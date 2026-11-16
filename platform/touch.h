@@ -3,12 +3,13 @@
 #define TOUCH_H
 #include <stdint.h>
 
-enum { TOUCH_RING, TOUCH_KNOB, TOUCH_CROSS, TOUCH_CIRCLE, TOUCH_TRIANGLE, TOUCH_SQUARE, TOUCH_START, TOUCH_SELECT, TOUCH_L1, TOUCH_R1 };
+enum { TOUCH_RING, TOUCH_KNOB, TOUCH_CROSS, TOUCH_CIRCLE, TOUCH_TRIANGLE, TOUCH_SQUARE, TOUCH_START, TOUCH_SELECT, TOUCH_L1, TOUCH_R1, TOUCH_PROGRESS };
 
 typedef struct TouchShape {
     float x, y, r; /* the window's pixels, from the top left */
     int kind;
     float alpha;
+    float value; /* TOUCH_PROGRESS: how much of the ring is filled, 0 to 1 */
 } TouchShape;
 
 int touch_enabled(void); /* on Android, or DW3_TOUCH=1 */

@@ -7,6 +7,11 @@
 #include <math.h>
 #include "touch.h"
 
+int movie_playing(void); /* movie.c */
+
+/* A finger held on a movie this long skips it (Start, as the game takes) */
+#define SKIP_HOLD_MS 2000
+
 /* PlayStation button bits, as pad.c's NAMES[] */
 enum { B_SELECT = 0, B_START = 3, B_UP = 4, B_RIGHT = 5, B_DOWN = 6, B_LEFT = 7, B_L2 = 8, B_R2 = 9, B_L1 = 10, B_R1 = 11,
        B_TRIANGLE = 12, B_CIRCLE = 13, B_CROSS = 14, B_SQUARE = 15 };
@@ -26,6 +31,10 @@ static int s_stick_on;
 static float s_bx, s_by, s_fx, s_fy, s_rad; /* the stick's base, the finger, its reach */
 static float s_vx, s_vy;                    /* -1..1 */
 static Uint64 s_last_touch;
+static SDL_FingerID s_skip_id;
+static int s_skip_on, s_skip_press;
+static Uint64 s_skip_from;
+static float s_skip_x, s_skip_y;
 
 /* The screens' targets (native_touch_target), in the PSX display's pixels; each lasts a moment unless marked again */
 typedef struct Target {
@@ -159,7 +168,7 @@ static Key *key_at(float x, float y) {
 }
 
 void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
-    int ndev = 0, seen_stick = 0;
+    int ndev = 0, seen_stick = 0, seen_skip = 0;
     SDL_TouchID *devs;
 
     if (!touch_enabled() || w <= 0 || h <= 0) {
@@ -208,6 +217,12 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
             }
             if ((k = key_at(x, y)) != NULL) {
                 k->down = 1;
+            } else if (movie_playing()) { /* held on a movie: skips it after SKIP_HOLD_MS */
+                if (!s_skip_on || s_skip_id != fingers[i]->id) {
+                    s_skip_on = 1, s_skip_id = fingers[i]->id, s_skip_from = SDL_GetTicks();
+                }
+                seen_skip = 1;
+                s_skip_x = x, s_skip_y = y;
             } else if (!s_stick_on) { /* a new finger off the keys: the stick appears under it */
                 s_stick_on = seen_stick = 1;
                 s_stick_id = fingers[i]->id;
@@ -222,6 +237,16 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     forget_targets(now_down, now_n);
     if (!seen_stick) {
         s_stick_on = 0;
+    }
+    if (!seen_skip) {
+        s_skip_on = 0;
+    } else if (s_skip_on == 1 && SDL_GetTicks() - s_skip_from >= SKIP_HOLD_MS) {
+        s_skip_on = 2; /* done: Start for a few vsyncs, once per hold */
+        s_skip_press = 8;
+    }
+    if (s_skip_press > 0) {
+        s_skip_press--;
+        *held |= 1 << B_START;
     }
     s_vx = s_vy = 0;
     if (s_stick_on) {
@@ -268,11 +293,15 @@ int touch_shapes(TouchShape *out, int max) {
     }
     for (int i = 0; i < s_nkeys && n < max; i++) {
         float a = (s_keys[i].down ? 0.55f : 0.32f) * fade;
-        out[n++] = (TouchShape){s_keys[i].x, s_keys[i].y, s_keys[i].r, s_keys[i].kind, a};
+        out[n++] = (TouchShape){s_keys[i].x, s_keys[i].y, s_keys[i].r, s_keys[i].kind, a, 0};
     }
     if (s_stick_on && n + 2 <= max) {
-        out[n++] = (TouchShape){s_bx, s_by, s_rad * 1.25f, TOUCH_RING, 0.45f};
-        out[n++] = (TouchShape){s_bx + s_vx * s_rad, s_by + s_vy * s_rad, s_rad * 0.5f, TOUCH_KNOB, 0.75f};
+        out[n++] = (TouchShape){s_bx, s_by, s_rad * 1.25f, TOUCH_RING, 0.45f, 0};
+        out[n++] = (TouchShape){s_bx + s_vx * s_rad, s_by + s_vy * s_rad, s_rad * 0.5f, TOUCH_KNOB, 0.75f, 0};
+    }
+    if (s_skip_on == 1 && n < max) {
+        float f = SDL_min(1.0f, (float)(SDL_GetTicks() - s_skip_from) / SKIP_HOLD_MS);
+        out[n++] = (TouchShape){s_skip_x, s_skip_y, s_rad * 0.9f, TOUCH_PROGRESS, 0.9f, f};
     }
     return n;
 }

@@ -7,15 +7,17 @@ static const char *TOUCH_VS =
     "#version 330 core\n"
     "layout(location = 0) in vec2 pos;\n"
     "layout(location = 1) in vec4 shape;\n" /* centre x, y, radius, kind */
-    "layout(location = 2) in float alpha;\n"
+    "layout(location = 2) in vec2 alpha_value;\n"
     "uniform vec2 screen;\n"
     "out vec2 p;\n"
     "flat out int kind;\n"
     "out float a;\n"
+    "out float value;\n"
     "void main() {\n"
     "    p = (pos - shape.xy) / shape.z;\n"
     "    kind = int(shape.w + 0.5);\n"
-    "    a = alpha;\n"
+    "    a = alpha_value.x;\n"
+    "    value = alpha_value.y;\n"
     "    vec2 ndc = pos / screen * 2.0 - 1.0;\n"
     "    gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);\n"
     "}\n";
@@ -25,6 +27,7 @@ static const char *TOUCH_FS =
     "in vec2 p;\n"
     "flat in int kind;\n"
     "in float a;\n"
+    "in float value;\n"
     "out vec4 frag;\n"
     "float seg(vec2 q, vec2 s, vec2 e) { vec2 d = e - s; float t = clamp(dot(q - s, d) / dot(d, d), 0.0, 1.0); return length(q - s - d * t); }\n"
     "void main() {\n"
@@ -32,6 +35,13 @@ static const char *TOUCH_FS =
     "    float disc = 1.0 - smoothstep(1.0 - aa, 1.0, d);\n"
     "    if (kind == 0) { frag = vec4(1.0, 1.0, 1.0, a * (1.0 - smoothstep(0.05, 0.05 + aa, abs(d - 0.92)))); return; }\n"
     "    if (kind == 1) { frag = vec4(1.0, 1.0, 1.0, a * disc); return; }\n"
+    "    if (kind == 10) {\n" /* a ring that fills clockwise from the top, over a dim one */
+    "        float turn = fract(atan(p.x, -p.y) / 6.2831853);\n"
+    "        float band = 1.0 - smoothstep(0.1, 0.1 + aa, abs(d - 0.8));\n"
+    "        float lit = turn <= value ? 1.0 : 0.25;\n"
+    "        frag = vec4(1.0, 0.82, 0.48, a * band * lit + 0.35 * a * disc * (1.0 - band));\n"
+    "        return;\n"
+    "    }\n"
     "    float g = 1e3; vec3 c = vec3(1.0);\n"
     "    if (kind == 2) { g = min(seg(p, vec2(-0.38, -0.38), vec2(0.38, 0.38)), seg(p, vec2(-0.38, 0.38), vec2(0.38, -0.38))); c = vec3(0.55, 0.7, 1.0); }\n"
     "    if (kind == 3) { g = abs(d - 0.4); c = vec3(1.0, 0.45, 0.45); }\n"
@@ -52,7 +62,7 @@ static GLint s_screen;
 
 void gl_touch_draw(int w, int h) {
     TouchShape shapes[16];
-    float v[16 * 6 * 7];
+    float v[16 * 6 * 8];
     int n = touch_shapes(shapes, 16), k = 0;
     GLint prog, vao, vbo, view[4];
 
@@ -72,9 +82,9 @@ void gl_touch_draw(int w, int h) {
         static const float CORNER[6][2] = {{-1, -1}, {1, -1}, {1, 1}, {-1, -1}, {1, 1}, {-1, 1}};
 
         for (int c = 0; c < 6; c++) {
-            float *o = &v[k++ * 7];
+            float *o = &v[k++ * 8];
             o[0] = s->x + CORNER[c][0] * s->r, o[1] = s->y + CORNER[c][1] * s->r;
-            o[2] = s->x, o[3] = s->y, o[4] = s->r, o[5] = (float)s->kind, o[6] = s->alpha;
+            o[2] = s->x, o[3] = s->y, o[4] = s->r, o[5] = (float)s->kind, o[6] = s->alpha, o[7] = s->value;
         }
     }
     GL(glGetIntegerv)(GL_CURRENT_PROGRAM, &prog);
@@ -93,13 +103,13 @@ void gl_touch_draw(int w, int h) {
     GL(glUniform2f)(s_screen, (float)w, (float)h);
     GL(glBindVertexArray)(s_vao);
     GL(glBindBuffer)(GL_ARRAY_BUFFER, s_vbo);
-    GL(glBufferData)(GL_ARRAY_BUFFER, (GLsizeiptr)(k * 7 * sizeof(float)), v, GL_STREAM_DRAW);
+    GL(glBufferData)(GL_ARRAY_BUFFER, (GLsizeiptr)(k * 8 * sizeof(float)), v, GL_STREAM_DRAW);
     GL(glEnableVertexAttribArray)(0);
-    GL(glVertexAttribPointer)(0, 2, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)0);
+    GL(glVertexAttribPointer)(0, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)0);
     GL(glEnableVertexAttribArray)(1);
-    GL(glVertexAttribPointer)(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)(2 * sizeof(float)));
+    GL(glVertexAttribPointer)(1, 4, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(2 * sizeof(float)));
     GL(glEnableVertexAttribArray)(2);
-    GL(glVertexAttribPointer)(2, 1, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)(6 * sizeof(float)));
+    GL(glVertexAttribPointer)(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
     GL(glDrawArrays)(GL_TRIANGLES, 0, k);
     GL(glDisable)(GL_BLEND);
     GL(glUseProgram)((GLuint)prog);
