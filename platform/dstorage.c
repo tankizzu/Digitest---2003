@@ -2,12 +2,14 @@
    the reader thread's plain reads stay. The header is C++ only, so the few calls used are declared by hand; their sizes are checked in
    the static asserts below against what the header gives (sizeof DSTORAGE_REQUEST 104, DSTORAGE_CONFIGURATION1 32, offsets as written).
    Kept apart from files.c: windows.h and platform.h clash. */
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
-#ifndef _WIN64
+#if !defined(_WIN64)
 /* the layouts below are the 64-bit ones: the 32-bit build keeps the reader thread's plain reads */
 int ds_ready(int buffered) { (void)buffered; return 0; }
 int ds_start(const char *path, long long offset, unsigned bytes, void *dst) { (void)path, (void)offset, (void)bytes, (void)dst; return 0; }

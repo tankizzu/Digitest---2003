@@ -32,7 +32,7 @@ int CdControl(uint8_t com, uint8_t *param, uint8_t *result) {
 }
 
 /* Streams from the last CdlSetloc (the movies) */
-int CdRead2(long mode) {
+int CdRead2(psx_long mode) {
     movie_stream_start(s_loc);
     return 1;
 }

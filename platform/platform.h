@@ -5,6 +5,10 @@
 #define PLATFORM_H
 
 #include <stdint.h>
+/* The PSX's (and PsyQ's) long: 32 bits, as on Windows; Linux and Android have a 64-bit long */
+typedef int32_t psx_long;
+typedef uint32_t psx_ulong;
+#include <stdint.h>
 #include <stdio.h>
 
 /* --- PsyQ types the platform needs, with the same layout --- */

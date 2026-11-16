@@ -17,7 +17,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
 #include <windows.h>
+#define MODE(m) L##m
+typedef wchar_t mode_char;
+#else
+#include <sys/statvfs.h>
+#define MODE(m) m
+typedef char mode_char;
+#endif
 
 #include "extract.h"
 
@@ -36,13 +44,17 @@ static int s_raw;     /* raw 2352-byte sectors (.bin), or plain 2048 (.iso) */
 static long s_sectors;
 
 /* fopen with the UTF-8 paths SDL's dialogs and drops give, whatever the system's code page */
-static FILE *open_utf8(const char *path, const wchar_t *mode) {
+static FILE *open_utf8(const char *path, const mode_char *mode) {
+#ifndef _WIN32
+    return fopen(path, mode);
+#else
     wchar_t wide[1200];
 
     if (MultiByteToWideChar(CP_UTF8, 0, path, -1, wide, SDL_arraysize(wide)) == 0) {
         return NULL;
     }
     return _wfopen(wide, mode);
+#endif
 }
 
 /* The 2048 user bytes of `count` sectors (Mode 2 Form 1 in a raw image) */
@@ -90,7 +102,7 @@ static long find(const char *name, long *size) {
 }
 
 static int write_file(const char *path, const void *data, size_t size) {
-    FILE *f = open_utf8(path, L"wb");
+    FILE *f = open_utf8(path, MODE("wb"));
     int ok = f != NULL && fwrite(data, 1, size, f) == size;
 
     if (f != NULL) {
@@ -112,10 +124,10 @@ static int open_image(const char *image) {
 
     s_disc = NULL;
     if (dot == NULL || SDL_strcasecmp(dot, ".cue") != 0) {
-        s_disc = open_utf8(image, L"rb");
+        s_disc = open_utf8(image, MODE("rb"));
         return s_disc != NULL ? E_NONE : E_OPEN;
     }
-    if ((cue = open_utf8(image, L"r")) == NULL) {
+    if ((cue = open_utf8(image, MODE("r"))) == NULL) {
         return E_OPEN;
     }
     name[0] = 0;
@@ -136,11 +148,11 @@ static int open_image(const char *image) {
         int dir = slash != NULL ? (int)(slash - image) + 1 : 0;
         int absolute = name[0] == '/' || name[0] == '\\' || name[1] == ':';
         snprintf(path, sizeof path, "%.*s%s", absolute ? 0 : dir, image, name);
-        s_disc = open_utf8(path, L"rb");
+        s_disc = open_utf8(path, MODE("rb"));
     }
     if (s_disc == NULL) {
         snprintf(path, sizeof path, "%.*s.bin", (int)(dot - image), image);
-        s_disc = open_utf8(path, L"rb");
+        s_disc = open_utf8(path, MODE("rb"));
     }
     return s_disc != NULL ? E_NONE : E_OPEN;
 }
@@ -168,6 +180,13 @@ static void remove_tmp(const char *tmp) {
 }
 
 static int enough_space(const char *data) {
+#ifndef _WIN32
+    struct statvfs st;
+    if (statvfs(data, &st) != 0) {
+        return 1; /* can't tell: the writes will */
+    }
+    return (unsigned long long)st.f_bavail * st.f_frsize >= NEED_BYTES;
+#else
     wchar_t wide[1200];
     ULARGE_INTEGER free_bytes;
 
@@ -176,6 +195,7 @@ static int enough_space(const char *data) {
         return 1; /* can't tell: the writes will */
     }
     return free_bytes.QuadPart >= NEED_BYTES;
+#endif
 }
 
 /* The complete game from tmp into data: the marker goes first and comes back last */
@@ -292,7 +312,7 @@ static int write_names(const uint8_t *exe, const char *dir, int (*progress)(int 
         }
     }
     snprintf(path, sizeof path, "%s/names.txt", dir);
-    if (result == E_NONE && (f = open_utf8(path, L"wb")) != NULL) {
+    if (result == E_NONE && (f = open_utf8(path, MODE("wb"))) != NULL) {
         for (int fid = 0; fid < FILE_COUNT; fid++) {
             fprintf(f, "%s\n", starts[fid] > 0 && starts[fid] < s_sectors ? by_lba[starts[fid]] : "");
         }

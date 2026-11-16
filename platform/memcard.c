@@ -23,7 +23,7 @@ typedef struct DirEntry {
 
 static uint8_t s_card[CARD_SIZE];
 static char s_path[1100];
-SAVED static long s_cmd, s_result;
+SAVED static psx_long s_cmd, s_result;
 SAVED static int s_pending;
 
 /* The card image, written whole to a file beside and renamed over the card: a crash
@@ -80,7 +80,7 @@ static int next_block(int b) {
 }
 
 /* copies `bytes` at `ofs` of a file to or from `buf`, the card in memory only */
-static long file_copy(const char *name, uint8_t *buf, long ofs, long bytes, int write) {
+static psx_long file_copy(const char *name, uint8_t *buf, psx_long ofs, psx_long bytes, int write) {
     int b = find_file(name);
 
     if (!formatted()) {
@@ -90,7 +90,7 @@ static long file_copy(const char *name, uint8_t *buf, long ofs, long bytes, int 
         return ERR_NO_FILE;
     }
     while (bytes > 0) {
-        long n;
+        psx_long n;
 
         while (b != 0 && ofs >= BLOCK) {
             ofs -= BLOCK;
@@ -113,8 +113,8 @@ static long file_copy(const char *name, uint8_t *buf, long ofs, long bytes, int 
 }
 
 /* the same, and the card written when it was a write */
-static long file_io(const char *name, uint8_t *buf, long ofs, long bytes, int write) {
-    long r = file_copy(name, buf, ofs, bytes, write);
+static psx_long file_io(const char *name, uint8_t *buf, psx_long ofs, psx_long bytes, int write) {
+    psx_long r = file_copy(name, buf, ofs, bytes, write);
 
     if (write && r == ERR_NONE) {
         save_card();
@@ -153,7 +153,7 @@ static void backup_once(const char *what) {
 }
 
 /* the slot whose data section starts at `ofs`, or -1 */
-static int slot_at(long ofs) {
+static int slot_at(psx_long ofs) {
     return ofs >= SLOT_OFS && (ofs - SLOT_OFS) % SLOT_SIZE == 0 && (ofs - SLOT_OFS) / SLOT_SIZE < SLOTS ? (int)((ofs - SLOT_OFS) / SLOT_SIZE) : -1;
 }
 
@@ -210,7 +210,7 @@ static void forms_written(const char *file, int slot) {
     tail_io(file, tail, 1);
 }
 
-static long finish(long cmd, long chan, long result) {
+static psx_long finish(psx_long cmd, psx_long chan, psx_long result) {
     LOGC(LOG_MC, "mc: command %ld on port %ld: %ld", cmd, chan, result);
     s_cmd = cmd;
     s_result = chan == 0 ? result : ERR_NO_CARD;
@@ -218,9 +218,9 @@ static long finish(long cmd, long chan, long result) {
     return 1;
 }
 
-long MemCardFormat(long chan);
+psx_long MemCardFormat(psx_long chan);
 
-void MemCardInit(long val) {
+void MemCardInit(psx_long val) {
     FILE *f;
 
     (void)val;
@@ -244,27 +244,27 @@ void MemCardInit(long val) {
 void MemCardStart(void) {}
 
 /* 1 once a command finished (its McFunc* and McErr*), -1 when none is pending */
-long MemCardSync(long mode, long *cmds, unsigned long *result) {
+psx_long MemCardSync(psx_long mode, psx_long *cmds, psx_ulong *result) {
     (void)mode;
     if (!s_pending) {
         return -1;
     }
     s_pending = 0;
     *cmds = s_cmd;
-    *result = (unsigned long)s_result;
+    *result = (psx_ulong)s_result;
     return 1;
 }
 
-long MemCardExist(long chan) {
+psx_long MemCardExist(psx_long chan) {
     return finish(1, chan, ERR_NONE);
 }
 
-long MemCardAccept(long chan) {
+psx_long MemCardAccept(psx_long chan) {
     return finish(2, chan, formatted() ? ERR_NONE : ERR_UNFORMATTED);
 }
 
-long MemCardReadFile(long chan, const char *file, void *adrs, long ofs, long bytes) {
-    long r = chan == 0 ? file_io(file, adrs, ofs, bytes, 0) : ERR_NO_CARD;
+psx_long MemCardReadFile(psx_long chan, const char *file, void *adrs, psx_long ofs, psx_long bytes) {
+    psx_long r = chan == 0 ? file_io(file, adrs, ofs, bytes, 0) : ERR_NO_CARD;
 
     if (r == ERR_NONE && slot_at(ofs) >= 0) {
         forms_reading(file, slot_at(ofs));
@@ -272,8 +272,8 @@ long MemCardReadFile(long chan, const char *file, void *adrs, long ofs, long byt
     return finish(3, chan, r);
 }
 
-long MemCardWriteFile(long chan, const char *file, void *adrs, long ofs, long bytes) {
-    long r;
+psx_long MemCardWriteFile(psx_long chan, const char *file, void *adrs, psx_long ofs, psx_long bytes) {
+    psx_long r;
 
     if (chan == 0 && slot_at(ofs) >= 0) {
         forms_writing(file, slot_at(ofs));
@@ -289,8 +289,8 @@ long MemCardWriteFile(long chan, const char *file, void *adrs, long ofs, long by
 }
 
 /* the synchronous ones return their McErr* themselves */
-long MemCardGetDirentry(long chan, char *name, DirEntry *d, long *files, long ofs, long max) {
-    long n = 0;
+psx_long MemCardGetDirentry(psx_long chan, char *name, DirEntry *d, psx_long *files, psx_long ofs, psx_long max) {
+    psx_long n = 0;
     int b;
 
     (void)name; /* the game only lists "*" */
@@ -320,7 +320,7 @@ long MemCardGetDirentry(long chan, char *name, DirEntry *d, long *files, long of
     return ERR_NONE;
 }
 
-long MemCardCreateFile(long chan, const char *file, long blocks) {
+psx_long MemCardCreateFile(psx_long chan, const char *file, psx_long blocks) {
     int free[15], nfree = 0, b, i;
 
     if (chan != 0) {
@@ -361,7 +361,7 @@ long MemCardCreateFile(long chan, const char *file, long blocks) {
     return ERR_NONE;
 }
 
-long MemCardFormat(long chan) {
+psx_long MemCardFormat(psx_long chan) {
     int f;
 
     if (chan != 0) {
@@ -386,7 +386,7 @@ long MemCardFormat(long chan) {
     return ERR_NONE;
 }
 
-long MemCardUnformat(long chan) {
+psx_long MemCardUnformat(psx_long chan) {
     if (chan != 0) {
         return ERR_NO_CARD;
     }

@@ -12,3 +12,5 @@ build-o2/
 # the maintainer's own notes
 TODO.md
 tools/todo_summary.py
+build-linux/
+build-android/

@@ -1,0 +1,790 @@
+<title>Digimon 2003 Touch</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Rubik:wght@400;500;600&display=swap">
+<style>
+/* Layout: telefono simulato a sinistra, guida passo-passo e registro degli input a destra; su telefono tutto in colonna */
+:root{
+  --bg:#EDF1F3; --surface:#FFFFFF; --ink:#14232B; --muted:#56666E; --line:#D2DBDF;
+  --accent:#D9622A; --accent-soft:#F8E3D8; --teal:#1C7385;
+  --display:"Chakra Petch","Segoe UI",system-ui,sans-serif;
+  --body:"Rubik","Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E161A; --surface:#152127; --ink:#E4ECEF; --muted:#93A4AC; --line:#26363D;
+  --accent:#F0874B; --accent-soft:#3A2418; --teal:#52B4C6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E161A; --surface:#152127; --ink:#E4ECEF; --muted:#93A4AC; --line:#26363D;
+  --accent:#F0874B; --accent-soft:#3A2418; --teal:#52B4C6; color-scheme:dark}
+
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:grid;gap:6px;margin-bottom:18px}
+.eyebrow{margin:0;font:600 12px/1 var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+h1{margin:0;font:700 clamp(24px,4vw,34px)/1.1 var(--display);text-wrap:balance}
+.lead{margin:0;color:var(--muted);max-width:65ch}
+.layout{display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1000px){.layout{grid-template-columns:minmax(0,1fr) 360px;align-items:start}}
+.stage{display:grid;gap:12px;justify-items:center;min-width:0}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px}
+.seg button{font:600 13px var(--display);letter-spacing:.04em;border:0;background:none;color:var(--muted);padding:7px 16px;border-radius:999px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- telefono ---------- */
+.device{background:#0A1013;border-radius:38px;padding:11px;box-shadow:0 18px 50px -20px rgba(10,20,30,.55),inset 0 0 0 2px #26343a;max-width:100%}
+.device.portrait{width:min(382px,100%)}
+.device.landscape{width:min(800px,100%)}
+.screen{position:relative;overflow:hidden;border-radius:28px;background:#0B1114;touch-action:none;user-select:none;-webkit-user-select:none;font-family:var(--body);color:#E9F0F2}
+.portrait .screen{aspect-ratio:360/760}
+.landscape .screen{aspect-ratio:760/360}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+#stick{position:absolute;width:112px;height:112px;margin:-56px 0 0 -56px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.04) 70%);border:2px solid rgba(255,255,255,.35);pointer-events:none;z-index:5}
+#stick .knob{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px 0 0 -25px;border-radius:50%;
+  background:rgba(255,255,255,.75);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+#ctx{position:absolute;transform:translate(-50%,-100%);z-index:6;font:600 14px var(--display);letter-spacing:.04em;
+  color:#1B1206;background:#FFD27A;border:0;border-radius:999px;padding:8px 16px;box-shadow:0 4px 14px rgba(0,0,0,.35);cursor:pointer;
+  animation:bob 1.2s ease-in-out infinite}
+#ctx::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top-color:#FFD27A}
+@keyframes bob{50%{transform:translate(-50%,calc(-100% - 4px))}}
+#menuBtn{position:absolute;top:12px;right:12px;z-index:6;width:42px;height:42px;border-radius:12px;border:0;
+  background:rgba(8,14,18,.55);color:#fff;font-size:20px;cursor:pointer;backdrop-filter:blur(4px)}
+#toast{position:absolute;left:50%;top:calc(var(--gh) * .42);transform:translate(-50%,-50%);z-index:8;
+  font:700 22px var(--display);letter-spacing:.08em;text-transform:uppercase;color:#fff;background:rgba(217,98,42,.92);padding:10px 22px;border-radius:10px;pointer-events:none}
+.landscape #toast{top:42%}
+
+/* interfaccia sovrapposta al gioco a tutto schermo, in verticale e in orizzontale */
+#dock{position:absolute;inset:0;pointer-events:none}
+.pane{display:none;position:absolute;inset:0}
+.screen[data-scene="field"] #p-field,.screen[data-scene="dialog"] #p-dialog,.screen[data-scene="battle"] #p-battle{display:block}
+[data-ui]{pointer-events:auto}
+
+.hud{position:absolute;left:10px;top:10px;width:min(196px,58%);display:grid;gap:5px}
+.pc{background:rgba(8,14,18,.62);backdrop-filter:blur(3px);border-radius:10px;padding:6px 9px;display:grid;gap:3px;border:1px solid transparent}
+.pc.active{border-color:#FFD27A}
+.pc.ko{opacity:.45}
+.pc .top{display:flex;justify-content:space-between;align-items:baseline;gap:6px;font-size:12px}
+.pc .top b{font:600 13px var(--display);letter-spacing:.02em;display:flex;align-items:center;gap:6px}
+.pc .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
+.pc .lv{font:500 11px var(--mono);color:#C9D6DB}
+.st{display:grid;grid-template-columns:24px 1fr 52px;align-items:center;gap:6px}
+.st em{font:600 9px var(--display);font-style:normal;letter-spacing:.06em;color:#9FB2BA}
+.bar{height:5px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.bar i{display:block;height:100%;background:#5BD08A;border-radius:3px;transition:width .3s}
+.bar.low i{background:#F0B04B}
+.bar.xp i{background:#B58CF0}
+.num{font:500 10px var(--mono);color:#C9D6DB;text-align:right;font-variant-numeric:tabular-nums}
+.fhint{position:absolute;left:50%;bottom:28px;transform:translateX(-50%);background:rgba(8,14,18,.6);padding:8px 14px;border-radius:999px;font-size:13px;white-space:nowrap;transition:opacity .6s}
+.fhint.gone{opacity:0}
+
+/* dialogo */
+.dbox{position:absolute;left:10px;right:10px;bottom:16px;display:flex;flex-direction:column;gap:8px;background:rgba(9,15,19,.88);border:1px solid #2C3F47;border-radius:14px;padding:12px 16px 14px}
+.landscape .dbox{left:12%;right:12%;bottom:12px}
+.who{font:600 13px var(--display);letter-spacing:.06em;color:#FFD27A;min-height:1em;display:flex;justify-content:space-between}
+.ff{color:#FFD27A;opacity:0;transition:opacity .15s;font:700 12px var(--display);letter-spacing:.1em}
+.ff.on{opacity:1}
+.dtext{font-size:18px;line-height:1.45;min-height:4.4em}
+.landscape .dtext{font-size:17px;min-height:3em}
+.choices{display:flex;gap:10px;flex-wrap:wrap}
+.choices:empty{display:none}
+.choices button{font:600 16px var(--display);border:1px solid #3B5560;background:#18262D;color:#fff;border-radius:12px;padding:11px 26px;cursor:pointer}
+.choices button:hover{border-color:#FFD27A}
+.dhint{font-size:12px;color:#8FA3AB}
+
+/* battaglia: posizioni degli elementi originali, ridisposti */
+.prompt{position:absolute;left:12px;right:12px;bottom:146px;text-align:center;font:600 15px var(--display);letter-spacing:.03em}
+.prompt span{background:rgba(9,15,19,.72);padding:6px 12px;border-radius:8px}
+.cmds{position:absolute;left:10px;right:10px;bottom:14px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cmds button{font:600 15px var(--display);letter-spacing:.03em;min-height:56px;border-radius:14px;border:1px solid #33505B;
+  background:rgba(23,38,45,.9);color:#fff;cursor:pointer;display:grid;place-items:center;gap:0;padding:6px}
+.cmds button small{font:400 11px var(--body);color:#9FB2BA}
+.cmds button.main{background:#D9622A;border-color:#D9622A}
+.cmds button.main small{color:#FFE2D2}
+.cmds button.wide{grid-column:1/-1}
+.landscape .prompt{left:auto;right:12px;width:260px;bottom:180px}
+.landscape .cmds{left:auto;right:12px;width:260px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.landscape .cmds button{min-height:46px}
+/* menu */
+#menu{position:absolute;inset:0;z-index:7;background:rgba(9,15,19,.96);display:flex;flex-direction:column;padding:14px 16px}
+.mhead{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.mhead button{border:0;background:#1A2A31;color:#fff;font:600 14px var(--display);padding:10px 14px;border-radius:12px;cursor:pointer}
+.mhead h2{margin:0;font:700 20px var(--display);letter-spacing:.04em}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;overflow:auto}
+.landscape .mgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.mgrid button{text-align:left;border:1px solid #2C434C;background:#132027;color:#fff;border-radius:14px;padding:14px;cursor:pointer;display:grid;gap:2px}
+.mgrid button b{font:600 16px var(--display);letter-spacing:.03em}
+.mgrid button span{font-size:12px;color:#93A7AF}
+.mgrid button.cur{border-color:#FFD27A}
+.mlist{display:grid;gap:8px;overflow:auto}
+.mlist button{display:flex;justify-content:space-between;border:1px solid #2C434C;background:#132027;color:#fff;border-radius:12px;padding:14px;font:500 15px var(--body);cursor:pointer}
+.mlist button.cur{border-color:#FFD27A}
+.mnote{font-size:12px;color:#8FA3AB;margin-top:12px}
+
+/* ---------- colonna guida ---------- */
+.side{display:grid;gap:16px;min-width:0}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.steps button{border:1px solid var(--line);background:var(--surface);color:var(--muted);border-radius:12px;padding:8px 6px;cursor:pointer;
+  display:grid;gap:2px;text-align:left;font:500 12px var(--body)}
+.steps button b{font:700 11px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.steps button[aria-current="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.steps button[aria-current="true"] b{color:var(--accent)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.card h2{margin:0 0 8px;font:700 19px var(--display)}
+.card h3{margin:14px 0 6px;font:600 12px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--teal)}
+.card ul{margin:0;padding-left:18px;display:grid;gap:6px}
+.card ul.done{list-style:none;padding-left:0}
+.card ul.done li{padding-left:22px;position:relative}
+.card ul.done li::before{content:"✓";position:absolute;left:2px;color:var(--teal);font-weight:600}
+.card p{margin:0}
+.decide li{color:var(--ink)}
+.io h2{font-size:16px}
+.io p{color:var(--muted);font-size:13px}
+#stickRead{margin-top:10px;font:500 12px/1.5 var(--mono);background:var(--bg);border-radius:10px;padding:8px 10px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+#log{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:4px;min-height:60px}
+#log li{display:grid;grid-template-columns:44px minmax(0,auto) minmax(0,1fr);gap:8px;font-size:13px;align-items:baseline}
+#log .t{font:500 11px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+#log .k{font:600 12px var(--mono);color:var(--accent);white-space:nowrap}
+#log .w{color:var(--ink);min-width:0}
+#log li:first-child{animation:flash .6s}
+@keyframes flash{from{background:var(--accent-soft)}}
+@media (prefers-reduced-motion:reduce){#ctx,#log li:first-child{animation:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">Prototipo interfaccia · solo touch</p>
+    <h1>Digimon World 2003 per Android</h1>
+    <p class="lead">Versione 2, con le tue scelte. Prova il telefono qui sotto con il dito o con il mouse, passo per passo. Grafica, nomi e testi sono segnaposto: nel gioco vero vedrai quelli del tuo disco.</p>
+  </header>
+
+  <div class="layout">
+    <section class="stage">
+      <div class="seg" id="orient">
+        <button type="button" id="o-portrait" data-o="portrait" aria-pressed="true">Verticale</button>
+        <button type="button" id="o-landscape" data-o="landscape" aria-pressed="false">Orizzontale</button>
+      </div>
+      <div class="device portrait" id="device">
+        <div class="screen" id="screen" data-scene="field">
+          <canvas id="cv"></canvas>
+          <div id="stick" hidden><div class="knob"></div></div>
+          <button type="button" id="ctx" data-ui hidden>Parla</button>
+          <button type="button" id="menuBtn" data-ui aria-label="Apri il menu">☰</button>
+          <div id="toast" hidden></div>
+
+          <div id="dock">
+            <div class="hud" id="hud"></div>
+            <div class="pane" id="p-field">
+              <div class="fhint" id="fhint">Tocca e trascina ovunque per muoverti</div>
+            </div>
+            <div class="pane" id="p-dialog">
+              <div class="dbox">
+                <div class="who"><span id="dWho"></span><span class="ff" id="dFast">▶▶ VELOCE</span></div>
+                <div class="dtext" id="dText"></div>
+                <div class="choices" id="dChoices"></div>
+                <div class="dhint">Tocca per continuare · tieni premuto per andare veloce</div>
+              </div>
+            </div>
+            <div class="pane" id="p-battle">
+              <div class="prompt"><span id="bPrompt"></span></div>
+              <div class="cmds" id="bCmds"></div>
+            </div>
+          </div>
+
+          <div id="menu" data-ui hidden>
+            <div class="mhead"><button type="button" id="mBack">‹ Indietro</button><h2 id="mTitle">Menu</h2></div>
+            <div id="mBody"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <nav class="steps" id="steps" aria-label="Passi del prototipo">
+        <button type="button" id="s1" data-s="field"><b>Passo 1</b>Esplorare</button>
+        <button type="button" id="s2" data-s="dialog"><b>Passo 2</b>Dialoghi</button>
+        <button type="button" id="s3" data-s="menu"><b>Passo 3</b>Menu</button>
+        <button type="button" id="s4" data-s="battle"><b>Passo 4</b>Battaglia</button>
+      </nav>
+      <div class="card" id="stepCard"></div>
+      <div class="card io">
+        <h2>Cosa riceve il gioco</h2>
+        <p>Il gioco crede di avere un DualShock in mano. Ogni tocco viene tradotto in levetta o tasti PlayStation, e qui vedi la traduzione in diretta.</p>
+        <div id="stickRead">Levetta: al centro (0x80 0x80)</div>
+        <ol id="log"></ol>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const screen = $('#screen'), device = $('#device'), cv = $('#cv'), g = cv.getContext('2d');
+const stickEl = $('#stick'), knob = stickEl.querySelector('.knob'), ctxBtn = $('#ctx'), menuBtn = $('#menuBtn'), toastEl = $('#toast');
+const logEl = $('#log'), stickRead = $('#stickRead');
+let orient = 'portrait', scene = 'field', W = 360, H = 760, G = {x:0,y:0,w:360,h:270}, dpr = 1;
+
+function layout(){
+  const r = screen.getBoundingClientRect(); W = r.width; H = r.height;
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cv.width = Math.round(W*dpr); cv.height = Math.round(H*dpr);
+  G = {x:0,y:0,w:W,h:H};
+  screen.style.setProperty('--gh', G.h + 'px');
+}
+new ResizeObserver(layout).observe(screen);
+layout();
+
+const t0 = performance.now();
+function log(key, what){
+  const li = document.createElement('li');
+  li.innerHTML = `<span class="t">${((performance.now()-t0)/1000).toFixed(1)}s</span><span class="k"></span><span class="w"></span>`;
+  li.children[1].textContent = key; li.children[2].textContent = what;
+  logEl.prepend(li); while (logEl.children.length > 9) logEl.lastChild.remove();
+}
+let toastTimer;
+function toast(msg, ms=1100){ toastEl.textContent = msg; toastEl.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(()=>toastEl.hidden = true, ms); }
+
+/* ---------- squadra condivisa ---------- */
+const party = [
+  {name:'Partner 1', lv:12, hp:96, max:120, exp:1840, next:2300, col:'#F2994A'},
+  {name:'Partner 2', lv:11, hp:110, max:110, exp:1210, next:1900, col:'#4AB0A0'},
+  {name:'Partner 3', lv:10, hp:58, max:100, exp:1530, next:1600, col:'#C26FD6'},
+];
+function partyRows(active){
+  const el = $('#hud'); el.innerHTML = '';
+  party.forEach((p,i) => {
+    const r = document.createElement('div');
+    r.className = 'pc' + (i===active ? ' active':'') + (p.hp<=0 ? ' ko':'');
+    const hp = Math.max(0, p.hp/p.max*100), xp = Math.min(100, p.exp/p.next*100);
+    r.innerHTML = `<div class="top"><b><span class="dot" style="background:${p.col}"></span><span class="nm"></span></b><span class="lv">Lv ${p.lv}</span></div>
+      <div class="st"><em>HP</em><div class="bar${hp<50?' low':''}"><i style="width:${hp}%"></i></div><span class="num">${Math.max(0,p.hp)}/${p.max}</span></div>
+      <div class="st"><em>EXP</em><div class="bar xp"><i style="width:${xp}%"></i></div><span class="num">${p.next-p.exp} →</span></div>`;
+    r.querySelector('.nm').textContent = p.name; el.appendChild(r);
+  });
+}
+
+/* ---------- mondo ---------- */
+const world = {w:1400, h:1400};
+const player = {x:700, y:800, dir:-Math.PI/2};
+let cam = 0;
+const npc = {x:790, y:640, kind:'npc'};
+const chest = {x:560, y:900, kind:'chest', open:false};
+const grass = {x:900, y:840, w:280, h:240};
+const house = {x:600, y:470, w:200, h:120};
+let seed = 11; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+const trees = [];
+for (let i=0; i<90; i++){
+  const x = rnd()*world.w, y = rnd()*world.h;
+  if (Math.abs(x-700) < 130 || Math.abs(y-730) < 120) continue;
+  if (x>grass.x-40 && x<grass.x+grass.w+40 && y>grass.y-40 && y<grass.y+grass.h+40) continue;
+  if (x>house.x-50 && x<house.x+house.w+50 && y>house.y-50 && y<house.y+house.h+60) continue;
+  trees.push({x, y, r:16+rnd()*14});
+}
+const sc = () => Math.min(G.w/360, G.h/270);
+function toScreen(wx, wy){
+  const s = sc(), dx = wx-player.x, dy = wy-player.y, c = Math.cos(cam), n = Math.sin(cam);
+  return {x: G.x+G.w/2 + (dx*c + dy*n)*s, y: G.y+G.h*0.56 + (-dx*n + dy*c)*s};
+}
+
+/* ---------- levetta ---------- */
+const MAXR = 46;
+let stick = null, twist = null, vx = 0, vy = 0, lastRead = '';
+function pt(e){ const r = screen.getBoundingClientRect(); return {x:e.clientX-r.left, y:e.clientY-r.top}; }
+function placeStick(){
+  stickEl.style.left = stick.bx+'px'; stickEl.style.top = stick.by+'px';
+  let dx = stick.x-stick.bx, dy = stick.y-stick.by; const d = Math.hypot(dx,dy);
+  if (d > MAXR){ dx *= MAXR/d; dy *= MAXR/d; }
+  knob.style.transform = `translate(${dx}px,${dy}px)`;
+  vx = dx/MAXR; vy = dy/MAXR;
+  if (Math.hypot(vx,vy) < 0.14){ vx = 0; vy = 0; }
+}
+const hex = v => '0x' + Math.round(128 + v*127).toString(16).toUpperCase().padStart(2,'0');
+function readStick(){
+  const t = (vx||vy) ? `Levetta sinistra: x ${vx>=0?'+':''}${vx.toFixed(2)}  y ${vy>=0?'+':''}${vy.toFixed(2)} → ${hex(vx)} ${hex(vy)}` : 'Levetta: al centro (0x80 0x80)';
+  if (t !== lastRead){ stickRead.textContent = t; lastRead = t; }
+}
+
+/* ---------- input sullo schermo ---------- */
+let hold = null;
+screen.addEventListener('pointerdown', e => {
+  if (e.target.closest('[data-ui]')) return;
+  e.preventDefault();
+  try { screen.setPointerCapture(e.pointerId); } catch(_){}
+  const p = pt(e);
+  if (scene === 'field'){
+    if (stick) return;
+    $('#fhint').classList.add('gone');
+    stick = {id:e.pointerId, bx:p.x, by:p.y, x:p.x, y:p.y, t:performance.now(), moved:false};
+    stickEl.hidden = false; placeStick();
+  } else if (scene === 'dialog'){
+    hold = {id:e.pointerId, t:performance.now(), fast:false};
+  } else if (scene === 'battle'){
+    battleTap(p);
+  }
+});
+screen.addEventListener('pointermove', e => {
+  const p = pt(e);
+  if (stick && e.pointerId === stick.id){
+    stick.x = p.x; stick.y = p.y;
+    const d = Math.hypot(p.x-stick.bx, p.y-stick.by);
+    if (d > 8) stick.moved = true;
+    if (d > MAXR*1.5){ const k = (d - MAXR*1.5)/d; stick.bx += (p.x-stick.bx)*k; stick.by += (p.y-stick.by)*k; }
+    placeStick();
+  }
+});
+function endPointer(e){
+  if (stick && e.pointerId === stick.id){
+    const short = !stick.moved && performance.now()-stick.t < 300;
+    const p = {x:stick.x, y:stick.y};
+    stick = null; stickEl.hidden = true; vx = vy = 0;
+    if (short) tapWorld(p);
+  } else if (hold && e.pointerId === hold.id){
+    const quick = !hold.fast && performance.now()-hold.t < 260;
+    if (hold.fast) log('✕ rilasciato', 'Testo a velocità normale');
+    hold = null; $('#dFast').classList.remove('on');
+    if (quick && dlg) dialogTap();
+  }
+}
+screen.addEventListener('pointerup', endPointer);
+screen.addEventListener('pointercancel', endPointer);
+
+/* ---------- esplorazione ---------- */
+let near = null, grassMeter = 0, grassGoal = 2.4;
+function nearest(){
+  let best = null, bd = 74;
+  for (const o of [npc, chest]){
+    if (o.kind==='chest' && o.open) continue;
+    const d = Math.hypot(o.x-player.x, o.y-player.y);
+    if (d < bd){ bd = d; best = o; }
+  }
+  return best;
+}
+function tapWorld(p){
+  for (const o of [npc, chest]){
+    if (o.kind==='chest' && o.open) continue;
+    const s = toScreen(o.x, o.y);
+    if (Math.hypot(s.x-p.x, s.y-(p.y+10)) < 34*sc()){
+      if (Math.hypot(o.x-player.x, o.y-player.y) < 74){ log('✕', 'Toccato direttamente: interagisci'); interact(o); }
+      else toast('Avvicinati', 700);
+      return;
+    }
+  }
+}
+ctxBtn.addEventListener('click', () => { if (!near) return; log('✕', 'Etichetta «' + ctxBtn.textContent + '» toccata'); interact(near); });
+function interact(o){
+  if (o.kind === 'npc') startDialog(npcLines());
+  else { o.open = true; startDialog([{who:'', text:'Hai trovato: Pozione (segnaposto) ×1.'}]); }
+}
+function collide(){
+  for (const t of trees){
+    const dx = player.x-t.x, dy = player.y-t.y, d = Math.hypot(dx,dy), m = t.r*0.55+10;
+    if (d < m && d > 0){ player.x = t.x + dx/d*m; player.y = t.y + dy/d*m; }
+  }
+  const h = {x:house.x-10, y:house.y-10, w:house.w+20, h:house.h+20};
+  if (player.x>h.x && player.x<h.x+h.w && player.y>h.y && player.y<h.y+h.h){
+    const opts = [[player.x-h.x,'l'],[h.x+h.w-player.x,'r'],[player.y-h.y,'t'],[h.y+h.h-player.y,'b']].sort((a,b)=>a[0]-b[0]);
+    const side = opts[0][1];
+    if (side==='l') player.x = h.x; else if (side==='r') player.x = h.x+h.w; else if (side==='t') player.y = h.y; else player.y = h.y+h.h;
+  }
+  for (const o of [npc, chest]){
+    const dx = player.x-o.x, dy = player.y-o.y, d = Math.hypot(dx,dy);
+    if (d < 24 && d > 0){ player.x = o.x + dx/d*24; player.y = o.y + dy/d*24; }
+  }
+  player.x = Math.max(20, Math.min(world.w-20, player.x));
+  player.y = Math.max(20, Math.min(world.h-20, player.y));
+}
+function updateField(dt){
+  const m = Math.hypot(vx,vy);
+  if (m > 0){
+    const c = Math.cos(cam), n = Math.sin(cam);
+    const wx = vx*c - vy*n, wy = vx*n + vy*c;
+    const speed = 160 * Math.min(1, m);
+    player.x += wx*speed*dt; player.y += wy*speed*dt;
+    player.dir = Math.atan2(wy, wx);
+    collide();
+    const inGrass = player.x>grass.x && player.x<grass.x+grass.w && player.y>grass.y && player.y<grass.y+grass.h;
+    if (inGrass){ grassMeter += dt*m; if (grassMeter > grassGoal){ grassMeter = 0; grassGoal = 2 + Math.random()*2.5; startBattle(true); return; } }
+  }
+  near = nearest();
+  if (near){
+    const s = toScreen(near.x, near.y);
+    ctxBtn.textContent = near.kind === 'npc' ? 'Parla' : 'Apri';
+    ctxBtn.style.left = s.x + 'px'; ctxBtn.style.top = (s.y - 40*sc()) + 'px';
+    ctxBtn.hidden = false;
+  } else ctxBtn.hidden = true;
+}
+
+function drawField(){
+  const s = sc(), cx = G.x+G.w/2, cy = G.y+G.h*0.56;
+  g.save(); g.beginPath(); g.rect(G.x,G.y,G.w,G.h); g.clip();
+  g.fillStyle = '#2F5530'; g.fillRect(G.x,G.y,G.w,G.h);
+  g.save(); g.translate(cx,cy); g.scale(s,s); g.rotate(-cam); g.translate(-player.x,-player.y);
+  g.fillStyle = '#6A9C55'; g.fillRect(0,0,world.w,world.h);
+  g.fillStyle = '#CDB98A'; g.fillRect(0,690,world.w,80); g.fillRect(660,0,80,world.h);
+  g.beginPath(); g.arc(700,730,95,0,Math.PI*2); g.fill();
+  g.strokeStyle = 'rgba(120,96,58,.35)'; g.lineWidth = 3; g.beginPath(); g.arc(700,730,70,0,Math.PI*2); g.stroke();
+  g.fillStyle = '#4C8A3C'; g.fillRect(grass.x,grass.y,grass.w,grass.h);
+  g.strokeStyle = '#3A7430'; g.lineWidth = 3;
+  for (let x = grass.x+8; x < grass.x+grass.w; x += 16) for (let y = grass.y+10; y < grass.y+grass.h; y += 18){
+    g.beginPath(); g.moveTo(x,y+6); g.lineTo(x-3,y-4); g.moveTo(x+4,y+6); g.lineTo(x+6,y-3); g.stroke();
+  }
+  g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(house.x+8,house.y+10,house.w,house.h);
+  g.fillStyle = '#E7DCC6'; g.fillRect(house.x,house.y,house.w,house.h);
+  g.fillStyle = '#B85A3E'; g.fillRect(house.x-8,house.y-8,house.w+16,house.h*0.55);
+  g.fillStyle = '#5B3A2A'; g.fillRect(house.x+house.w/2-16,house.y+house.h-34,32,34);
+  g.restore();
+
+  const spr = [];
+  for (const t of trees) spr.push({o:t, k:'tree'});
+  spr.push({o:npc,k:'npc'},{o:chest,k:'chest'},{o:player,k:'player'});
+  for (const it of spr){ const p = toScreen(it.o.x, it.o.y); it.sx = p.x; it.sy = p.y; }
+  spr.sort((a,b) => a.sy-b.sy);
+  for (const it of spr){
+    const x = it.sx, y = it.sy;
+    if (x < G.x-60 || x > G.x+G.w+60 || y < G.y-80 || y > G.y+G.h+60) continue;
+    g.fillStyle = 'rgba(0,0,0,.28)'; g.beginPath(); g.ellipse(x, y, (it.k==='tree'?it.o.r*0.9:11)*s, (it.k==='tree'?it.o.r*0.4:5)*s, 0, 0, Math.PI*2); g.fill();
+    if (it.k === 'tree'){
+      const r = it.o.r*s;
+      g.fillStyle = '#5B3E2B'; g.fillRect(x-3*s, y-r*0.9, 6*s, r*0.9);
+      g.fillStyle = '#2E6A39'; g.beginPath(); g.arc(x, y-r*1.15, r, 0, Math.PI*2); g.fill();
+      g.fillStyle = '#3E8746'; g.beginPath(); g.arc(x-r*0.25, y-r*1.35, r*0.55, 0, Math.PI*2); g.fill();
+    } else if (it.k === 'chest'){
+      g.fillStyle = it.o.open ? '#8E6A43' : '#7A4F2A'; g.fillRect(x-12*s, y-18*s, 24*s, 16*s);
+      g.fillStyle = '#E3B341'; g.fillRect(x-12*s, y-12*s, 24*s, 3*s);
+      if (it.o.open){ g.fillStyle = '#A9845A'; g.fillRect(x-12*s, y-26*s, 24*s, 6*s); }
+    } else {
+      const col = it.k==='player' ? '#F2994A' : '#4A7FD6', ed = it.k==='player' ? '#6B3410' : '#1E3F75';
+      g.fillStyle = col; g.strokeStyle = ed; g.lineWidth = 2*s;
+      g.beginPath(); g.arc(x, y-12*s, 11*s, 0, Math.PI*2); g.fill(); g.stroke();
+      const a = it.k==='player' ? player.dir - cam : Math.PI/2;
+      g.fillStyle = '#fff'; g.beginPath(); g.arc(x + Math.cos(a)*6*s, y-12*s + Math.sin(a)*6*s, 3*s, 0, Math.PI*2); g.fill();
+      if (it.k === 'npc' && near === npc){
+        g.fillStyle = '#FFD27A'; g.font = `700 ${16*s}px "Chakra Petch",sans-serif`; g.textAlign = 'center'; g.fillText('!', x, y-30*s);
+      }
+    }
+  }
+  g.restore();
+}
+
+/* ---------- dialoghi ---------- */
+let dlg = null;
+function npcLines(){ return [
+  {who:'Abitante', text:'Ciao! Non ti ho mai visto da queste parti.'},
+  {who:'Abitante', text:'Nell\'erba alta a est i Digimon selvatici attaccano spesso.'},
+  {who:'Abitante', text:'Vuoi che curi la tua squadra prima di partire?', choices:['Sì','No']},
+];}
+function startDialog(lines){ dlg = {lines, i:0, shown:0}; setScene('dialog'); renderDialog(); }
+function line(){ return dlg.lines[dlg.i]; }
+function renderDialog(){
+  const l = line();
+  $('#dWho').textContent = l.who;
+  $('#dText').textContent = l.text.slice(0, Math.floor(dlg.shown));
+  const ch = $('#dChoices'); ch.innerHTML = '';
+  if (l.choices && dlg.shown >= l.text.length){
+    l.choices.forEach((c,i) => {
+      const b = document.createElement('button'); b.type = 'button'; b.dataset.ui = ''; b.textContent = c;
+      b.addEventListener('click', () => choose(i)); ch.appendChild(b);
+    });
+  }
+}
+function choose(i){
+  const l = line();
+  log(i === 0 ? '✕' : 'Giù ×1 → ✕', 'Scelta «' + l.choices[i] + '» toccata');
+  if (i === 0) party.forEach(p => p.hp = p.max);
+  dlg.lines.splice(dlg.i+1, 0, {who:l.who, text: i===0 ? 'Fatto! La squadra è in piena forma.' : 'Va bene, fai attenzione là fuori.'});
+  dlg.i++; dlg.shown = 0; renderDialog();
+}
+function dialogTap(){
+  const l = line();
+  if (dlg.shown < l.text.length){ dlg.shown = l.text.length; log('✕', 'Mostra subito tutta la frase'); renderDialog(); return; }
+  if (l.choices) return;
+  log('✕', 'Avanti');
+  if (dlg.i < dlg.lines.length-1){ dlg.i++; dlg.shown = 0; renderDialog(); } else endDialog();
+}
+function endDialog(){ dlg = null; setScene('field'); }
+function updateDialog(dt){
+  if (hold && !hold.fast && performance.now()-hold.t > 260){
+    hold.fast = true; $('#dFast').classList.add('on'); log('✕ tenuto', 'Testo veloce, le frasi scorrono da sole');
+  }
+  const fast = hold && hold.fast, l = line();
+  if (dlg.shown < l.text.length){
+    const before = Math.floor(dlg.shown);
+    dlg.shown = Math.min(l.text.length, dlg.shown + dt*(fast ? 220 : 40));
+    if (Math.floor(dlg.shown) !== before) renderDialog();
+    dlg.wait = 0;
+  } else if (fast && !l.choices){
+    dlg.wait = (dlg.wait || 0) + dt;
+    if (dlg.wait > 0.3){ dlg.wait = 0; if (dlg.i < dlg.lines.length-1){ dlg.i++; dlg.shown = 0; renderDialog(); } else { hold = null; $('#dFast').classList.remove('on'); endDialog(); } }
+  }
+}
+
+/* ---------- menu ---------- */
+const menuItems = [
+  ['Squadra','Stato e cambio partner'],['Oggetti','Usa e riordina'],['Tecniche','Impara e assegna'],['Equip.','Armi e accessori'],
+  ['Mappa','Viaggio rapido'],['Digilog','Missioni attive'],['Salva','Scheda di memoria'],['Opzioni','Grafica, lingua, comandi'],
+];
+const subLists = {
+  'Oggetti':['Pozione ×3','Super pozione ×1','Antidoto ×2','Disco ricarica ×1','Esca ×4'],
+  'Squadra': party.map(p => p.name),
+  'Opzioni':['Lingua: Italiano','Testo: veloce','Levetta: dove tocchi','Telecamera: due dita','Vibrazione: sì'],
+};
+let mCur = 0, subName = null, sCur = 0;
+function moveSeq(from, to, cols){
+  if (from === to) return '✕';
+  const fr = Math.floor(from/cols), fc = from%cols, tr = Math.floor(to/cols), tc = to%cols, parts = [];
+  if (tr !== fr) parts.push((tr>fr?'Giù':'Su') + ' ×' + Math.abs(tr-fr));
+  if (tc !== fc) parts.push((tc>fc?'Destra':'Sinistra') + ' ×' + Math.abs(tc-fc));
+  return parts.join(', ') + ' → ✕';
+}
+function openMenu(){ setScene('menu'); subName = null; log('△', 'Apre il menu del campo'); renderMenu(); }
+function renderMenu(){
+  const body = $('#mBody'); body.innerHTML = '';
+  const cols = orient === 'landscape' ? 4 : 2;
+  if (!subName){
+    $('#mTitle').textContent = 'Menu';
+    const grid = document.createElement('div'); grid.className = 'mgrid';
+    menuItems.forEach(([n,d],i) => {
+      const b = document.createElement('button'); b.type = 'button'; if (i === mCur) b.className = 'cur';
+      b.innerHTML = '<b></b><span></span>'; b.firstChild.textContent = n; b.lastChild.textContent = d;
+      b.addEventListener('click', () => { log(moveSeq(mCur, i, cols), 'Apre «' + n + '»'); mCur = i; subName = n; sCur = 0; renderMenu(); });
+      grid.appendChild(b);
+    });
+    body.appendChild(grid);
+  } else {
+    $('#mTitle').textContent = subName;
+    const list = document.createElement('div'); list.className = 'mlist';
+    (subLists[subName] || ['Voce 1','Voce 2','Voce 3']).forEach((n,i) => {
+      const b = document.createElement('button'); b.type = 'button'; if (i === sCur) b.className = 'cur';
+      b.innerHTML = '<span></span><span>›</span>'; b.firstChild.textContent = n;
+      b.addEventListener('click', () => { log(moveSeq(sCur, i, 1), 'Sceglie «' + n + '»'); sCur = i; renderMenu(); });
+      list.appendChild(b);
+    });
+    body.appendChild(list);
+    const note = document.createElement('p'); note.className = 'mnote';
+    note.textContent = 'Nel gioco vero questa è la schermata originale: l\'app sa dov\'è il cursore e traduce il tocco nei tasti giusti.';
+    body.appendChild(note);
+  }
+}
+$('#mBack').addEventListener('click', () => {
+  log('△', 'Indietro');
+  if (subName){ subName = null; renderMenu(); } else setScene('field');
+});
+menuBtn.addEventListener('click', openMenu);
+
+/* ---------- battaglia ---------- */
+let bt = null;
+const cmdList = [['Attacco','colpo base','main'],['Tecnica','usa MP'],['Difesa','dimezza danni'],['Oggetto','Pozione ×3'],['Cambio','riserva'],['Fuga','esci']];
+function startBattle(fromGrass){
+  bt = {
+    enemies:[
+      {name:'Nemico A', hp:70, max:70, col:'#7C5BD6', fx:.50, fy:.42, flash:0},
+      {name:'Nemico B', hp:90, max:90, col:'#D64C6B', fx:.66, fy:.30, flash:0},
+      {name:'Nemico C', hp:60, max:60, col:'#3FA3D6', fx:.80, fy:.46, flash:0},
+    ],
+    turn:0, mode:'cmd', cur:0, pending:null, floats:[]
+  };
+  party.forEach(p => { if (p.hp <= 0) p.hp = 1; p.guard = false; });
+  setScene('battle');
+  if (fromGrass) toast('Incontro!');
+  renderBattle();
+}
+function ePos(e){
+  const land = orient === 'landscape';
+  const fx = land ? 0.30 + (e.fx-0.5)*0.9 : e.fx;
+  return {x: G.x + G.w*fx, y: G.y + G.h*(land ? e.fy+0.08 : e.fy+0.04)};
+}
+function renderBattle(){
+  partyRows(bt.mode==='cmd' || bt.mode==='tech' || bt.mode==='target' ? bt.turn : -1);
+  const pr = $('#bPrompt'), cm = $('#bCmds'); cm.innerHTML = '';
+  const add = (label, sub, cls, fn) => {
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.ui = '';
+    if (cls) b.className = cls;
+    b.innerHTML = '<span></span>' + (sub ? '<small></small>' : '');
+    b.firstChild.textContent = label; if (sub) b.lastChild.textContent = sub;
+    b.addEventListener('click', fn); cm.appendChild(b);
+  };
+  const who = party[bt.turn] ? party[bt.turn].name : '';
+  if (bt.mode === 'cmd'){
+    pr.textContent = 'Cosa fa ' + who + '?';
+    const cols = orient === 'landscape' ? 2 : 3;
+    cmdList.forEach(([n,s,c],i) => add(n, s, c, () => command(i, n, cols)));
+  } else if (bt.mode === 'tech'){
+    pr.textContent = 'Scegli la tecnica';
+    [['Fiammata','8 MP'],['Artiglio','5 MP'],['Onda','12 MP']].forEach(([n,s],i) => add(n, s, i===0?'main':'', () => {
+      log(moveSeq(0, i, 1), 'Tecnica «' + n + '»'); bt.pending = {label:n, min:24, max:36}; bt.mode = 'target'; renderBattle();
+    }));
+    add('Annulla', '', 'wide', () => { log('△', 'Indietro'); bt.mode = 'cmd'; renderBattle(); });
+  } else if (bt.mode === 'target'){
+    pr.textContent = 'Tocca il nemico da colpire';
+    add('Annulla', '', 'wide', () => { log('△', 'Indietro'); bt.mode = 'cmd'; renderBattle(); });
+  } else if (bt.mode === 'enemy'){
+    pr.textContent = 'Turno dei nemici…';
+  } else if (bt.mode === 'end'){
+    pr.textContent = 'Vittoria! +120 EXP';
+    if (!bt.won){ bt.won = true; party.forEach(p => { if (p.hp > 0){ p.exp += 120; while (p.exp >= p.next){ p.exp -= p.next; p.lv++; p.next = Math.round(p.next*1.2); } } }); partyRows(-1); }
+    add('Continua', '', 'main wide', () => { log('✕', 'Chiude il resoconto'); setScene('field'); });
+  }
+}
+function command(i, n, cols){
+  log(moveSeq(bt.cur, i, cols), 'Comando «' + n + '»'); bt.cur = i;
+  const p = party[bt.turn];
+  if (n === 'Attacco'){ bt.pending = {label:'Attacco', min:12, max:20}; bt.mode = 'target'; }
+  else if (n === 'Tecnica'){ bt.mode = 'tech'; }
+  else if (n === 'Difesa'){ p.guard = true; float(partyPos(bt.turn), 'Difesa', '#9FD3FF'); nextTurn(); return; }
+  else if (n === 'Oggetto'){ p.hp = Math.min(p.max, p.hp+40); float(partyPos(bt.turn), '+40', '#5BD08A'); nextTurn(); return; }
+  else if (n === 'Cambio'){ toast('Cambio partner', 800); nextTurn(); return; }
+  else if (n === 'Fuga'){ toast('Fuga riuscita', 800); setTimeout(() => setScene('field'), 700); bt.mode = 'enemy'; }
+  renderBattle();
+}
+function partyPos(i){
+  const land = orient === 'landscape';
+  return {x: G.x + G.w*(land ? 0.10 + i*0.09 : 0.25 + i*0.25), y: G.y + G.h*(land ? 0.86 : 0.70)};
+}
+function float(p, txt, col){ bt.floats.push({x:p.x, y:p.y-30*sc(), txt, col, t:0}); }
+function battleTap(p){
+  if (bt.mode !== 'target') return;
+  const alive = bt.enemies.filter(e => e.hp > 0);
+  for (const e of bt.enemies){
+    if (e.hp <= 0) continue;
+    const q = ePos(e);
+    if (Math.hypot(q.x-p.x, q.y-p.y) < 36*sc()){
+      const idx = alive.indexOf(e);
+      log(idx === 0 ? '✕' : 'Destra ×' + idx + ' → ✕', bt.pending.label + ' su ' + e.name);
+      const dmg = Math.round(bt.pending.min + Math.random()*(bt.pending.max-bt.pending.min));
+      e.hp -= dmg; e.flash = 0.35; float(q, '-' + dmg, '#FFE07A');
+      nextTurn(); return;
+    }
+  }
+}
+function nextTurn(){
+  if (bt.enemies.every(e => e.hp <= 0)){ bt.mode = 'end'; renderBattle(); return; }
+  do { bt.turn++; } while (bt.turn < 3 && party[bt.turn].hp <= 0);
+  if (bt.turn < 3){ bt.mode = 'cmd'; renderBattle(); return; }
+  bt.mode = 'enemy'; renderBattle();
+  const attackers = bt.enemies.filter(e => e.hp > 0);
+  attackers.forEach((e, k) => setTimeout(() => {
+    if (scene !== 'battle') return;
+    const targets = party.map((p,i) => i).filter(i => party[i].hp > 0);
+    const ti = targets[Math.floor(Math.random()*targets.length)];
+    let dmg = 8 + Math.floor(Math.random()*12); if (party[ti].guard) dmg = Math.ceil(dmg/2);
+    party[ti].hp = Math.max(1, party[ti].hp - dmg); e.flash = 0.2; float(partyPos(ti), '-' + dmg, '#FF8A8A');
+    renderBattle();
+    if (k === attackers.length-1) setTimeout(() => { if (scene !== 'battle') return; bt.turn = 0; party.forEach(p => p.guard = false); bt.mode = 'cmd'; renderBattle(); }, 500);
+  }, 450 + k*550));
+}
+function drawBattle(dt){
+  const s = sc();
+  g.save(); g.beginPath(); g.rect(G.x,G.y,G.w,G.h); g.clip();
+  const grd = g.createLinearGradient(0, G.y, 0, G.y+G.h);
+  grd.addColorStop(0, '#2B4766'); grd.addColorStop(.55, '#3E6A7C'); grd.addColorStop(.56, '#4D7A45'); grd.addColorStop(1, '#2E4F2C');
+  g.fillStyle = grd; g.fillRect(G.x,G.y,G.w,G.h);
+  g.fillStyle = 'rgba(0,0,0,.18)'; g.beginPath(); g.ellipse(G.x+G.w*0.55, G.y+G.h*0.72, G.w*0.5, G.h*0.16, 0, 0, Math.PI*2); g.fill();
+  const now = performance.now()/1000;
+  for (const e of bt.enemies){
+    const q = ePos(e); e.flash = Math.max(0, e.flash-dt);
+    if (e.hp <= 0){ g.globalAlpha = .15; }
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(q.x, q.y+24*s, 22*s, 7*s, 0, 0, Math.PI*2); g.fill();
+    const bob = Math.sin(now*3 + e.fx*9)*2*s;
+    g.fillStyle = e.flash > 0 ? '#FFFFFF' : e.col;
+    g.beginPath(); g.ellipse(q.x, q.y+bob, 24*s, 22*s, 0, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(q.x-8*s, q.y-4*s+bob, 5*s, 0, Math.PI*2); g.arc(q.x+8*s, q.y-4*s+bob, 5*s, 0, Math.PI*2); g.fill();
+    g.fillStyle = '#111'; g.beginPath(); g.arc(q.x-7*s, q.y-3*s+bob, 2.4*s, 0, Math.PI*2); g.arc(q.x+9*s, q.y-3*s+bob, 2.4*s, 0, Math.PI*2); g.fill();
+    if (e.hp > 0){
+      g.fillStyle = 'rgba(0,0,0,.5)'; g.fillRect(q.x-22*s, q.y-36*s, 44*s, 5*s);
+      g.fillStyle = '#5BD08A'; g.fillRect(q.x-22*s, q.y-36*s, 44*s*Math.max(0,e.hp/e.max), 5*s);
+      if (bt.mode === 'target'){
+        g.strokeStyle = '#FFD27A'; g.lineWidth = 2.5*s; g.globalAlpha = .55 + .45*Math.sin(now*6);
+        g.beginPath(); g.arc(q.x, q.y+bob, 32*s, 0, Math.PI*2); g.stroke(); g.globalAlpha = 1;
+      }
+    }
+    g.globalAlpha = 1;
+  }
+  party.forEach((p,i) => {
+    const q = partyPos(i);
+    g.globalAlpha = p.hp <= 0 ? .3 : 1;
+    g.fillStyle = 'rgba(0,0,0,.3)'; g.beginPath(); g.ellipse(q.x, q.y+14*s, 16*s, 5*s, 0, 0, Math.PI*2); g.fill();
+    g.fillStyle = p.col; g.beginPath(); g.arc(q.x, q.y, 15*s, 0, Math.PI*2); g.fill();
+    if (i === bt.turn && (bt.mode==='cmd'||bt.mode==='tech'||bt.mode==='target')){
+      g.strokeStyle = '#FFD27A'; g.lineWidth = 2.5*s; g.beginPath(); g.arc(q.x, q.y, 20*s, 0, Math.PI*2); g.stroke();
+    }
+    if (p.guard){ g.strokeStyle = '#9FD3FF'; g.lineWidth = 2*s; g.beginPath(); g.arc(q.x, q.y, 24*s, Math.PI*1.1, Math.PI*1.9); g.stroke(); }
+    g.globalAlpha = 1;
+  });
+  g.textAlign = 'center'; g.font = `700 ${18*s}px "Chakra Petch",sans-serif`;
+  bt.floats = bt.floats.filter(f => (f.t += dt) < 1);
+  for (const f of bt.floats){ g.globalAlpha = 1 - f.t; g.fillStyle = f.col; g.fillText(f.txt, f.x, f.y - f.t*30*s); }
+  g.globalAlpha = 1; g.restore();
+}
+
+/* ---------- scene e guida ---------- */
+const stepMap = {field:'s1', dialog:'s2', menu:'s3', battle:'s4'};
+const stepText = {
+  field: {h:'Passo 1 · Esplorare',
+    done:['Esplorazione a tutto schermo, anche in verticale.','Levetta che compare dove tocchi e sparisce quando alzi il dito.','Per correre basta spingere di più la levetta.','Niente rotazione della telecamera: nel gioco è fissa.','Squadra in alto a sinistra con nome, livello, HP ed esperienza (la barra viola e i punti che mancano al livello successivo); menu in alto a destra.','Vicino a un personaggio compare un fumetto: toccandolo parte il dialogo.'],
+    what:['Trascina il dito in un punto qualsiasi dello schermo per muoverti.','Avvicinati all\'abitante blu o allo scrigno e tocca il fumetto.','Nell\'erba alta a destra della piazza può partire una battaglia.'],
+    ask:['Da rivedere con la grafica vera del gioco.']},
+  dialog: {h:'Passo 2 · Dialoghi',
+    done:['Il dialogo parte toccando il fumetto sopra il personaggio.','Un tocco manda avanti la frase.','Tenendo premuto il testo va veloce e le frasi scorrono da sole; alzando il dito torna normale.'],
+    what:['Tieni premuto: in alto a destra del riquadro compare ▶▶ VELOCE.','Alle domande rispondi toccando Sì o No: tenere premuto non sceglie mai al posto tuo.'],
+    ask:['Il riquadro del testo in basso va bene, o lo vuoi nella posizione originale del gioco?']},
+  menu: {h:'Passo 3 · Menu',
+    done:['Il menu resta quello originale, con la sua grafica: lo progettiamo sulle schermate vere.'],
+    what:['Qui c\'è solo un segnaposto. L\'idea è toccare direttamente le voci del menu originale: l\'app sa dov\'è il cursore e traduce il tocco nei tasti (lo vedi nel registro qui sotto).'],
+    ask:['Ne riparliamo con le schermate vere del gioco.']},
+  battle: {h:'Passo 4 · Battaglia',
+    done:['Si tiene la grafica originale della battaglia: cambia solo la posizione degli elementi per il verticale.'],
+    what:['Qui vedi solo le posizioni: squadra in alto a sinistra come nell\'esplorazione, nemici al centro, comandi in basso vicino ai pollici.','Scegli un comando e poi tocca il nemico da colpire.'],
+    ask:['I comandi originali li tocchiamo direttamente, o vuoi scorrerli col dito come una ruota?','Da rivedere con le schermate vere: cosa spostare e cosa lasciare dov\'è.']},
+};
+function setScene(s){
+  scene = s; screen.dataset.scene = s === 'menu' ? 'field' : s;
+  $('#menu').hidden = s !== 'menu';
+  menuBtn.hidden = s !== 'field';
+  if (s !== 'field'){ ctxBtn.hidden = true; stick = null; stickEl.hidden = true; vx = vy = 0; }
+  if (s === 'field' || s === 'dialog') partyRows(-1);
+  if (s === 'battle' && bt) bt.won = false;
+  for (const [k,id] of Object.entries(stepMap)) $('#'+id).setAttribute('aria-current', k === s ? 'true' : 'false');
+  const t = stepText[s], card = $('#stepCard');
+  card.innerHTML = '<h2></h2><h3>Deciso</h3><ul class="done"></ul><h3>Cosa provare</h3><ul class="what"></ul><h3>Ancora da decidere</h3><ul class="decide"></ul>';
+  t.done.forEach(x => { const li = document.createElement('li'); li.textContent = x; card.querySelector('.done').appendChild(li); });
+  card.querySelector('h2').textContent = t.h;
+  t.what.forEach(x => { const li = document.createElement('li'); li.textContent = x; card.querySelector('.what').appendChild(li); });
+  t.ask.forEach(x => { const li = document.createElement('li'); li.textContent = x; card.querySelector('.decide').appendChild(li); });
+}
+$('#steps').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const s = b.dataset.s;
+  if (s === 'field') setScene('field');
+  else if (s === 'dialog') startDialog(npcLines());
+  else if (s === 'menu') openMenu();
+  else startBattle(false);
+});
+$('#orient').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  orient = b.dataset.o;
+  document.querySelectorAll('#orient button').forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+  device.className = 'device ' + orient;
+  layout();
+  if (scene === 'battle') renderBattle();
+  if (scene === 'menu') renderMenu();
+});
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now-last)/1000); last = now;
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.fillStyle = '#0B1114'; g.fillRect(0,0,W,H);
+  if (scene === 'field' || scene === 'menu' || scene === 'dialog'){ if (scene === 'field') updateField(dt); drawField(); }
+  if (scene === 'dialog') updateDialog(dt);
+  if (scene === 'battle') drawBattle(dt);
+  readStick();
+  requestAnimationFrame(frame);
+}
+setScene('field');
+requestAnimationFrame(frame);
+})();
+</script>

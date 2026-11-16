@@ -22,7 +22,7 @@ int SetGraphDebug(int level) {
     return 0;
 }
 
-long SetVideoMode(long mode) {
+psx_long SetVideoMode(psx_long mode) {
     long old = s_video_mode;
 
     s_video_mode = (int)mode;

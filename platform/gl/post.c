@@ -119,7 +119,11 @@ static const char *EASU_FS =
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wc23-extensions"
 __attribute__((section(".zsmaa"))) static char SMAA_SRC[] = {
+#if defined(__has_embed)
 #embed "../smaa/SMAA.hlsl"
+#else
+#include "smaa_src.inc" /* build_unix.py: the same bytes, for compilers without #embed */
+#endif
     , 0};
 #pragma clang diagnostic pop
 #define areaTexBytes __attribute__((section(".zsmaar"))) areaTexBytes

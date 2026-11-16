@@ -195,7 +195,7 @@ static int playing(int n) {
 
 /* --- VAB --- */
 
-short SsVabOpenHeadSticky(unsigned char *addr, short id, unsigned long sbaddr) {
+short SsVabOpenHeadSticky(unsigned char *addr, short id, psx_ulong sbaddr) {
     Vab *vb;
     const uint16_t *sizes;
     int ps, p, k = 0, i;
@@ -460,7 +460,7 @@ static Seq *find_seq(short acc, short sep) {
     return &s_sep[acc].seq[sep];
 }
 
-short SsSepOpen(unsigned long *addr, short vab, short count) {
+short SsSepOpen(psx_ulong *addr, short vab, short count) {
     const uint8_t *p = (const uint8_t *)addr;
     int acc, i;
     Sep *sp;
@@ -548,7 +548,7 @@ void SsSepSetVol(short acc, short sep, short l, short r) {
 }
 
 /* Lowers the volume by `by` over `ticks` calls of the sequencer */
-void SsSepSetDecrescendo(short acc, short sep, short by, long ticks) {
+void SsSepSetDecrescendo(short acc, short sep, short by, psx_long ticks) {
     Seq *t = find_seq(acc, sep);
 
     if (t != NULL) {
@@ -594,7 +594,7 @@ void SsStart2(void) {}
 void SsSetTableSize(char *table, short seqs, short tracks) {}
 
 /* SS_NOTICK | n: the game calls SsSeqCalledTbyT n times a second (60 if 0) */
-void SsSetTickMode(long mode) {
+void SsSetTickMode(psx_long mode) {
     static const int RATES[6] = {60, 60, 240, 120, 50, 60};
     int n = (int)(mode & 0xFFF);
 

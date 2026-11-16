@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#ifdef _WIN32
 #include <windows.h>
 /* A crash prints the faulting address and the frame-pointer chain (the game
    is built -O0); `llvm-addr2line -fe dw2003.exe <addr>...` names them. The
@@ -48,3 +49,32 @@ static LONG WINAPI on_crash(EXCEPTION_POINTERS *e) {
 void install_crash_handler(void) {
     SetUnhandledExceptionFilter(on_crash);
 }
+#else
+/* POSIX (Linux, Android): the faulting address and the frame-pointer chain on stderr */
+#include <signal.h>
+#include <unistd.h>
+static void on_signal(int sig, siginfo_t *info, void *uc) {
+    uintptr_t *fp = (uintptr_t *)__builtin_frame_address(0);
+    char report[1024];
+    int n = snprintf(report, sizeof report, "CRASH signal %d (access %p)\nstack:", sig, info->si_addr);
+    (void)uc;
+    for (int i = 0; i < 24 && fp != NULL && n < (int)sizeof report - 24; i++, fp = (uintptr_t *)fp[0]) {
+        n += snprintf(report + n, sizeof report - n, " %llx", (unsigned long long)fp[1]);
+    }
+    fprintf(stderr, "%s\n", report);
+    fflush(stderr);
+    signal(sig, SIG_DFL);
+    raise(sig);
+}
+
+void install_crash_handler(void) {
+    struct sigaction sa;
+    memset(&sa, 0, sizeof sa);
+    sa.sa_sigaction = on_signal;
+    sa.sa_flags = SA_SIGINFO | SA_ONSTACK;
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGBUS, &sa, NULL);
+    sigaction(SIGFPE, &sa, NULL);
+    sigaction(SIGILL, &sa, NULL);
+}
+#endif

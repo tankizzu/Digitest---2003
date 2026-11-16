@@ -5,6 +5,16 @@
 #include <SDL3/SDL.h>
 #include <stdio.h>
 #include <string.h>
+#ifndef _WIN32
+/* Linux and Android builds keep the game's tables in the binary for now
+   (tools/asset_scan.py strips PE images only): nothing to fill */
+void native_log(const char *fmt, ...);
+int native_fill(const char *data) {
+    (void)data;
+    native_log("the game's tables come with the binary");
+    return 1;
+}
+#else
 #include <windows.h>
 
 void native_log(const char *fmt, ...);
@@ -50,3 +60,4 @@ int native_fill(const char *data) {
     }
     return 1;
 }
+#endif
