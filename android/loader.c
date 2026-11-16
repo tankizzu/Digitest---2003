@@ -19,8 +19,13 @@
 #endif
 
 #define TITLE "Digimon World 2003"
-#define LOW_BASE ((uintptr_t)0x10000)
-#define LOW_SIZE ((size_t)64 << 20)
+/* Where the library may go: its heap starts ~4 MB in and takes 6 MB (build_unix.py puts it before the code),
+   and has to end below 16 MB; the whole library takes ~20 MB */
+#define LOW_FIRST ((uintptr_t)0x10000)
+#define LOW_LAST ((uintptr_t)0x600000)
+#define LOW_STEP ((uintptr_t)0x10000)
+#define LOW_SIZE ((size_t)24 << 20)
+#define HEAP_SIZE (6 * 1024 * 1024) /* include/native.h's NATIVE_HEAP_SIZE */
 
 static void say(SDL_MessageBoxFlags kind, const char *text) {
     __android_log_print(ANDROID_LOG_INFO, "dw2003", "%s", text);
@@ -112,14 +117,46 @@ int main(int argc, char *argv[]) {
     SDL_snprintf(data, sizeof data, "%s/data", base);
     setenv("DW3_DATA", data, 1);
 
-    low = mmap((void *)LOW_BASE, LOW_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
-    if (low != (void *)LOW_BASE) {
-        fprintf(stderr, "loader: no low memory at %p (%p, errno %d)\n", (void *)LOW_BASE, low, errno);
-        if (low != MAP_FAILED) {
-            munmap(low, LOW_SIZE);
+    /* the first room free low in memory: MAP_FIXED_NOREPLACE where the kernel has it, a plain hint where not */
+    low = NULL;
+    {
+        uintptr_t at;
+        int first_errno = 0;
+        void *first_got = NULL;
+
+        for (at = LOW_FIRST; at <= LOW_LAST && low == NULL; at += LOW_STEP) {
+            void *got = mmap((void *)at, LOW_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE | MAP_FIXED_NOREPLACE, -1, 0);
+
+            if (got == (void *)at) {
+                low = got;
+            } else {
+                if (at == LOW_FIRST) {
+                    first_errno = errno, first_got = got;
+                }
+                if (got != MAP_FAILED) {
+                    munmap(got, LOW_SIZE);
+                }
+            }
         }
-        say(SDL_MESSAGEBOX_ERROR, "Questo telefono non lascia al gioco la memoria che gli serve (indirizzi bassi). Manda il file log.txt.");
-        return 1;
+        if (low == NULL) {
+            char text[400];
+            FILE *maps = fopen("/proc/self/maps", "r");
+            char line[256];
+
+            fprintf(stderr, "loader: no room low in memory (first try: %p, errno %d); the map:\n", first_got, first_errno);
+            for (int n = 0; maps != NULL && fgets(line, sizeof line, maps) != NULL && n < 12; n++) {
+                fputs(line, stderr);
+            }
+            if (maps != NULL) {
+                fclose(maps);
+            }
+            SDL_snprintf(text, sizeof text,
+                         "Questo telefono non lascia al gioco la memoria che gli serve (indirizzi bassi).\n\n"
+                         "Codice: %p / %d. Mandalo a chi sviluppa il gioco, con il file log.txt se puoi.",
+                         first_got, first_errno);
+            say(SDL_MESSAGEBOX_ERROR, text);
+            return 1;
+        }
     }
     SDL_zero(info);
     info.flags = ANDROID_DLEXT_RESERVED_ADDRESS;
@@ -131,7 +168,15 @@ int main(int argc, char *argv[]) {
         say(SDL_MESSAGEBOX_ERROR, "Non riesco a caricare il gioco. Manda il file log.txt.");
         return 1;
     }
-    fprintf(stderr, "loader: game at %p\n", low);
+    {
+        uint8_t *heap = (uint8_t *)dlsym(game, "HEAP_BASE");
+
+        fprintf(stderr, "loader: game at %p, heap at %p\n", low, (void *)heap);
+        if (heap == NULL || (uintptr_t)heap + HEAP_SIZE > 0x01000000) {
+            say(SDL_MESSAGEBOX_ERROR, "Il gioco è stato caricato troppo in alto in memoria. Manda il file log.txt.");
+            return 1;
+        }
+    }
     SDL_snprintf(exe, sizeof exe, "%s/SLES_039.36", data);
     if (access(exe, R_OK) != 0 && !first_run(game, data)) {
         return 0;

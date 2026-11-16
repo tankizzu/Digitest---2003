@@ -150,6 +150,8 @@ def main():
     # build.py's .data$dw3<group><n> sections, in name order, as the PE linker sorts them (platform/memory.c, state.c)
     lds = OUT / "dw3.lds"
     lds.write_text("SECTIONS {\n  .dw3data : { KEEP(*(SORT_BY_NAME(.data$dw3*))) }\n} INSERT AFTER .data;\n")
+    if ANDROID:  # the heap (platform/memory.c) before the code: it has to end below 16 MB (android/loader.c)
+        lds.write_text(lds.read_text() + "SECTIONS {\n  .dw3heap (NOLOAD) : { *(.bss.dw3heap) }\n} INSERT BEFORE .text;\n")
     rsp = OUT / "objs.rsp"
     rsp.write_text("\n".join(f'"{o}"' for o in game_objs + platform + [OUT / "stubs.o"]))
     if ANDROID:

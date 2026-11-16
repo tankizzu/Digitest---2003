@@ -7,6 +7,11 @@
 #include "../include/native.h"
 
 /* HEAP_BASE..+NATIVE_HEAP_SIZE (the game's heap.h, patched) */
+#ifdef __ANDROID__
+/* in a section of its own, which build_unix.py puts before the code: near the start of the library, so the
+   heap ends below 16 MB wherever android/loader.c finds room for the library low in memory */
+__attribute__((section(".bss.dw3heap")))
+#endif
 uint32_t HEAP_BASE[NATIVE_HEAP_SIZE / 4];
 
 /* The mode overlays load at OVERLAY_VRAM and the stages at STAGE_VRAM: only
