@@ -358,7 +358,29 @@ static GLuint shader(GLenum type, const char *const *src, int n) {
     GLint ok;
     char log[1024];
 
+#ifdef DW3_GLES
+    /* the desktop shaders, in OpenGL ES 3.0's dialect: its head, and precisions it has no defaults for */
+    static const char ES_HEAD[] = "#version 300 es\nprecision highp float;\nprecision highp int;\n"
+                                  "precision highp usampler2D;\nprecision highp sampler2D;\n";
+    const char *es[16];
+    char *first = NULL;
+    int i;
+
+    for (i = 0; i < n && i < 16; i++) {
+        es[i] = src[i];
+    }
+    if (n > 0 && SDL_strncmp(src[0], "#version 330 core\n", 18) == 0) {
+        size_t len = sizeof ES_HEAD + SDL_strlen(src[0] + 18);
+        if ((first = SDL_malloc(len)) != NULL) {
+            SDL_snprintf(first, len, "%s%s", ES_HEAD, src[0] + 18);
+            es[0] = first;
+        }
+    }
+    GL(glShaderSource)(s, n, es, NULL);
+    SDL_free(first);
+#else
     GL(glShaderSource)(s, n, src, NULL);
+#endif
     GL(glCompileShader)(s);
     GL(glGetShaderiv)(s, GL_COMPILE_STATUS, &ok);
     if (!ok) {

@@ -20,6 +20,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 ANDROID = "--android" in sys.argv
+GLES = ANDROID or "--gles" in sys.argv  # OpenGL ES 3.0, as on Android; --gles tries it on Linux
 
 # build.py looks for llvm-mingw at import: point it anywhere, its tools are replaced below
 os.environ.setdefault("LLVM_MINGW", str(HERE))
@@ -40,7 +41,7 @@ else:
     CC = Path(shutil.which("clang"))
     NM = Path(shutil.which("llvm-nm-18") or shutil.which("llvm-nm"))
     OBJCOPY = Path(shutil.which("llvm-objcopy-18") or shutil.which("llvm-objcopy"))
-    OUT = B.NATIVE / "build-linux"
+    OUT = B.NATIVE / ("build-linux-gles" if GLES else "build-linux")
 SDL = Path(os.environ.get("SDL3_PREFIX", B.NATIVE.parent / ("sdl3-android" if ANDROID else "sdl3-linux")))
 
 PIC = ["-fPIC"] if ANDROID else ["-fno-pic", "-fno-pie"]
@@ -51,7 +52,7 @@ B.GAME_CFLAGS = [f.replace(str(B.NATIVE / "build-x64"), str(OUT)) for f in B.GAM
 B.GAME_OPT = B.GAME_OPT + PIC
 B.SAN_FLAGS = []
 PLATFORM_CFLAGS = ["-std=gnu11", "-c", "-O2", "-g", "-Wall", "-Wno-unused-parameter", "-Wno-unused-function",
-                   f"-I{SDL / 'include'}", f"-I{OUT}", *PIC, "-D_GNU_SOURCE",
+                   f"-I{SDL / 'include'}", f"-I{OUT}", *PIC, "-D_GNU_SOURCE", *(["-DDW3_GLES"] if GLES else []),
                    "-include", "stdlib.h", "-include", "string.h", "-include", "stdio.h",
                    "-include", "stddef.h", "-include", str(B.NATIVE / "platform/posix_compat.h")]
 
@@ -157,7 +158,7 @@ def main():
               "-Wl,--no-undefined", "-Wl,-z,max-page-size=16384"]
     else:
         out = OUT / "dw2003"
-        ld = ["-no-pie", "-fuse-ld=lld", f"-Wl,-T,{lds}", f"-L{SDL / 'lib'}", f"-Wl,-rpath,{SDL / 'lib'}", "-lSDL3", "-lm", "-lpthread", "-ldl"]
+        ld = ["-no-pie", "-fuse-ld=lld", f"-Wl,-T,{lds}", f"-L{SDL / 'lib'}", f"-Wl,-rpath,{SDL / 'lib'}", "-lSDL3", *(["-lGLESv2"] if GLES else []), "-lm", "-lpthread", "-ldl"]
     r = run([CC, f"@{rsp}", "-o", out, *ld])
     if r.returncode != 0:
         sys.exit(f"link failed:\n{r.stderr[:6000]}")

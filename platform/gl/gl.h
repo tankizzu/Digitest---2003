@@ -9,9 +9,24 @@
 #include "../platform.h"
 #include "../gfx.h"
 #undef RECT
-#define GL_GLEXT_PROTOTYPES
 #include <SDL3/SDL.h>
+#if defined(__ANDROID__) && !defined(DW3_GLES)
+#define DW3_GLES 1
+#endif
+#ifdef DW3_GLES
+/* OpenGL ES 3.0 (Android; DW3_GLES=1 tries it on a desktop): the same renderer, its shaders given an ES head
+   (shaders.c) and the few desktop calls it makes given stand-ins (device.c) */
+#include <GLES3/gl3.h>
+#define GL_TIME_ELAPSED 0x88BF
+typedef uint64_t GLuint64;
+void glClearDepth(double depth);
+void glGetTexImage(GLenum target, GLint level, GLenum format, GLenum type, void *pixels);
+void glGetQueryObjectiv(GLuint id, GLenum pname, GLint *params);
+void glGetQueryObjectui64v(GLuint id, GLenum pname, GLuint64 *params);
+#else
+#define GL_GLEXT_PROTOTYPES
 #include <SDL3/SDL_opengl.h>
+#endif
 
 GFX_DECLARE(gl) /* renderer.h's, gl_* (gfx.c calls them through GFX_GL) */
 

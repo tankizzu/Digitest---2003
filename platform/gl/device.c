@@ -20,6 +20,9 @@ void gl_query_begin(int kind) {
     if (!perf_on() || s_qopen >= 0) {
         return;
     }
+#ifdef DW3_GLES
+    return; /* no timer queries in ES 3.0: the meter shows the CPU's times alone */
+#endif
     if (!s_q_made) {
         int i;
 
@@ -169,10 +172,32 @@ void gl_sync(int force) {
     gl_refresh(0, 0, VRAM_W, VRAM_H);
 }
 
+#ifdef DW3_GLES
+void glClearDepth(double depth) {
+    glClearDepthf((float)depth);
+}
+void glGetTexImage(GLenum target, GLint level, GLenum format, GLenum type, void *pixels) {
+    (void)target, (void)level, (void)format, (void)type, (void)pixels; /* the depth self-test's read-back: none in ES */
+}
+void glGetQueryObjectiv(GLuint id, GLenum pname, GLint *params) {
+    (void)id, (void)pname;
+    *params = 0;
+}
+void glGetQueryObjectui64v(GLuint id, GLenum pname, GLuint64 *params) {
+    (void)id, (void)pname;
+    *params = 0;
+}
+#endif
+
 uint64_t gl_window_flags(void) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+#ifdef DW3_GLES
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     return SDL_WINDOW_OPENGL;
 }
@@ -188,6 +213,11 @@ int gl_init(SDL_Window *window) {
         LOG("gl: %s", SDL_GetError());
         return 0;
     }
+#ifdef DW3_GLES
+#define X(f) p_##f = f; /* linked from libGLESv3, the stand-ins above included */
+    GL_FUNCS(X)
+#undef X
+#else
 #define X(f)                                                         \
     if ((p_##f = (__typeof__(f) *)SDL_GL_GetProcAddress(#f)) == NULL) { \
         LOG("gl: no %s", #f);                                        \
@@ -195,6 +225,7 @@ int gl_init(SDL_Window *window) {
     }
     GL_FUNCS(X)
 #undef X
+#endif
     if ((GLS.main = gl_program(MAIN_VS, MAIN_FS)) == 0 || (GLS.blit = gl_program(BLIT_VS, BLIT_FS)) == 0 ||
         (GLS.soft = gl_program(BLIT_VS, SOFT_FS)) == 0 || (GLS.prop = gl_program(PROP_VS, PROP_FS)) == 0 || (GLS.pinst = gl_program(PINST_VS, PROP_FS)) == 0) {
         return 0;
