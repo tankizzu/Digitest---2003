@@ -213,6 +213,12 @@ static uint16_t scripted(int frame) {
         if (frame == at && name[0] == 'f') {
             state_key(SDL_GetKeyFromName(name)); /* f1, f2, f5, f9: the debug keys */
         }
+        if (frame == at && name[0] == 't') { /* t200y150: a tap at that pixel of the display (touch.c) */
+            int tx, ty;
+            if (SDL_sscanf(name, "t%dy%d", &tx, &ty) == 2) {
+                touch_script_tap(tx, ty);
+            }
+        }
         if (frame == at && SDL_strcmp(name, "esc") == 0) {
             menu_toggle(); /* the options menu */
         }

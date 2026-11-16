@@ -322,4 +322,9 @@ int native_visual_load(void);
 int native_visual_get(int technique, int field, int original);
 int native_visual_archive_enabled(int archive); /* selected archive contains prepared launch slots */
 
+/* Touch (platform/touch.c): a screen marks where its options are, in the PSX display's pixels, each frame it
+   wants them; native_touch_tap() is the id of the one a finger landed on since it was last asked, or -1 */
+void native_touch_target(int id, int x, int y, int w, int h);
+int native_touch_tap(void);
+
 #endif /* NATIVE_H */

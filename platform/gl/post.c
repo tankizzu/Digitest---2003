@@ -483,6 +483,7 @@ void gl_present(const SDL_Surface *menu, SDL_Surface **shot) {
     menu_vp[3] = w * 3 > h * 4 ? h : w * 3 / 4;
     menu_vp[0] = (w - menu_vp[2]) / 2;
     menu_vp[1] = (h - menu_vp[3]) / 2;
+    touch_set_picture(vp[0], vp[1], vp[2], vp[3], d.w, d.h); /* symmetric: the same from the top */
     if (d.x + d.w > VRAM_W) d.w = VRAM_W - d.x;
     if (d.y + d.h > VRAM_H) d.h = VRAM_H - d.y;
     game = g_disp_on && d.w > 0 && d.h > 0 && !g_disp.isrgb24 && GLS.scale > 0;

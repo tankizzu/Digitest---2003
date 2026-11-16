@@ -27,6 +27,67 @@ static float s_bx, s_by, s_fx, s_fy, s_rad; /* the stick's base, the finger, its
 static float s_vx, s_vy;                    /* -1..1 */
 static Uint64 s_last_touch;
 
+/* The screens' targets (native_touch_target), in the PSX display's pixels; each lasts a moment unless marked again */
+typedef struct Target {
+    int id, x, y, w, h;
+    Uint64 until;
+} Target;
+static Target s_targets[32];
+static int s_ntargets;
+static int s_tap = -1;
+static float s_pic[4] = {0, 0, 1, 1}, s_disp[2] = {320, 240};
+static SDL_FingerID s_down[10];
+static int s_ndown;
+
+void touch_set_picture(int x, int y, int w, int h, int disp_w, int disp_h) {
+    s_pic[0] = (float)x, s_pic[1] = (float)y, s_pic[2] = (float)SDL_max(w, 1), s_pic[3] = (float)SDL_max(h, 1);
+    s_disp[0] = (float)SDL_max(disp_w, 1), s_disp[1] = (float)SDL_max(disp_h, 1);
+}
+
+void native_touch_target(int id, int x, int y, int w, int h) {
+    Uint64 now = SDL_GetTicks();
+    int i;
+
+    for (i = 0; i < s_ntargets && s_targets[i].id != id; i++) {
+    }
+    if (i == s_ntargets) {
+        for (i = 0; i < s_ntargets && s_targets[i].until >= now; i++) { /* an expired slot, or a new one */
+        }
+        if (i == s_ntargets) {
+            if (s_ntargets == (int)SDL_arraysize(s_targets)) {
+                return;
+            }
+            s_ntargets++;
+        }
+    }
+    s_targets[i] = (Target){id, x, y, w, h, now + 120};
+}
+
+int native_touch_tap(void) {
+    int t = s_tap;
+    s_tap = -1;
+    return t;
+}
+
+/* The target under a point of the PSX display, or -1 */
+static int target_at(float px, float py) {
+    Uint64 now = SDL_GetTicks();
+    for (int i = 0; i < s_ntargets; i++) {
+        const Target *t = &s_targets[i];
+        if (t->until >= now && px >= t->x && px < t->x + t->w && py >= t->y && py < t->y + t->h) {
+            return t->id;
+        }
+    }
+    return -1;
+}
+
+void touch_script_tap(int px, int py) {
+    int id = target_at((float)px, (float)py);
+    if (id >= 0) {
+        s_tap = id;
+    }
+}
+
 int touch_enabled(void) {
     if (s_enabled < 0) {
         const char *env = SDL_getenv("DW3_TOUCH");
@@ -57,6 +118,36 @@ static void layout(int w, int h) {
     s_keys[s_nkeys++] = (Key){w - sr * 1.8f, sr * 1.8f + h * 0.02f, sr, B_R1, TOUCH_R1, 0};
 }
 
+/* Fingers that tapped an option: they stay off the stick and the keys until they lift */
+static SDL_FingerID s_on_target[10];
+static int s_non_target;
+static void hold_target(SDL_FingerID id) {
+    if (s_non_target < (int)SDL_arraysize(s_on_target)) {
+        s_on_target[s_non_target++] = id;
+    }
+}
+static int held_target(SDL_FingerID id) {
+    for (int i = 0; i < s_non_target; i++) {
+        if (s_on_target[i] == id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+static void forget_targets(const SDL_FingerID *down, int n) {
+    int k = 0;
+    for (int i = 0; i < s_non_target; i++) {
+        int still = 0;
+        for (int j = 0; j < n; j++) {
+            still |= down[j] == s_on_target[i];
+        }
+        if (still) {
+            s_on_target[k++] = s_on_target[i];
+        }
+    }
+    s_non_target = k;
+}
+
 static Key *key_at(float x, float y) {
     for (int i = 0; i < s_nkeys; i++) {
         float dx = x - s_keys[i].x, dy = y - s_keys[i].y, r = s_keys[i].r * 1.25f;
@@ -80,6 +171,9 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     for (int i = 0; i < s_nkeys; i++) {
         s_keys[i].down = 0;
     }
+    SDL_FingerID now_down[10];
+    int now_n = 0;
+
     devs = SDL_GetTouchDevices(&ndev);
     for (int d = 0; devs != NULL && d < ndev; d++) {
         int n = 0;
@@ -90,6 +184,23 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
             Key *k;
 
             s_last_touch = SDL_GetTicks();
+            {
+                int was = 0, id;
+                for (int j = 0; j < s_ndown; j++) {
+                    was |= s_down[j] == fingers[i]->id;
+                }
+                if (now_n < (int)SDL_arraysize(now_down)) {
+                    now_down[now_n++] = fingers[i]->id;
+                }
+                if (was && held_target(fingers[i]->id)) {
+                    continue; /* still on the option it tapped */
+                }
+                if (!was && (id = target_at((x - s_pic[0]) / s_pic[2] * s_disp[0], (y - s_pic[1]) / s_pic[3] * s_disp[1])) >= 0) {
+                    s_tap = id;
+                    hold_target(fingers[i]->id);
+                    continue;
+                }
+            }
             if (s_stick_on && fingers[i]->id == s_stick_id) {
                 seen_stick = 1;
                 s_fx = x, s_fy = y;
@@ -106,6 +217,9 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
         SDL_free(fingers);
     }
     SDL_free(devs);
+    SDL_memcpy(s_down, now_down, sizeof(SDL_FingerID) * (size_t)now_n);
+    s_ndown = now_n;
+    forget_targets(now_down, now_n);
     if (!seen_stick) {
         s_stick_on = 0;
     }

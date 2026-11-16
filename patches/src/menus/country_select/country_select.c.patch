@@ -1,5 +1,5 @@
---- a/src/menus/country_select/country_select.c	2026-11-15 21:28:01.498710700 -0300
-+++ b/src/menus/country_select/country_select.c	2026-11-15 21:28:39.128671100 -0300
+--- a/src/menus/country_select/country_select.c
++++ b/src/menus/country_select/country_select.c
 @@ -1,5 +1,12 @@
  #include "menus/country_select.h"
  
@@ -84,3 +84,37 @@
                  SOUND.playSound(SOUND_MENU_MOVE);
                  task->selection++;
              }
+@@ -554,7 +570,23 @@
+             task->nextSubstate(task);
+             break;
+         case MENU_SELECT:
++#ifdef NATIVE
++        {
++            /* touch: the six rows of the right panel, tapped, pick that language at once */
++            s32 row, tapped;
++
++            for (row = 0; row < 6; row++) {
++                native_touch_target(row, 158, 49 + row * 31, 156, 31);
++            }
++            tapped = native_touch_tap();
++            if (tapped >= 0) {
++                task->selection = tapped;
++                children->cursor->setSelection(children->cursor, tapped);
++            }
++            if (PAD_PRESSED(PAD_START) || tapped >= 0) {
++#else
+             if (PAD_PRESSED(PAD_START)) {
++#endif
+                 SOUND.playSound(SOUND_MENU_CONFIRM);
+                 children->cursor->setState(children->cursor, TASK_DONE);
+                 task->nextSubstate(task);
+@@ -567,6 +599,9 @@
+             }
+             children->cursor->setSelection(children->cursor, task->selection);
+             break;
++#ifdef NATIVE
++        }
++#endif
+         case MENU_WAIT_FLASH:
+             if (++task->timer >= 43) {
+                 task->nextSubstate(task);
