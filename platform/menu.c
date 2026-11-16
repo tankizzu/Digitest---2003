@@ -1,0 +1,672 @@
+/* The options menu: Esc, or Back on the gamepad. The game stops
+   while it is open; what changes there goes to native.ini when it closes.
+   Its options in tabs, L1 / R1 (Q / E, Page Up / Down) between them, with
+   the battle menu's page arrows. */
+#include <SDL3/SDL.h>
+#include <stdlib.h>
+#include "platform.h"
+#include "menu_skin.h"
+
+extern int NTSC_MODE; /* the game's: 60 Hz (its NTSC mode) rather than 50 */
+void SsSetTickMode(long mode);
+
+enum { FPS, SCALE, SUBPIXEL, DEPTH, WIDESCREEN, PERSPECTIVE, SMOOTH_3D, TRUE_COLOR, DITHER, SOFT_SHADOWS, BATTLE_SHADOWS, BATTLE_SKY, BATTLE_FORM_NAME, MOVIES, VSYNC, FULLSCREEN, WINDOW, INACTIVE, RUMBLE, DEADZONE, FAST_TEXT, FAST_FORWARD, FF_MENUS, FAST_TRAVEL, MAP_OBJECTIVE, JOURNAL, EXTRA_PACKS, BLADEGARURUMON, FULL_EXP_SHARE, TECHNIQUE_VISUALS, SOBER_DISK_SHOPS, HEAL_LEVELUP, SAVE_ANYWHERE, FIX_EQUIP, CUSTOM_EFFECTS, CUSTOM_SOUNDS, CUSTOM_SCRIPTS, ICONS, CONTROLS, SKIP_START, SKIP_SCENES, MENU_WRAP, QUIT_GAME, SHARPEN, BRIGHTNESS, GAMMA, SATURATION, SCANLINES, INTEGER_SCALE, SMAA, FSR, PRESET, UP_MODE, RENDERER, ITEMS };
+
+static const char *LABELS[ITEMS] = {
+    "Frame rate", "Resolution", "Sub-pixel 3D", "Depth buffer", "Widescreen battles", "Perspective 3D", "Smooth 3D textures", "True colour", "Dithering", "Soft shadows", "Battle shadows", "Battle sky and fog", "Form name in battle", "Smooth movies", "VSync", "Fullscreen", "Window size", "Inactive window", "Vibration", "Stick deadzone",
+    "Fast text (hold X)", "Fast forward (Tab/R3)", "Menus in fast forward", "Fast travel (map, X)", "Objective on map", "Digilog (field menu)", "Extra starter packs", "BladeGarurumon", "Full EXP Share", "Tech visual upgrade", "Items while confused", "Heal on level up", "Save anywhere", "Crest fix", "Custom effects", "Custom sounds", "Custom scripts",
+    "Button icons", "Controls", "Skip PRESS START", "Skip scenes (hold Sq)", "Menu cursor wraps", "Quit game",
+    "Sharpen", "Brightness", "Gamma", "Saturation", "Scanlines", "Integer scaling", "SMAA anti-aliasing", "Upscaling", "Preset", "Upscaler mode", "Renderer",
+};
+
+/* the tabs and their options, each list ending with -1 */
+#define TABS 4
+#define ROWS 12 /* the rows shown: the box stays the same size, a longer tab scrolls */
+#define MAX_ITEMS 20
+static const char *TAB_NAMES[TABS] = {"Display", "Graphics", "Input", "Mods"};
+static const int TAB_ITEMS[TABS][MAX_ITEMS + 1] = {
+#ifdef _WIN64 /* the 32-bit build has OpenGL alone: no Renderer, no Upscaler mode (FSR 3.1 and DLSS are Direct3D 12's) */
+    {FPS, RENDERER, FULLSCREEN, WINDOW, INTEGER_SCALE, WIDESCREEN, VSYNC, MOVIES, INACTIVE, QUIT_GAME, -1},
+    {PRESET, SCALE, SUBPIXEL, DEPTH, PERSPECTIVE, SMOOTH_3D, TRUE_COLOR, DITHER, SOFT_SHADOWS, BATTLE_SHADOWS, BATTLE_SKY, BATTLE_FORM_NAME, SMAA, FSR, UP_MODE, SHARPEN, BRIGHTNESS, GAMMA, SATURATION, SCANLINES, -1},
+#else
+    {FPS, FULLSCREEN, WINDOW, INTEGER_SCALE, WIDESCREEN, VSYNC, MOVIES, INACTIVE, QUIT_GAME, -1},
+    {PRESET, SCALE, SUBPIXEL, DEPTH, PERSPECTIVE, SMOOTH_3D, TRUE_COLOR, DITHER, SOFT_SHADOWS, BATTLE_SHADOWS, BATTLE_SKY, BATTLE_FORM_NAME, SMAA, FSR, SHARPEN, BRIGHTNESS, GAMMA, SATURATION, SCANLINES, -1},
+#endif
+    {ICONS, CONTROLS, FAST_FORWARD, FF_MENUS, SKIP_START, SKIP_SCENES, MENU_WRAP, RUMBLE, DEADZONE, -1},
+    {FAST_TEXT, FAST_TRAVEL, MAP_OBJECTIVE, JOURNAL, EXTRA_PACKS, BLADEGARURUMON, FULL_EXP_SHARE, TECHNIQUE_VISUALS, SOBER_DISK_SHOPS, HEAL_LEVELUP, SAVE_ANYWHERE, FIX_EQUIP, CUSTOM_EFFECTS, CUSTOM_SOUNDS, CUSTOM_SCRIPTS, -1},
+};
+
+static int s_open, s_tab, s_cursor[TABS], s_top[TABS], s_changed; /* s_top: the first row shown */
+static int s_quit_armed, s_quit_was; /* "Quit game" asks for a second press */
+static int s_renderer_was = -1;      /* native.ini's renderer at start, once the menu changed it */
+
+static void save(void);
+
+/* Upscaler mode sets FSR 3.1's and DLSS's render size alone: hidden with the others */
+static int shown(int item) {
+    return item != UP_MODE || g_fsr >= 2;
+}
+
+static int tab_count(int tab) {
+    int n = 0, i;
+
+    for (i = 0; i < MAX_ITEMS && TAB_ITEMS[tab][i] >= 0; i++) {
+        n += shown(TAB_ITEMS[tab][i]);
+    }
+    return n;
+}
+
+/* the tab's nth row shown */
+static int tab_item(int tab, int n) {
+    int i;
+
+    for (i = 0; i < MAX_ITEMS && TAB_ITEMS[tab][i] >= 0; i++) {
+        if (shown(TAB_ITEMS[tab][i]) && n-- == 0) {
+            return TAB_ITEMS[tab][i];
+        }
+    }
+    return -1;
+}
+
+int menu_active(void) {
+    return s_open;
+}
+
+/* The game's 60 Hz mode: its clocks, the music's tempo and the vsync follow
+   at once; a walking speed is set when the area loads */
+void set_fps(int sixty) {
+    NTSC_MODE = sixty;
+    SsSetTickMode(sixty ? 0x1000 : 0x1000 | 50);
+}
+
+static int window_scale(void) {
+    int w, h;
+
+    SDL_GetWindowSize(video_window(), &w, &h);
+    return SDL_clamp((h + 120) / 240, 1, 8);
+}
+
+/* The Graphics tab as a whole: the PlayStation's picture, the port's own defaults, and those with every extra on.
+   Brightness, gamma and saturation are the screen's, and stay as they are, as do Sub-pixel 3D and the Depth buffer */
+static int *const PRESET_VARS[] = {&g_perspective, &g_smooth_3d, &g_true_color, &g_dither_on, &g_soft_shadows,
+                                   &g_battle_shadows, &g_battle_sky, &g_smaa, &g_fsr, &g_sharpen, &g_scanlines};
+enum { PRESET_N = SDL_arraysize(PRESET_VARS), PRESETS = 3 };
+static const char *PRESET_NAMES[PRESETS + 1] = {"Original", "Enhanced", "Remaster", "Custom"};
+static const signed char PRESET_VALUES[PRESETS][PRESET_N] = {
+    {0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+    {1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0},
+    {1, 1, 1, 1, 1, 1, 1, 1, 0, 3, 0},
+};
+
+/* The resolution a preset goes with: the PlayStation's, or a finer one (the one set, else the window's) */
+static int preset_scale(int p) {
+    return p == 0 ? 1 : g_res_scale > 1 ? g_res_scale : SDL_max(window_scale(), 2);
+}
+
+/* The preset the options are at, PRESETS when at none */
+static int preset(void) {
+    int p, i;
+
+    for (p = 0; p < PRESETS; p++) {
+        for (i = 0; i < PRESET_N && *PRESET_VARS[i] == PRESET_VALUES[p][i]; i++) {
+        }
+        if (i == PRESET_N && g_res_scale == preset_scale(p)) {
+            return p;
+        }
+    }
+    return PRESETS;
+}
+
+static void value(int item, char *out, size_t size) {
+    int on = 0;
+
+    switch (item) {
+    case FPS: SDL_snprintf(out, size, NTSC_MODE ? "60 Hz" : "50 Hz (original)"); return;
+    case SCALE: if (gfx_scale_tied()) { SDL_snprintf(out, size, "%dx%d (mode)", 320 * gfx_scale(), 240 * gfx_scale()); return; } SDL_snprintf(out, size, g_res_scale > 1 ? "%dx%d" : "%dx%d (original)", 320 * g_res_scale, 240 * g_res_scale); return;
+    case WINDOW: SDL_snprintf(out, size, "%dx%d", video_window_width(window_scale()), 240 * window_scale()); return;
+    case DEADZONE: SDL_snprintf(out, size, "%d%%", (g_deadzone * 100 + 16383) / 32767); return;
+    case FAST_FORWARD: SDL_snprintf(out, size, g_ff_speed > 1 ? "x%d" : "Off", g_ff_speed); return;
+    case ICONS: {
+        static const char *SHOWN[ICONS_COUNT] = {"Auto", "PS1", "PS3", "PS4", "PS5", "Xbox 360", "Xbox One", "Xbox Series", "Switch", "Keyboard"};
+
+        SDL_snprintf(out, size, "%s", SHOWN[g_icons]);
+        return;
+    }
+    case INACTIVE: SDL_snprintf(out, size, "%s", g_inactive_window == 2 ? "Pause" : g_inactive_window == 1 ? "Mute" : "Off"); return;
+    case CONTROLS: SDL_snprintf(out, size, ">"); return;
+    case SHARPEN: SDL_snprintf(out, size, g_sharpen ? "%d" : "Off", g_sharpen); return;
+    case PRESET: SDL_snprintf(out, size, "%s", PRESET_NAMES[preset()]); return;
+    case SMAA: on = g_smaa; break;
+    case FSR: {
+        int st = gfx_fsr3_status(), sd = gfx_dlss_status();
+
+        if (g_fsr == 3) {
+            SDL_snprintf(out, size, sd < 0 ? "DLSS (not here)" : sd == 0 ? "DLSS (restart)" : sd == 2 ? "DLSS (lower res.)" : "DLSS");
+        } else {
+            SDL_snprintf(out, size, g_fsr == 0 ? "Off" : g_fsr == 1 ? "FSR 1" : st == 0 ? "FSR 3.1 (restart)" : st == 2 ? "FSR 3.1 (lower res.)" : "FSR 3.1");
+        }
+        return;
+    }
+    case UP_MODE:
+        if (gfx_fsr3_status() < 0 && gfx_dlss_status() < 0) { /* OpenGL running: kept for Direct3D 12 */
+            SDL_snprintf(out, size, "(not here)");
+            return;
+        }
+        SDL_snprintf(out, size, "%s", g_up_mode == 0 ? (g_fsr == 2 ? "Native AA" : "DLAA") : g_up_mode == 1 ? "Quality" : g_up_mode == 2 ? "Balanced" : "Performance"); return;
+    case SCANLINES: SDL_snprintf(out, size, g_scanlines ? "%d" : "Off", g_scanlines); return;
+    case INTEGER_SCALE: on = g_integer_scale; break;
+    case BRIGHTNESS: SDL_snprintf(out, size, g_brightness ? "%+d" : "0", g_brightness); return;
+    case GAMMA: SDL_snprintf(out, size, g_gamma ? "%+d" : "0", g_gamma); return;
+    case SATURATION: SDL_snprintf(out, size, g_saturation ? "%+d" : "0", g_saturation); return;
+    case QUIT_GAME: SDL_snprintf(out, size, s_quit_armed ? "Press again" : ">"); return;
+    case RENDERER: { /* the one asked for, and what runs: Auto's pick, a restart pending, or OpenGL in its place */
+        static const char *NAMES[3] = {"Auto", "D3D12", "OpenGL"};
+
+        if (s_renderer_was >= 0 && g_renderer != s_renderer_was) {
+            SDL_snprintf(out, size, "%s (restart)", NAMES[g_renderer]);
+        } else if (g_renderer == 0) {
+            SDL_snprintf(out, size, "Auto (%s)", gfx_name());
+        } else {
+            SDL_snprintf(out, size, SDL_strcmp(NAMES[g_renderer], gfx_name()) != 0 ? "%s (not here)" : "%s", NAMES[g_renderer]);
+        }
+        return;
+    }
+    case DITHER: on = g_dither_on; break;
+    case SOFT_SHADOWS: on = g_soft_shadows; break;
+    case BATTLE_SHADOWS: on = g_battle_shadows; break;
+    case BATTLE_SKY: on = g_battle_sky; break;
+    case SUBPIXEL: on = g_subpixel; break;
+    case DEPTH: on = g_depth; break;
+    case WIDESCREEN: on = g_widescreen; break;
+    case PERSPECTIVE: on = g_perspective; break;
+    case SMOOTH_3D: on = g_smooth_3d; break;
+    case TRUE_COLOR: on = g_true_color; break;
+    case MOVIES: on = g_smooth_movies; break;
+    case VSYNC: on = g_vsync; break;
+    case FULLSCREEN: on = (SDL_GetWindowFlags(video_window()) & SDL_WINDOW_FULLSCREEN) != 0; break;
+    case RUMBLE: on = g_rumble; break;
+    case FAST_TEXT: on = g_fast_text; break;
+    case FAST_TRAVEL: on = g_fast_travel; break;
+    case MAP_OBJECTIVE: on = g_map_objective; break;
+    case JOURNAL: on = g_journal; break;
+    case EXTRA_PACKS: on = g_extra_packs; break;
+    case BLADEGARURUMON: on = g_bladegarurumon; break;
+    case FULL_EXP_SHARE: on = g_full_exp_share; break;
+    case TECHNIQUE_VISUALS: on = g_technique_visuals; break;
+    case SOBER_DISK_SHOPS: on = g_sober_disk_shops; break;
+    case HEAL_LEVELUP: on = g_heal_on_levelup; break;
+    case SKIP_START: on = g_skip_press_start; break;
+    case SKIP_SCENES: on = g_skip_scenes; break;
+    case FF_MENUS: on = g_ff_menu_speed; break;
+    case MENU_WRAP: on = g_menu_wrap; break;
+    case BATTLE_FORM_NAME: on = g_battle_form_name; break;
+    case SAVE_ANYWHERE: on = g_save_anywhere; break;
+    case FIX_EQUIP: on = g_fix_equip_stacking; break;
+    case CUSTOM_EFFECTS: on = g_custom_effects; break;
+    case CUSTOM_SOUNDS: on = g_custom_sounds; break;
+    case CUSTOM_SCRIPTS: on = g_custom_scripts; break;
+    }
+    SDL_snprintf(out, size, on ? "On" : "Off");
+}
+
+/* Left / right (dir -1 / 1), or Enter / A (dir 0, as right) */
+static void change(int item, int dir) {
+    int scale;
+
+    switch (item) {
+    case FPS: set_fps(!NTSC_MODE); break;
+    case SCALE: g_res_scale = (g_res_scale + (dir < 0 ? 6 : 0)) % 8 + 1; break; /* 1-8, round */
+    case DITHER: g_dither_on = !g_dither_on; break;
+    case SOFT_SHADOWS: g_soft_shadows = !g_soft_shadows; break;
+    case BATTLE_SHADOWS: g_battle_shadows = !g_battle_shadows; break;
+    case BATTLE_SKY: g_battle_sky = !g_battle_sky; break;
+    case SUBPIXEL: g_subpixel = !g_subpixel; break;
+    case DEPTH: g_depth = !g_depth; break;
+    case WIDESCREEN: /* the window follows, unless fullscreen */
+        g_widescreen = !g_widescreen;
+        if (!(SDL_GetWindowFlags(video_window()) & SDL_WINDOW_FULLSCREEN)) {
+            video_resize(window_scale());
+        }
+        break;
+    case PERSPECTIVE: g_perspective = !g_perspective; break;
+    case SMOOTH_3D: g_smooth_3d = !g_smooth_3d; break;
+    case TRUE_COLOR: g_true_color = !g_true_color; break;
+    case MOVIES: g_smooth_movies = !g_smooth_movies; break;
+    case VSYNC: g_vsync = !g_vsync; break;
+    case FULLSCREEN: SDL_SetWindowFullscreen(video_window(), !(SDL_GetWindowFlags(video_window()) & SDL_WINDOW_FULLSCREEN)); break;
+    case INACTIVE: g_inactive_window = (g_inactive_window + (dir < 0 ? 2 : 1)) % 3; break;
+    case RUMBLE: g_rumble = !g_rumble; break;
+    case FAST_TEXT: g_fast_text = !g_fast_text; break;
+    case FAST_TRAVEL: g_fast_travel = !g_fast_travel; break;
+    case MAP_OBJECTIVE: g_map_objective = !g_map_objective; break;
+    case JOURNAL: g_journal = !g_journal; break;
+    case EXTRA_PACKS: g_extra_packs = !g_extra_packs; break;
+    case BLADEGARURUMON: g_bladegarurumon = !g_bladegarurumon; break;
+    case FULL_EXP_SHARE: g_full_exp_share = !g_full_exp_share; break;
+    case TECHNIQUE_VISUALS: g_technique_visuals = !g_technique_visuals; break;
+    case SOBER_DISK_SHOPS: g_sober_disk_shops = !g_sober_disk_shops; break;
+    case HEAL_LEVELUP: g_heal_on_levelup = !g_heal_on_levelup; break;
+    case SKIP_START: g_skip_press_start = !g_skip_press_start; break;
+    case SKIP_SCENES: g_skip_scenes = !g_skip_scenes; break;
+    case FF_MENUS: g_ff_menu_speed = !g_ff_menu_speed; break;
+    case MENU_WRAP: g_menu_wrap = !g_menu_wrap; break;
+    case BATTLE_FORM_NAME: g_battle_form_name = !g_battle_form_name; break;
+    case SAVE_ANYWHERE: g_save_anywhere = !g_save_anywhere; break;
+    case FIX_EQUIP: g_fix_equip_stacking = !g_fix_equip_stacking; break;
+    case CUSTOM_EFFECTS: g_custom_effects = !g_custom_effects; break;
+    case CUSTOM_SOUNDS: g_custom_sounds = !g_custom_sounds; break;
+    case CUSTOM_SCRIPTS: g_custom_scripts = !g_custom_scripts; break;
+    case SHARPEN: g_sharpen = SDL_clamp(g_sharpen + (dir < 0 ? -1 : 1), 0, 10); break;
+    case PRESET: { /* from Custom: right to the first, left to the last */
+        int p = preset(), i;
+
+        p = dir < 0 ? (p + PRESETS - 1) % PRESETS : (p + 1) % (p == PRESETS ? PRESETS + 1 : PRESETS);
+        for (i = 0; i < PRESET_N; i++) {
+            *PRESET_VARS[i] = PRESET_VALUES[p][i];
+        }
+        g_res_scale = preset_scale(p);
+        break;
+    }
+    case SMAA: g_smaa = !g_smaa; break;
+    case FSR: { /* Off, FSR 1, and FSR 3.1 and DLSS where the renderer has them */
+        int have[4] = {1, 1, gfx_fsr3_status() >= 0, gfx_dlss_status() >= 0}, k;
+
+        for (k = 0; k < 4; k++) { /* the next one that is there, in the direction asked */
+            g_fsr = (g_fsr + (dir < 0 ? 3 : 1)) % 4;
+            if (have[g_fsr]) {
+                break;
+            }
+        }
+        break;
+    }
+    case UP_MODE: g_up_mode = (g_up_mode + (dir < 0 ? 3 : 1)) % 4; break;
+    case RENDERER:
+        s_renderer_was = s_renderer_was < 0 ? g_renderer : s_renderer_was;
+        g_renderer = (g_renderer + (dir < 0 ? 2 : 1)) % 3;
+        break;
+    case SCANLINES: g_scanlines = SDL_clamp(g_scanlines + (dir < 0 ? -1 : 1), 0, 10); break;
+    case INTEGER_SCALE: g_integer_scale = !g_integer_scale; break;
+    case BRIGHTNESS: g_brightness = SDL_clamp(g_brightness + (dir < 0 ? -1 : 1), -10, 10); break;
+    case GAMMA: g_gamma = SDL_clamp(g_gamma + (dir < 0 ? -1 : 1), -10, 10); break;
+    case SATURATION: g_saturation = SDL_clamp(g_saturation + (dir < 0 ? -1 : 1), -10, 10); break;
+    case FAST_FORWARD: ff_cycle(); return; /* not saved */
+    case ICONS: g_icons = (g_icons + (dir < 0 ? ICONS_COUNT - 1 : 1)) % ICONS_COUNT; break;
+    case CONTROLS:
+        if (dir >= 0) {
+            controls_open();
+        }
+        return;
+    case QUIT_GAME: /* the same exit as closing the window, after the menu's own changes are saved */
+        if (dir >= 0) {
+            if (!s_quit_was) {
+                s_quit_armed = 1;
+                return;
+            }
+            native_quit();
+        }
+        return;
+    case WINDOW:
+        scale = SDL_clamp(window_scale() + (dir < 0 ? -1 : 1), 1, 8);
+        video_resize(scale);
+        break;
+    case DEADZONE: /* 5% steps, up to 50% */
+        g_deadzone = SDL_clamp(((g_deadzone * 100 + 16383) / 32767 / 5 + (dir < 0 ? -1 : 1)) * 5, 0, 50) * 32767 / 100;
+        break;
+    }
+    s_changed = 1;
+}
+
+/* native.ini's "key = value" lines get the new values; missing keys are
+   added, the bindings' only when not the default */
+static void save(void) {
+    static const char *KEYS[] = {"fps", "render_scale", "dither", "smooth_movies", "fullscreen", "scale", "rumble", "deadzone", "fast_text", "extra_packs", "bladegarurumon", "soft_shadows", "true_color", "perspective", "smooth_3d", "battle_shadows", "widescreen", "vsync", "fast_travel", "map_objective", "journal", "icons", "battle_sky", "full_exp_share", "save_anywhere", "custom_effects", "custom_sounds", "custom_scripts", "inactive_window", "heal_on_levelup", "skip_press_start", "ff_menu_speed", "menu_wrap", "battle_form_name", "fix_equip_stacking", "technique_visuals", "sharpen", "brightness", "gamma", "saturation", "scanlines", "integer_scale", "smaa", "fsr", "upscale_mode", "renderer", "sober_disk_shops", "skip_scenes"};
+    enum { FIXED = SDL_arraysize(KEYS), ALL = FIXED + 32 };
+    char path[1100], line[1200], key[32], names[ALL][32], vals[ALL][64];
+    int done[ALL] = {0}, i, n = ALL;
+    size_t len = 0;
+    char *out = SDL_malloc(65536);
+    FILE *f;
+
+    SDL_snprintf(vals[0], 16, "%d", NTSC_MODE ? 60 : 50);
+    SDL_snprintf(vals[1], 16, "%d", g_res_scale);
+    SDL_snprintf(vals[2], 16, "%d", g_dither_on);
+    SDL_snprintf(vals[3], 16, "%d", g_smooth_movies);
+    SDL_snprintf(vals[4], 16, "%d", (SDL_GetWindowFlags(video_window()) & SDL_WINDOW_FULLSCREEN) != 0);
+    SDL_snprintf(vals[5], 16, "%d", window_scale());
+    SDL_snprintf(vals[6], 16, "%d", g_rumble);
+    SDL_snprintf(vals[7], 16, "%d", g_deadzone);
+    SDL_snprintf(vals[8], 16, "%d", g_fast_text);
+    SDL_snprintf(vals[9], 16, "%d", g_extra_packs);
+    SDL_snprintf(vals[10], 16, "%d", g_bladegarurumon);
+    SDL_snprintf(vals[11], 16, "%d", g_soft_shadows);
+    SDL_snprintf(vals[12], 16, "%d", g_true_color);
+    SDL_snprintf(vals[13], 16, "%d", g_perspective);
+    SDL_snprintf(vals[14], 16, "%d", g_smooth_3d);
+    SDL_snprintf(vals[15], 16, "%d", g_battle_shadows);
+    SDL_snprintf(vals[16], 16, "%d", g_widescreen);
+    SDL_snprintf(vals[17], 16, "%d", g_vsync);
+    SDL_snprintf(vals[18], 16, "%d", g_fast_travel);
+    SDL_snprintf(vals[19], 16, "%d", g_map_objective);
+    SDL_snprintf(vals[20], 16, "%d", g_journal);
+    SDL_snprintf(vals[21], 16, "%s", ICON_NAMES[g_icons]);
+    SDL_snprintf(vals[22], 16, "%d", g_battle_sky);
+    SDL_snprintf(vals[23], 16, "%d", g_full_exp_share);
+    SDL_snprintf(vals[24], 16, "%d", g_save_anywhere);
+    SDL_snprintf(vals[25], 16, "%d", g_custom_effects);
+    SDL_snprintf(vals[26], 16, "%d", g_custom_sounds);
+    SDL_snprintf(vals[27], 16, "%d", g_custom_scripts);
+    SDL_snprintf(vals[28], 16, "%d", g_inactive_window);
+    SDL_snprintf(vals[29], 16, "%d", g_heal_on_levelup);
+    SDL_snprintf(vals[30], 16, "%d", g_skip_press_start);
+    SDL_snprintf(vals[31], 16, "%d", g_ff_menu_speed);
+    SDL_snprintf(vals[32], 16, "%d", g_menu_wrap);
+    SDL_snprintf(vals[33], 16, "%d", g_battle_form_name);
+    SDL_snprintf(vals[34], 16, "%d", g_fix_equip_stacking);
+    SDL_snprintf(vals[35], 16, "%d", g_technique_visuals);
+    SDL_snprintf(vals[36], 16, "%d", g_sharpen);
+    SDL_snprintf(vals[37], 16, "%d", g_brightness);
+    SDL_snprintf(vals[38], 16, "%d", g_gamma);
+    SDL_snprintf(vals[39], 16, "%d", g_saturation);
+    SDL_snprintf(vals[40], 16, "%d", g_scanlines);
+    SDL_snprintf(vals[41], 16, "%d", g_integer_scale);
+    SDL_snprintf(vals[42], 16, "%d", g_smaa);
+    SDL_snprintf(vals[43], 16, "%d", g_fsr);
+    SDL_snprintf(vals[44], 16, "%d", g_up_mode);
+    SDL_snprintf(vals[45], 16, "%s", g_renderer == 1 ? "d3d12" : g_renderer == 2 ? "gl" : "auto");
+    SDL_snprintf(vals[46], 16, "%d", g_sober_disk_shops);
+    SDL_snprintf(vals[47], 16, "%d", g_skip_scenes);
+    for (i = 0; i < ALL; i++) {
+        if (i < FIXED) {
+            SDL_strlcpy(names[i], KEYS[i], sizeof names[i]);
+        } else {
+            done[i] = !pad_bind_line(i - FIXED, names[i], vals[i], sizeof vals[i]); /* the default: not added */
+        }
+    }
+    SDL_snprintf(path, sizeof path, "%snative.ini", SDL_GetBasePath());
+    out[0] = 0;
+    if ((f = fopen(path, "r")) != NULL) {
+        while (fgets(line, sizeof line, f) != NULL && len < 60000) {
+            for (i = 0; i < n; i++) {
+                if (line[0] != '#' && line[0] != ';' && SDL_sscanf(line, " %31[^= ] =", key) == 1 && SDL_strcasecmp(key, names[i]) == 0) {
+                    SDL_snprintf(line, sizeof line, "%s = %s\n", names[i], vals[i]);
+                    done[i] = 1;
+                }
+            }
+            len += SDL_strlcpy(out + len, line, 65536 - len);
+        }
+        fclose(f);
+    }
+    for (i = 0; i < n; i++) {
+        if (!done[i]) {
+            len += SDL_snprintf(out + len, 65536 - len, "%s = %s\n", names[i], vals[i]);
+        }
+    }
+    if ((f = fopen(path, "w")) != NULL) {
+        fwrite(out, 1, len, f);
+        fclose(f);
+    } else {
+        LOG("menu: can't write %s", path);
+    }
+    SDL_free(out);
+}
+
+void native_quit(void) {
+    if (s_changed) {
+        save();
+    }
+    exit(0);
+}
+
+void menu_toggle(void) {
+    s_open = !s_open;
+    s_quit_armed = 0;
+    if (!s_open && s_changed) {
+        save();
+        s_changed = 0;
+    }
+}
+
+static void move(int up, int down, int left, int right, int ok, int tab) {
+    int n = tab_count(s_tab), *c = &s_cursor[s_tab];
+
+    s_quit_was = s_quit_armed;
+    s_quit_armed = 0;
+    if (tab) s_tab = (s_tab + tab + TABS) % TABS;
+    if (up) *c = (*c + n - 1) % n;
+    if (down) *c = (*c + 1) % n;
+    if (left || right || ok) change(tab_item(s_tab, *c), left ? -1 : 1);
+    *c = SDL_min(*c, tab_count(s_tab) - 1); /* a row hidden by the change (Preset, Upscaling) */
+}
+
+/* 1 when the event was the menu's */
+int menu_event(const SDL_Event *e) {
+    controls_note(e);
+    if (s_open && controls_active()) {
+        if (controls_event(e)) {
+            s_changed = 1;
+        }
+        return e->type == SDL_EVENT_KEY_DOWN || e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN || e->type == SDL_EVENT_MOUSE_WHEEL ||
+               e->type == SDL_EVENT_GAMEPAD_AXIS_MOTION;
+    }
+    if (e->type == SDL_EVENT_KEY_DOWN && e->key.key == SDLK_ESCAPE && !e->key.repeat) {
+        menu_toggle();
+        return 1;
+    }
+    if (e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN) {
+        int b = e->gbutton.button;
+
+        if (b == SDL_GAMEPAD_BUTTON_BACK || (s_open && b == SDL_GAMEPAD_BUTTON_EAST)) {
+            menu_toggle();
+            return 1;
+        }
+        if (s_open) {
+            move(b == SDL_GAMEPAD_BUTTON_DPAD_UP, b == SDL_GAMEPAD_BUTTON_DPAD_DOWN, b == SDL_GAMEPAD_BUTTON_DPAD_LEFT,
+                 b == SDL_GAMEPAD_BUTTON_DPAD_RIGHT, b == SDL_GAMEPAD_BUTTON_SOUTH,
+                 (b == SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER) - (b == SDL_GAMEPAD_BUTTON_LEFT_SHOULDER));
+        }
+    }
+    if (s_open && e->type == SDL_EVENT_KEY_DOWN) {
+        SDL_Keycode k = e->key.key;
+
+        move(k == SDLK_UP, k == SDLK_DOWN, k == SDLK_LEFT, k == SDLK_RIGHT, k == SDLK_RETURN || k == SDLK_Z || k == SDLK_SPACE,
+             (k == SDLK_E || k == SDLK_PAGEDOWN) - (k == SDLK_Q || k == SDLK_PAGEUP));
+    }
+    if (s_open && e->type == SDL_EVENT_MOUSE_WHEEL && e->wheel.y != 0) {
+        float y = e->wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -e->wheel.y : e->wheel.y;
+        move(y > 0, y < 0, 0, 0, 0, 0);
+    }
+    return s_open && (e->type == SDL_EVENT_KEY_DOWN || e->type == SDL_EVENT_GAMEPAD_BUTTON_DOWN ||
+                      e->type == SDL_EVENT_MOUSE_WHEEL);
+}
+
+/* The battle menu's page arrows (FILE_BATTLE_MENU's frames 0x1F and 0x20,
+   textured from FILE_BATTLE_IMAGES' first image), read from the player's disc */
+#define FILE_BATTLE_MENU 0x455
+#define FILE_BATTLE_IMAGES 0x456
+
+static const uint8_t *archive_entry(const uint8_t *a, long size, int i) {
+    uint32_t off;
+
+    if ((i + 1) * 4 > size) {
+        return NULL;
+    }
+    SDL_memcpy(&off, a + i * 4, 4);
+    return off && off < (uint32_t)size ? a + off : NULL;
+}
+
+/* An RLEN entry unpacked (malloc'd), or the entry itself copied */
+static uint8_t *unpack(const uint8_t *p, long room) {
+    uint8_t *out = malloc(0x10000), *o = out;
+    long s = 8;
+
+    if (out == NULL) {
+        return NULL;
+    }
+    if (SDL_memcmp(p, "RLEN", 4) != 0) {
+        SDL_memcpy(out, p, SDL_min(room, 0x10000));
+        return out;
+    }
+    while (s < room && p[s] != 0 && o - out < 0xFF00) {
+        int c = p[s++];
+
+        if (c & 0x80) {
+            SDL_memset(o, p[s++], c & 0x7F), o += c & 0x7F;
+        } else {
+            SDL_memcpy(o, p + s, c), o += c, s += c;
+        }
+    }
+    return out;
+}
+
+static SDL_Texture *game_arrow(SDL_Renderer *r, int frame) {
+    uint8_t *menu = NULL, *images = NULL, *tim = NULL;
+    long menu_size = native_read_raw(FILE_BATTLE_MENU, &menu), images_size = native_read_raw(FILE_BATTLE_IMAGES, &images);
+    const uint8_t *sheet, *arch, *e;
+    SDL_Texture *t = NULL;
+    SDL_Surface *s = NULL;
+
+    if (menu_size > 0 && images_size > 0 && (sheet = archive_entry(menu, menu_size, 0)) != NULL &&
+        (arch = archive_entry(images, images_size, 1)) != NULL &&
+        (e = archive_entry(arch, images_size - (arch - images), 0)) != NULL &&
+        (tim = unpack(e, images_size - (e - images))) != NULL) {
+        /* the image (64x256 halfwords at 0x200, 0) after the TIM's header */
+        const uint16_t *pix = (const uint16_t *)(tim + 8 + 12);
+        int32_t parts_off, ids_off, frame_off;
+        int k = 0, count, row, idx, px, py, u, v, w, h, cy, x, y;
+        const int16_t *f, *part;
+
+        SDL_memcpy(&parts_off, sheet, 4);
+        SDL_memcpy(&ids_off, sheet + 4, 4);
+        while (k < 256 && sheet[ids_off + k] != frame) {
+            k++;
+        }
+        SDL_memcpy(&frame_off, sheet + (k + 2) * 4, 4);
+        f = (const int16_t *)(sheet + frame_off);
+        count = f[0], row = f[1], idx = f[3], px = f[4], py = f[5];
+        part = (const int16_t *)(sheet + parts_off) + idx * 7;
+        u = part[0], v = part[1], w = part[2], h = part[3], cy = part[5];
+        if (count == 1 && part[6] == 0 && w <= 16 && h <= 16 && (s = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ABGR8888)) != NULL) {
+            for (y = 0; y < h; y++) {
+                for (x = 0; x < w; x++) {
+                    int uu = u + x, i = (pix[(v + y) * 64 + uu / 4] >> (uu % 4 * 4)) & 15;
+                    uint16_t c = pix[(cy + row) * 64 + part[4] + i];
+
+                    ((uint32_t *)s->pixels)[y * (s->pitch / 4) + x] =
+                        c == 0 ? 0 : (uint32_t)((c & 31) << 3 | (c >> 5 & 31) << 11 | (c >> 10 & 31) << 19 | 0xFF000000u);
+                }
+            }
+            t = SDL_CreateTextureFromSurface(r, s);
+            SDL_DestroySurface(s);
+            (void)px, (void)py;
+        }
+    }
+    free(tim);
+    free(menu);
+    free(images);
+    return t;
+}
+
+/* The help line at the box's foot, centred, with the pad's or keys' icons */
+static void hint(SDL_Renderer *r, const SDL_FRect *box) {
+    skin_ink(r, INK_DIM);
+    controls_hint(r, box->x + (box->w - controls_hint(r, 0, 0, 0)) / 2, box->y + box->h - 13, 1);
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_NONE);
+}
+
+/* Over the frame, in 320x240, centred: the tabs (L1 / R1 at their ends, with
+   the game's arrows, blinking as in its menus), then the tab's options */
+void menu_draw(SDL_Renderer *r) {
+    static SDL_Texture *arrows[2];
+    static int tried;
+    SDL_FRect box = {8, 0, 304, 46 + ROWS * 14 + 18};
+    int n = tab_count(s_tab), i, *top, blink = (SDL_GetTicks() / 267) & 1;
+    float x;
+    char text[32];
+
+    box.y = (240 - box.h) / 2;
+    if (!s_open) {
+        return;
+    }
+    if (!tried) {
+        tried = 1;
+        arrows[0] = game_arrow(r, 0x1F);
+        arrows[1] = game_arrow(r, 0x20);
+    }
+    SDL_SetRenderDrawBlendMode(r, SDL_BLENDMODE_BLEND);
+    skin_panel(r, &box);
+    if (controls_active()) {
+        controls_draw(r, box.x, box.y, box.w, ROWS);
+        hint(r, &box);
+        return;
+    }
+
+    /* the tab bar: "<L1  Display Graphics Controls Mods  R1>" */
+    for (i = 0; i < 2; i++) {
+        SDL_FRect a = {i ? box.x + box.w - 14 : box.x + 6, box.y + 8, 8, 8};
+
+        if (blink) {
+            if (arrows[i] != NULL) {
+                SDL_RenderTexture(r, arrows[i], NULL, &a);
+            } else {
+                skin_ink(r, INK_LABEL);
+                SDL_RenderDebugText(r, a.x, a.y, i ? ">" : "<");
+            }
+        }
+    }
+    skin_ink(r, INK_HEAD);
+    controls_tab_icons(r, box.x + 18, box.x + box.w - 30, box.y + 8);
+    for (i = 0, x = 0; i < TABS; i++) {
+        x += skin_text_width(TAB_NAMES[i]) + (i ? 8 : 0);
+    }
+    x = box.x + (box.w - x) / 2; /* centred between L1 and R1 */
+    for (i = 0; i < TABS; i++) {
+        float w = skin_text_width(TAB_NAMES[i]);
+
+        if (i == s_tab) {
+            SDL_FRect t = {x - 3, box.y + 5, w + 6, 14};
+
+            skin_tab(r, &t);
+            skin_ink(r, INK_LABEL);
+        } else {
+            skin_ink(r, INK_DIM);
+        }
+        skin_text(r, x, box.y + 8, TAB_NAMES[i]);
+        x += w + 8;
+    }
+    skin_rule(r, box.x + 4, box.x + box.w - 5, box.y + 21);
+
+    /* the options: the cursor's row always shown */
+    top = &s_top[s_tab];
+    *top = SDL_clamp(*top, 0, SDL_max(n - ROWS, 0));
+    if (s_cursor[s_tab] < *top) {
+        *top = s_cursor[s_tab];
+    } else if (s_cursor[s_tab] >= *top + ROWS) {
+        *top = s_cursor[s_tab] - ROWS + 1;
+    }
+    for (i = *top; i < n && i < *top + ROWS; i++) {
+        int item = tab_item(s_tab, i);
+        float y = box.y + 32 + (i - *top) * 14;
+
+        if (i == s_cursor[s_tab]) {
+            SDL_FRect bar = {box.x + 4, y - 3, box.w - 8, 14};
+
+            skin_row(r, &bar);
+        }
+        skin_ink(r, INK_LABEL);
+        skin_text(r, box.x + 10, y, LABELS[item]);
+        value(item, text, sizeof text);
+        skin_ink(r, INK_VALUE);
+        skin_text(r, box.x + box.w - 10 - skin_text_width(text), y, text);
+    }
+    if (n > ROWS) { /* the game's scroll bar (updateScrollBar): a white thumb of the visible share, at the cursor's item */
+        float from = box.y + 29, range = ROWS * 14, size = range * ROWS / n, y = from + range * s_cursor[s_tab] / n;
+        SDL_FRect thumb;
+
+        thumb.x = box.x + box.w - 6;
+        thumb.w = 4;
+        thumb.y = SDL_min(y, from + range - size);
+        thumb.h = size;
+        skin_thumb(r, &thumb);
+    }
+    hint(r, &box);
+}

@@ -1,0 +1,28 @@
+--- a/src/field/field_mode/actor_control.c
++++ b/src/field/field_mode/actor_control.c
+@@ -393,6 +393,9 @@
+     s32 forced;
+ 
+     if (FIELDSTG_state.menuOpen == 0 && FIELDSTG_state.busy == 0 && FIELDSTG_state.battleStarting == 0) {
++#ifdef NATIVE
++        native_skip_free(); /* skip_scenes: the player has the controls, a skip under way stops (native.h) */
++#endif
+         pad = (PAD.getHeld(0) >> PAD_UP) & 0xF;
+         pressed = (PAD.getPressed(0) & (1 << PAD_CROSS)) != 0;
+         forced = FLAGS_00.checkCondition(FIELD_FLAG_TALK_AHEAD, 1);
+@@ -823,9 +826,14 @@
+             prim.sprt->w = 0x20;
+             prim.sprt->h = 0x10;
+             prim.sprt->clut = getClut(shadow->shadow.clutX, shadow->shadow.clutY);
++            if (g_soft_shadows) { /* native: subtracted from the ground, smooth on the card (native.h) */
++                setRGB0(prim.sprt, 0xFF, 0xFF, 0xFF);
++                setSemiTrans(prim.sprt, 1);
++                prim.sprt->h |= NATIVE_SOFT_SHADOW;
++            }
+             addPrim(ot, prim.any);
+             prim.sprt++;
+-            SetDrawTPage(prim.tpage, 0, 1, GetTPage(0, 0, shadow->shadow.x, shadow->shadow.y));
++            SetDrawTPage(prim.tpage, 0, 1, GetTPage(0, g_soft_shadows ? 2 : 0, shadow->shadow.x, shadow->shadow.y));
+             addPrim(ot, prim.any);
+             prim.tpage++;
+         }

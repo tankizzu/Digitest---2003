@@ -1,0 +1,252 @@
+/* The port's options that change how the game plays: what were mods of the
+   PSX game (byte patches), as options of its own (native.ini, the options menu) */
+#include <SDL3/SDL.h>
+#include "platform.h"
+#include "stage_tables.h"
+#include "../include/native.h"
+
+int g_fast_text = 1; /* fast_text = 0: X held doesn't advance the texts (native.h) */
+int g_fast_travel = 0; /* fast_travel = 1: X on the map screen travels (ststatus/map_screen.c) */
+int g_map_objective = 0; /* map_objective = 1: the map blinks the story's next area (ststatus/map_screen.c) */
+int g_journal = 0; /* journal = 1: the field menu's journal row (ststatus/item_list.c) */
+int g_ff_speed = 1;  /* fast forward: the game's ticks a frame shown (etc.c); not saved */
+int g_inactive_window = 0; /* inactive_window: 0 nothing, 1 mute, 2 pause the game (video.c) */
+int g_give_form; /* --give ID (main.c) */
+int g_dna_other; /* native.h */
+int g_bladegarurumon = 1; /* bladegarurumon = 0: partners don't learn it (stfgtrep's growth.c) */
+int g_save_anywhere = 0; /* save_anywhere = 1: a SAVE row in the field menu (patches: main/menu/field_menu.c) */
+int g_save_from_menu = 0; /* the memory card screen was opened from that row: it goes back to the field */
+int g_fix_equip_stacking = 0; /* fix_equip_stacking = 1: Search and Counter Crest work beside special weapons (patches: battle/battle_mode/stats.c) */
+int g_battle_form_name = 0; /* battle_form_name = 1: the HUD names the partner's current form (patches: battle/battle_mode/hud.c) */
+int g_menu_wrap = 0; /* menu_wrap = 1: a menu's cursor goes round at its ends (patches: native.h helpers) */
+int g_ff_menu_speed = 0; /* ff_menu_speed = 1: menus repeat at their normal pace in fast forward (patches: main/pad/port.c) */
+int g_skip_press_start = 0; /* skip_press_start = 1: the title shows its two options, not PRESS START (patches: stdwtitl/menu.c) */
+int g_skip_scenes = 0; /* skip_scenes = 1: square held skips an event's script (patches: field_mode/event.c, player_name/welcome.c) */
+int g_heal_on_levelup = 0; /* heal_on_levelup = 1: a partner that levels up gets its HP and MP back (patches: stfgtrep/growth.c) */
+int g_full_exp_share = 0; /* full_exp_share = 1: full rewards for every non-KO party member */
+int g_technique_visuals = 1; /* technique_visuals = 1: use mapped player technique effects (scripts 9/13) */
+int g_sober_disk_shops = 0; /* sober_disk_shops = 1: Sober Disk stock and item use while confused */
+int g_full_exp_eligible[3]; /* battle-end HP > 0, including partners who stayed on the bench */
+int g_full_exp_report; /* the option captured once when a reward report starts */
+
+/* The files options make anew (files.c): the lobby's Veemon (packs.c),
+   BladeGarurumon's model and the fighters' file (bladegaru.c) */
+const uint8_t *made_file(int fid, long *size) {
+    const uint8_t *made = packs_file(fid, size);
+
+    return made != NULL ? made : bladegaru_file(fid, size);
+}
+
+int VSync(int mode);
+
+/* Fast text's buttons (native.h): those of HELD down 20 vsyncs or more
+   without a break; a gap of more than a few vsyncs since the last call
+   starts the count again */
+int native_long_held(int held) {
+    static int last = -1, out;
+    static int count[16];
+    int now = VSync(-1), i;
+
+    if (now != last) {
+        int step = now - last;
+
+        out = 0;
+        for (i = 0; i < 16; i++) {
+            count[i] = (held >> i & 1) && step > 0 && step <= 4 ? SDL_min(count[i] + step, 1000) : 0;
+            out |= count[i] >= 20 ? 1 << i : 0;
+        }
+        last = now;
+    }
+    return out;
+}
+
+/* skip_scenes (native.h): a skip under way, from a hold of the skip button
+   (HELD down 40 shown vsyncs without a break, fast forward doesn't shorten it;
+   a gap of more than a few vsyncs since the last call starts the count again)
+   until the player has the controls back, the name screen or a battle */
+#define SKIP_HOLD 40 /* shown vsyncs */
+#define SKIP_FADE 24 /* the picture's fade back in after a skip, in shown vsyncs */
+#define SKIP_LOST 60 /* shown vsyncs with nothing to skip that end a skip anyway */
+static int s_skipping, s_offered = -1000, s_held, s_fade_from = -1000;
+
+int native_skip_held(int held) {
+    static int start, last = -100;
+    int now = VSync(-1);
+
+    if (!g_skip_scenes) {
+        return s_skipping = 0;
+    }
+    s_offered = native_real_time();
+    if (s_skipping) {
+        return 1;
+    }
+    if (!held) {
+        last = -100;
+        s_held = 0;
+        return 0;
+    }
+    if (now - last > 4) {
+        start = native_real_time();
+    }
+    last = now;
+    s_held = native_real_time() - start;
+    return s_skipping = s_held >= SKIP_HOLD;
+}
+
+void native_skip_stop(void) {
+    if (s_skipping) {
+        s_fade_from = native_real_time();
+    }
+    s_skipping = 0;
+    s_held = 0;
+}
+
+int native_skip_running(void) {
+    if (s_skipping) {
+        s_offered = native_real_time();
+    }
+    return s_skipping;
+}
+
+/* The area banner (FIELDSTG banner.c) as a field opens: 1 while a skip is under way, which skips it
+   (the field doesn't wait for it) and has it wait (native_skip_waiting) */
+int native_skip_banner(void) {
+    return s_skipping;
+}
+
+/* The skipped banner, each vsync: 1 while the skip goes on. A field free of events (idle) counts as the
+   player's control, which the banner freezes: 10 vsyncs of it stop the skip and the banner shows */
+int native_skip_waiting(int idle) {
+    if (s_skipping && idle) {
+        native_skip_free();
+    }
+    return s_skipping;
+}
+
+/* The skip's cue (video.c): 0 none, 1 offered (the hold's share of the ring in *ring), 2 skipping.
+   Offered stays shown 8 shown vsyncs after the last offer: the game's tasks needn't ask every vsync */
+int native_skip_cue(float *ring) {
+    *ring = s_skipping ? 1.0f : SDL_min(s_held, SKIP_HOLD) / (float)SKIP_HOLD;
+    return s_skipping ? 2 : native_real_time() - s_offered <= 8 ? 1 : 0;
+}
+
+/* The black over the picture (each vsync, etc.c): 255 while skipping, then fading out. A skip with
+   nothing to skip for SKIP_LOST ends there, whatever holds the game (a scene of its own, a title) */
+int native_skip_blank(void) {
+    int t;
+
+    if (s_skipping && native_real_time() - s_offered > SKIP_LOST) {
+        native_skip_stop();
+    }
+    t = native_real_time() - s_fade_from;
+
+    return s_skipping ? 255 : t < SKIP_FADE ? 255 - 255 * t / SKIP_FADE : 0;
+}
+
+/* The player's control, each frame it runs: 10 vsyncs of it in a row stop the
+   skip (one alone may be the gap between two events of a scene) */
+void native_skip_free(void) {
+    static int since, last = -100;
+    int now = VSync(-1);
+
+    if (now - last > 4) {
+        since = now;
+    }
+    last = now;
+    if (now - since >= 10) {
+        native_skip_stop();
+    }
+}
+
+/* Tab or R3: x1, x2, x3, x5 and round */
+void ff_cycle(void) {
+    static const int SPEEDS[] = {1, 2, 3, 5};
+    int i = 0;
+
+    while (i < 3 && SPEEDS[i] != g_ff_speed) {
+        i++;
+    }
+    g_ff_speed = SPEEDS[(i + 1) % 4];
+}
+
+/* Fast travel's doors: every stage's ways out (its exits, and the warps and
+   launches that leave, a slot's destination being laid out as an exit's),
+   each with a mode of the stage it is in, and where each mode's stage starts
+   the player. Read
+   once before the game runs, from each stage's setup as the field runs it
+   (the field editor's changes too), its variables put back after */
+#define SLOT_EXIT 1
+#define SLOT_WARP1 9
+#define SLOT_WARP0 10
+#define SLOT_LAUNCH_OUT 14
+#define FIRST_FIELD 0x200
+#define FIELDS 0xD7 /* 0x200 to 0x2D6, the map's fields */
+static NativeExit *s_exits;
+static int s_exit_count;
+static struct {
+    int set, x, y, dir;
+} s_starts[FIELDS];
+
+static const StageFuncs *stage_of(void *init) {
+    for (const StageFuncs *s = native_stage_list; s->name != NULL; s++) {
+        if (s->start == init) {
+            return s;
+        }
+    }
+    return NULL;
+}
+
+/* each mode of the European table (FIELDSTG_pickStage's, outside the extra
+   game) set up as FIELDSTG does: its stage picked, its setup, then the field
+   editor's changes (--at kept for the game) */
+void native_fast_travel_setup(void) {
+    FieldState *st = &FIELDSTG_state;
+    int room = 0, at_x = g_field_at_x;
+
+    for (const StageEntry *e = FIELDSTG_stages; e->mode != 0; e++) {
+        const StageFuncs *s = stage_of(e->init);
+        int i = e->mode - FIRST_FIELD;
+
+        if (s == NULL || i < 0 || i >= FIELDS) {
+            continue;
+        }
+        native_reset_overlays(1);
+        memset(st, 0, 0x64);
+        memset(&FIELDSTG_map, 0, sizeof FIELDSTG_map);
+        st->stageFile = e->file, st->stageInit = e->init;
+        s->setup();
+        g_field_at_x = -1;
+        native_apply_stage_mod();
+        s_starts[i].set = 1, s_starts[i].x = st->startX, s_starts[i].y = st->startY, s_starts[i].dir = st->startDir;
+        for (StageSlot *slot = st->slots; slot != NULL && slot->type != 0; slot++) {
+            if (slot->type != SLOT_EXIT && slot->type != SLOT_WARP1 && slot->type != SLOT_WARP0 && slot->type != SLOT_LAUNCH_OUT) {
+                continue;
+            }
+            if (s_exit_count == room) {
+                room = room ? room * 2 : 256;
+                s_exits = SDL_realloc(s_exits, room * sizeof *s_exits);
+            }
+            s_exits[s_exit_count++] = (NativeExit){e->mode, slot->arg, slot->x, slot->y, slot->dir, slot->place, slot->placeArg,
+                                                   {{slot->conditions[0][0], slot->conditions[0][1]},
+                                                    {slot->conditions[1][0], slot->conditions[1][1]}},
+                                                   slot->type == SLOT_EXIT};
+        }
+    }
+    g_field_at_x = at_x;
+    LOG("fast travel: %d doors", s_exit_count);
+    native_reset_overlays(0);
+    native_reset_overlays(1);
+}
+
+const NativeExit *native_exits(int *count) {
+    *count = s_exit_count;
+    return s_exits;
+}
+
+int native_stage_start(int mode, int *x, int *y, int *dir) {
+    if (mode < FIRST_FIELD || mode >= FIRST_FIELD + FIELDS || !s_starts[mode - FIRST_FIELD].set) {
+        return 0;
+    }
+    *x = s_starts[mode - FIRST_FIELD].x, *y = s_starts[mode - FIRST_FIELD].y, *dir = s_starts[mode - FIRST_FIELD].dir;
+    return 1;
+}

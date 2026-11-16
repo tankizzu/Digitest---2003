@@ -1,0 +1,33 @@
+--- a/src/engine/file/cd_reader.c
++++ b/src/engine/file/cd_reader.c
+@@ -93,6 +93,14 @@
+ 
+ /* Whether the CD reader is busy */
+ s32 isCdReading(void) {
++#ifdef NATIVE
++    if (CD_READER.state != CD_READ_IDLE && native_read_done()) {
++        CD_READER.state = CD_READ_IDLE;
++        if (CD_READER.done != NULL) {
++            *CD_READER.done = 1;
++        }
++    }
++#endif
+     return CD_READER.state != CD_READ_IDLE;
+ }
+ 
+@@ -121,8 +129,15 @@
+         } else {
+             CD_READER.sectorCount = size;
+         }
++#ifdef NATIVE
++        /* native: the read is asked of data/files now and done a few frames on, as the drive's was (platform/files.c);
++           isCdReading, which the game polls, finishes it */
++        native_read_start(file, offset, CD_READER.sectorCount, buffer);
++        CD_READER.state = CD_READ_SECTORS;
++#else
+         FILE_TABLE.getPos(file, offset, CD_READER.loc);
+         CD_READER.sector = FILE_TABLE.getSector(file) + offset;
+         startCdRead();
++#endif
+     }
+ }

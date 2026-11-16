@@ -1,0 +1,50 @@
+# Credits
+
+The native port of Digimon World 2003 builds on the work of others:
+
+- **[dw3_decomp](https://github.com/ReGame-Labs/dw3_decomp)** (MIT License, Copyright (c) 2026 juandav, ReGame-Labs). It is the
+  decompiled C of the game that this port compiles for the PC, with our patches in `native/patches/`. Without it there
+  would be no port.
+- **[Dmw2003FastText](https://github.com/markisha64/Dmw2003FastText)** (MIT License, by markisha64). The idea of
+  Fast text: the text boxes reading X held as well as pressed, outside battles.
+- **[ddw3](https://github.com/markisha64/ddw3)** (markisha64, Zenithsiz). A decompilation of the game, whose
+  `mklang-file` encodes the extra starter packs' texts in the game's own text format (`tools/packs_text.py`).
+- **[Flawe's Mod](https://www.romhacking.net/hacks/9376/)** (by Flawe, on Romhacking). The idea of Fast travel: no part
+  of it is copied, the port's goes through the game's own doors.
+- **[dw2_decomp](https://github.com/Wyrelade/Digimon-World-2-Decomp)** (CC0, by Wyrelade and its contributors). The
+  decompiled Digimon World 2 that Flamedramon's model was read through.
+- **[dcb_decomp](https://github.com/ReGame-Labs/dcb_decomp)** (MIT License, ReGame-Labs). The decompiled Digimon Digital
+  Card Battle that Flamedramon's attacks were read through.
+- **Pixel Digivolve** (by Neale Davidson, Pixel Sagas). The launcher's font, baked into `dw3launcher.exe`; its license
+  is in `licenses/`.
+- **[SDL 3](https://libsdl.org)** (zlib License, Copyright (C) 1997-2026 Sam Lantinga). The window, input and audio.
+  `SDL3.dll` ships as it comes.
+- **[stb](https://github.com/nothings/stb)** (public domain / MIT, by Sean Barrett and its contributors). `stb_image`
+  and `stb_image_write`, in `platform/stb/`: the JPEG of the Digilog's pictures of the fields.
+- **[Xelu's free controller prompts](https://thoseawesomeguys.com/prompts/)** (CC0, by Nicolae "Xelu" Berbece, in
+  the SVG edition by [haaldor](https://github.com/haaldor/Xelu_prompts_SVG)). The button and key icons of the options
+  menu and of the game's texts, scaled down by `tools/prompts.py`, in `prompts/` by the exe with their license.
+- **[psx-spx](https://psx-spx.consoledev.net)** (the PlayStation specifications, after Martin Korth's nocash docs).
+  The hardware behaviour the platform layer reproduces, including two data tables of the chips: the SPU's Gaussian
+  interpolation weights and its reverb resampling filter.
+- **Zaw Htet Naing** (PR #21). Tech visual upgrade: the technique visuals map, the prepared launch slots of the players' scripts 9 and 13, and their option.
+- **Hucaru** (issue #15). The idea of Skip scenes: holding a button to jump the cutscenes, for repeated runs.
+- **AMD FidelityFX Contrast Adaptive Sharpening** (CAS, MIT). The idea behind the Sharpen option: a sharpening
+  weighted by the local contrast. The shader here is written for this renderer, not AMD's code.
+- **[SMAA](https://github.com/iryoku/smaa)** (Enhanced Subpixel Morphological Antialiasing, MIT; © 2013 Jorge Jimenez,
+  Jose I. Echevarria, Belen Masia, Fernando Navarro, Diego Gutierrez). The SMAA option: their shader and its two
+  tables as published, in `platform/smaa/` with their license.
+- **AMD FidelityFX Super Resolution 1.0** (FSR 1, MIT; © 2021 Advanced Micro Devices, Inc.). The FSR 1 option is
+  its upscaling pass (EASU), written out for this renderer after AMD's.
+- **AMD FidelityFX Super Resolution 3.1** (FSR 3.1 upscaler, MIT; © Advanced Micro Devices, Inc.). The FSR 3.1 option calls
+  it through AMD's C API (`ffx_api`), loaded at run time from AMD's own DLLs, which the port does not ship (the launcher can download them from AMD's SDK, tag v2.4.0, checking their SHA-256); only the
+  layout of the API's structures is declared in `platform/d3d12/fsr3_api.h`.
+- **[Microsoft DirectStorage](https://github.com/microsoft/DirectStorage)** (MIT; © Microsoft Corporation). The disc reads can go through it. The port loads `dstorage.dll` at run time, does not ship it, and declares the few calls it uses by hand in `platform/dstorage.c`, checked against Microsoft's header.
+- **[NVIDIA Streamline](https://github.com/NVIDIA-RTX/Streamline)** (headers MIT; © NVIDIA Corporation; its DLLs and the DLSS runtime under NVIDIA's own licence). The DLSS option calls it at run time from NVIDIA's DLLs, which the port does not ship (the launcher can download them from NVIDIA's release v2.14.16, checking their SHA-256); the layout of its structures is declared in `platform/d3d12/dlss_api.h`.
+
+PlayStation is a trademark of Sony Interactive Entertainment, Xbox of Microsoft and Nintendo Switch of Nintendo; the
+icons only show which button to press, and the project has no relation to them.
+
+Digimon World 2003 is © Bandai / Bandai Namco. This project carries no game data: you supply your own disc
+(see `README.md`). The game's own tables the decompiled C carries are taken out of the exe when it is built and
+read at run time from your own copy, as are the reverb presets.

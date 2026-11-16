@@ -1,0 +1,280 @@
+/* The native platform layer: what replaces the PSX hardware and Sony's PsyQ
+   libraries under the decompiled game. Its own types, not Sony's headers;
+   built with the host's C library and SDL3. */
+#ifndef PLATFORM_H
+#define PLATFORM_H
+
+#include <stdint.h>
+#include <stdio.h>
+
+/* --- PsyQ types the platform needs, with the same layout --- */
+typedef struct {
+    int16_t x, y, w, h;
+} RECT;
+
+typedef struct {
+    RECT disp;
+    RECT screen;
+    uint8_t isinter, isrgb24, pad0, pad1;
+} DISPENV;
+
+typedef struct {
+    uint32_t pmode;
+    int16_t px, py;
+    uint16_t pw, ph;
+    uint32_t *pixel;
+    int16_t cx, cy;
+    uint16_t cw, ch;
+    uint32_t *clut;
+} GsIMAGE;
+
+/* --- platform state --- */
+#define VRAM_W 1024
+#define VRAM_H 512
+extern uint16_t *g_vram; /* malloc'd: nothing in the OTs points at it */
+extern DISPENV g_disp; /* the last PutDispEnv */
+extern int g_disp_on;  /* SetDispMask */
+
+const char *data_dir(void);
+void native_log(const char *fmt, ...);
+void present_frame(void); /* platform/video.c */
+int pump_events(void);    /* 0 once the user closed the window */
+struct SDL_Window *video_window(void);
+struct SDL_Surface *video_boot_picture(void); /* the boot image as drawn on the window (RGBA), NULL once the renderer is up */
+
+/* The options menu (platform/menu.c) */
+union SDL_Event;
+struct SDL_Renderer;
+int menu_active(void);   /* the game waits while it is open */
+void menu_toggle(void);
+void native_quit(void); /* the field menu's Quit (include/native.h): saves the menu's changes, then exits */
+int menu_event(const union SDL_Event *e); /* 1: the menu's */
+void menu_draw(struct SDL_Renderer *r);
+void set_fps(int sixty); /* the game's 60 Hz mode on or off */
+
+#include "renderer.h" /* the drawing on the graphics card (gl.c) */
+/* The primitives' drawing into the 1x VRAM, queued until read (gpu_draw.c) */
+void soft_all(void);                          /* everything queued, drawn now */
+void soft_discard(void);                      /* VRAM was replaced (a loaded state) */
+void soft_age(void);                          /* at each vsync: what is three frames old is drawn */
+void soft_read(int x, int y, int w, int h);   /* this rect is about to be read */
+void soft_write(int x, int y, int w, int h);  /* this rect is about to be overwritten */
+#include "json.h" /* the JSON reader (json.c) */
+int gte_camera_get(PCam *c); /* the battle camera (gte.c); 0 when no stage was drawn lately */
+/* The battle's performance meter (perf.c): CPU sections timed with perf_begin / perf_end, the card's times from gl.c's queries */
+enum { PF_DRAW, PF_PROPS, PF_PRESENT, PF_WAIT, PF_GPU, PF_GPU_PROPS, PF_PLOAD, PF_PGL, PF_PFLUSH, PF_PTEX, PF_SPOLY, PF_BRIGHT, PF_PDRAW, PF_SOFT, PF_SOFT_N, PF_N };
+extern int g_perf; /* F10, perf in native.ini */
+int perf_on(void); /* the meter is on and a fight is running */
+void perf_begin(int section);
+void perf_end(int section);
+void perf_gpu(int section, double ms);
+void perf_note(const char *fmt, ...); /* a comment line in the fight's csv, with the frame */
+void perf_enter(double budget_ms); /* at each vsync */
+void perf_reset(void);
+void perf_draw(struct SDL_Renderer *r);
+/* GP0 1D (native.h): images KEY >> 12 at tick KEY & 0xFFF around (x, y),
+   their widths times xs (effects.c) */
+void native_effects_warm(void); /* once a frame from the start: the mod's effects read and put on the card, one picture a frame */
+void postcard_draw(int mode, float x, float y, float w, float h, int cx1, int cy1, int cx2, int cy2); /* postcards.c */
+void native_effect_draw(unsigned key, float x, float y, float xs, int cx1, int cy1, int cx2, int cy2);
+int gte_precise(const uint32_t *word, float *x, float *y, float *z);
+int gte_precise_motion(const uint32_t *word, float *mx, float *my); /* DW3_UPSCALE_DATA=motion: the vertex's motion since last frame */
+int gte_motion_on(void);
+void gte_precise_copy(void *dst, const void *src); /* the game's own code calls it too */
+void gte_precise_frame(void);
+
+/* --- sound: platform/spu.c, audio.c --- */
+#define SPU_VOICES 24
+#define AUDIO_RATE 44100
+void spu_write(uint32_t addr, const void *src, uint32_t size);
+void spu_key_on(int voice, uint32_t addr, uint16_t adsr1, uint16_t adsr2);
+void spu_key_off(int voice);
+void spu_voice_stop(int voice);
+void spu_set_pitch(int voice, uint16_t pitch);
+void spu_set_volume(int voice, int16_t l, int16_t r);
+int spu_voice_state(int voice, int *env);
+void spu_set_main_volume(int16_t l, int16_t r);
+void spu_set_cd_volume(int16_t l, int16_t r);
+void spu_set_reverb(const uint16_t regs[32], uint32_t base); /* a libspu preset, its work area in bytes */
+void spu_set_reverb_on(int on);
+void spu_set_reverb_depth(int16_t l, int16_t r); /* 0-0x7FFF */
+void spu_set_voice_reverb(int n, int on);
+void spu_cd_push(const int16_t *lr, int frames);
+int spu_cd_queued(void);
+void spu_cd_clear(void);
+void spu_render(int16_t *out, int frames);
+void audio_vblank(int rate); /* mixes and queues one vsync of sound */
+void audio_mute(int on);     /* silence, while the window is inactive */
+extern int g_inactive_window; /* inactive_window: 0 nothing, 1 mute, 2 pause the game (mods.c) */
+void movie_vblank(int rate); /* platform/movie.c: the CD streams on */
+
+/* Logs once per call site key: for stubs and first-time events */
+void log_once(const char *what);
+#define LOG(...) (fprintf(stderr, __VA_ARGS__), fputc('\n', stderr))
+
+/* Per subsystem, off unless DW3_LOG (or native.ini's log) names it:
+   DW3_LOG=cd,snd,pad,mc,ovl,gpu or all */
+enum { LOG_GPU = 1, LOG_CD = 2, LOG_SND = 4, LOG_PAD = 8, LOG_MC = 16, LOG_OVL = 32 };
+extern int g_log;
+#define LOGC(cat, ...) do { if (g_log & (cat)) LOG(__VA_ARGS__); } while (0)
+
+/* native.ini switches (main.c) */
+extern int g_debug;         /* debug = 1: the debug keys (state.c) */
+extern int g_renderer;      /* renderer = auto 0, d3d12 1, gl 2: the 64-bit build's choice (gfx.c) */
+extern int g_depth; /* the options menu's Depth buffer: the 3D models' polygons by their depth, not the PSX's order (gl.c) */
+extern int g_subpixel; /* the options menu's Sub-pixel 3D: 0 snaps vertices to the 1x pixel (gte.c), for comparing */
+extern int g_dither_on;     /* dither = 0: no GPU dithering (gpu_draw.c) */
+extern int g_true_color;    /* true_color = 0: the card's colours cut to the PSX's 5 bits a channel (gl.c) */
+extern int g_perspective;   /* perspective = 0: the 3D's textures without perspective, as the PSX's (gl.c) */
+extern int g_smooth_3d;     /* smooth_3d = 0: the 3D's textures by their nearest texel, as the PSX's (gl.c) */
+extern int g_sharpen, g_brightness, g_gamma, g_saturation; /* the post-process pass (gl.c): 0 to 10; -10 to 10 */
+extern int g_scanlines, g_integer_scale; /* scanlines = 0 to 10, integer_scale = 0/1 (gl.c) */
+extern int g_smaa, g_fsr, g_up_mode; /* smaa, fsr = 0/1: SMAA over the picture, FSR 1's upscaling to the window (gl.c) */
+extern int g_widescreen;     /* widescreen = 1: battles 16:9, the window too (gte.c) */
+void gte_motion_enable(void); /* FSR 3.1 asks for the motion (gte.c) */
+int gfx_scale_tied(void);   /* 1: the upscaler mode sets the render size, not Resolution (FSR 3.1, DLSS) */
+int gfx_dlss_status(void);  /* DLSS, the same numbers: -1 not here (the DLLs, an RTX card) */
+int gfx_fsr3_status(void); /* FSR 3.1: -1 not here, 0 after a restart, 1 on, 2 the Resolution is too high for it, 3 running (the renderer's) */
+int gte_proj_h(void);       /* the projection plane's distance, the 3D's field of view (gte.c) */
+int gte_widescreen(void);    /* this frame is (gte.c) */
+int gte_in_battle(void);     /* this frame is a battle's (gte.c) */
+int video_window_width(int scale); /* 320 * scale, or 16:9 with widescreen (video.c) */
+void video_resize(int scale);      /* the window, windowed, fitting the screen (video.c) */
+extern int g_vsync;                /* vsync = 0: frames shown at once, torn (gl.c) */
+extern int g_soft_shadows;
+extern int g_battle_sky; /* battle_sky = 1: a sky behind the battles and fog over the stage's far side (gl.c, gpu_draw.c) */
+/* A fight stage's profile for it (stages.ini; colours -1 for the stage's own) */
+typedef struct StageFx {
+    int sky;           /* a gradient behind the stage */
+    int sky_top[3];    /* its top */
+    float fog, fog_start; /* how much at the far side, where it starts (part of the way) */
+    int fog_color[3];
+    float horizon;     /* the painted horizon's radius, 0: none */
+    int leaves;        /* falling leaves in the arena, how many */
+    float wind;        /* how hard the wind blows them */
+    float clouds;      /* the painted sky's turn, degrees a second */
+    float sway;        /* how far the props (trees) bend in the wind */
+    int on;            /* 0: the stage is left as it is */
+} StageFx;
+void stagefx_draw(int ox, int oy, int x1, int y1, int x2, int y2); /* the particles, after the fighters (stagefx.c) */
+int gte_camera_project(const float p[3], float out[3]); /* the battle camera's (gte.c) */
+float gte_camera_scale(float z);
+int gte_camera_wide(void);
+const StageFx *stagefx_current(float *bright); /* the stage shown's, NULL for none (stagefx.c) */
+void stagefx_stage_drawn(int polygons);       /* the stage layer's ordering table drew this many (stagefx.c) */
+void stagefx_frame(void);                     /* a frame drawn */
+extern int g_battle_shadows; /* battle_shadows = 0: the fighters cast none (gl.c, native.h) */  /* soft_shadows = 1: the field's shadows see-through and smooth (gl.c, native.h) */
+extern int g_smooth_movies; /* smooth_movies = 0: movies scaled by nearest pixel (video.c) */
+extern int g_deadzone;      /* deadzone = <0..32767>: the sticks' and triggers' (pad.c) */
+extern int g_rumble;        /* rumble = 0: the gamepad doesn't vibrate (pad.c) */
+
+/* The PS buttons' keys and gamepad buttons, by bit (pad.c): native.ini's
+   keys_<button> = Z, Space and pad_<button> = a (SDL's names) */
+#define PAD_NONE (-1)
+#define PAD_LT 100 /* the triggers, as buttons */
+#define PAD_RT 101
+struct SDL_Gamepad;
+const char *pad_button_name(int bit);   /* "cross" */
+int *pad_keys(int bit);                 /* its two scancodes, 0 for none */
+int *pad_source(int bit);               /* its gamepad button, PAD_LT / PAD_RT or PAD_NONE */
+const char *pad_source_name(int src);   /* SDL's name: "a", "lefttrigger" */
+int pad_swapped(void);                  /* Triangle and Circle trade places (the Controls page's swap row) */
+void pad_bind_reset(void);              /* the defaults */
+int pad_bind_ini(const char *key, const char *value); /* 1: a binding, read */
+int pad_bind_line(int i, char *key, char *value, size_t size); /* line 0-31 for native.ini; 1: not the default */
+struct SDL_Gamepad *pad_gamepad(void);  /* the one open, or NULL */
+
+/* The options menu's Controls page and button icons (controls.c) */
+enum { ICONS_AUTO, ICONS_PS1, ICONS_PS3, ICONS_PS4, ICONS_PS5, ICONS_XBOX360, ICONS_XBOXONE, ICONS_XBOXSERIES, ICONS_SWITCH, ICONS_KEYBOARD, ICONS_COUNT };
+extern int g_icons;                     /* icons = ps1 | ps3 | ps4 | ps5 | xbox360 | xboxone | xboxseries | switch | keyboard | auto */
+extern const char *const ICON_NAMES[ICONS_COUNT];
+void controls_note(const union SDL_Event *e); /* every event: the last device used */
+void controls_open(void);
+int controls_active(void);
+int controls_event(const union SDL_Event *e); /* 1: a binding changed */
+void controls_draw(struct SDL_Renderer *r, float x, float y, float w, int rows);
+float controls_hint(struct SDL_Renderer *r, float x, float y, int draw); /* the help line; its width */
+void controls_tab_icons(struct SDL_Renderer *r, float left, float right, float y); /* L1 / R1, or Q / E */
+void controls_shoulder_text(int bit, char *out, int size); /* L1 (10) / R1 (11) as the game's full-width letters, for the keys or pad in use */
+int controls_glyph(int tx, int ty, int depth, int u, int v, int w, int h); /* a text sprite's face button, or -1 */
+int controls_game_icon(int bit, struct SDL_Surface **img, unsigned **tex); /* 1: drawn as img instead */
+extern int g_fast_text;     /* fast_text = 0: X held doesn't advance the texts (mods.c) */
+extern int g_ff_speed;      /* fast forward: the game's ticks a frame shown, 1 normal (mods.c, etc.c) */
+void ff_cycle(void);        /* Tab / R3: the next speed */
+extern int g_map_objective; /* map_objective = 1: the map blinks the story's next area (mods.c) */
+extern int g_journal;       /* journal = 1: the field menu's journal row (mods.c) */
+extern int g_fast_travel;   /* fast_travel = 1: X on the map screen travels there (mods.c) */
+extern int g_extra_packs;   /* extra_packs = 0: the starter choice has the game's three (packs.c) */
+extern int g_bladegarurumon; /* bladegarurumon = 0: partners don't learn it (mods.c) */
+extern int g_custom_effects; /* custom_effects = 0: no effect images of data/mods/effects (effects.c) */
+extern int g_custom_sounds; /* custom_sounds = 0: no effect sounds of data/mods/effects, nor the sound library (effects.c) */
+/* A WAV of a mod, read the first time it plays (clips.c); its voices are added to the vsync's mix by native_sfx_mix */
+typedef struct {
+    char *path; /* kept until it has been read, and NULL once it can't be */
+    int16_t *data; /* stereo at AUDIO_RATE, once read */
+    int frames, vol; /* vol 256 = as it is */
+} NativeClip;
+void native_clip_set(NativeClip *c, const char *path, int vol);
+void native_clip_clear(NativeClip *c);
+int native_clip_ready(NativeClip *c);
+void native_clip_play(NativeClip *c);
+void native_sfx_mix(int16_t *buf, int frames);
+int native_sound_replace(int index); /* the sound library's WAV plays in place of the game's battle sound, 1 if so (soundlib.c) */
+void native_soundlib_warm(void);
+int native_sound_id(const char *name); /* a library sound's id for a script mod (0x100 and up), -1 when there is none (soundlib.c) */
+struct Json;
+int native_script_compile(struct Json *root, short *out, char *err, int errsz); /* a script mod's commands as the game's words (scriptmod.c) */
+void native_scripts_scan(void);
+int native_scripts_check(void); /* --check-mods: lists the script files, returns how many are rejected */
+extern int g_custom_scripts; /* custom_scripts = 0: the game's own battle scripts (scriptmod.c) */
+extern int g_save_anywhere; /* save_anywhere = 1: a SAVE row in the field menu (mods.c) */
+extern int g_save_from_menu;
+extern int g_fix_equip_stacking; /* fix_equip_stacking = 1: Search and Counter Crest work beside special weapons (mods.c) */
+extern int g_battle_form_name; /* battle_form_name = 1: the battle HUD names the current form (mods.c) */
+extern int g_menu_wrap;      /* menu_wrap = 1: a menu's cursor goes round at its ends (mods.c) */
+extern int g_ff_menu_speed;  /* ff_menu_speed = 1: menus repeat at their normal pace in fast forward (mods.c) */
+extern int g_skip_press_start; /* skip_press_start = 1: no PRESS START on the title (mods.c) */
+extern int g_skip_scenes;      /* skip_scenes = 1: square held skips the cutscenes' dialogues (mods.c) */
+int native_skip_cue(float *ring); /* 0 none, 1 offered, 2 skipping; the ring filled 0-1 (mods.c) */
+int native_skip_blank(void);      /* the black over the picture while skipping, 0-255 (mods.c) */
+extern int g_heal_on_levelup; /* heal_on_levelup = 1: a partner that levels up is healed in full (mods.c) */
+extern int g_full_exp_share; /* full_exp_share = 1: full rewards for non-KO party members (mods.c) */
+extern int g_technique_visuals; /* technique_visuals = 1: mapped player technique effects (mods.c) */
+extern int g_sober_disk_shops; /* sober_disk_shops = 1: Sober Disk shops and Item while confused (mods.c) */
+extern int g_full_exp_eligible[3]; /* battle-end reward eligibility by party slot (mods.c) */
+extern int g_full_exp_report; /* the option captured for the current report (mods.c) */
+/* a file an option makes anew, whole, or NULL for the game's (mods.c; packs.c, bladegaru.c) */
+const uint8_t *made_file(int fid, long *size);
+void native_bladegarurumon_setup(void);
+int native_bladegarurumon_launch_ready(void); /* model 471 copied marked scripts 9/13 */
+int native_launch_generated_source(int fid); /* exact generated source selected for a disc fighter */
+/* An allocation the game can't go on without (the overlays' first values, BladeGarurumon's and the mods' files, built once): P, or a message box
+   saying what ran out and the exit (main.c). What can fall back (an image, a cache) checks its NULL and does */
+void *native_must(void *p, const char *what);
+#define NATIVE_FIGHTERS_FILE 0x1CC /* SMDLDATA.PRO: the fighters, with the partners' records */
+int native_fighter_has_record(const unsigned char *f, long size, int model); /* bladegaru.c: MODEL is a partner of that file (a mod's "like") */
+const uint8_t *packs_file(int fid, long *size);
+const uint8_t *bladegaru_file(int fid, long *size);
+long native_read_raw(int fid, uint8_t **out); /* files.c: a file on disk whole, malloc'd; its size */
+void native_read_wait(void); /* files.c: waits for the disc read in flight (state.c) */
+#define NATIVE_MAX_FIDS 8192 /* the file ids files.c keeps: the disc's, then the field editor's and the mods' */
+int native_disc_file(int fid); /* files.c: data/files/<fid>.bin, a file of the player's disc, is there */
+int native_disk_file(int fid); /* files.c: data/mods/<fid>.bin or the disc's is there (the files options make anew aren't asked) */
+
+/* Platform state that is the console's, saved with the game's in a
+   savestate (state.c): it sits in the game's variables' section */
+#define SAVED __attribute__((section(".data$dw3g1")))
+void state_key(int key);  /* a debug key (SDL keycode), from pump_events */
+void state_frame(void);   /* at the frame's end (native_wait_vblank): runs what the keys asked */
+int movie_playing(void);  /* movie.c */
+extern int g_render_sounds; /* --render-sounds: a hidden window, the sounds rendered to WAV files, then exit (soundrender.c) */
+int native_render_parse(const char *dir, const char *list); /* the indexes to render; 0 when none */
+int stage_dump(const char *dir); /* stagedump.c: --dump-stages DIR */
+int postcards_make(void);   /* postcards.c: --postcards, the journal's pictures of the fields */
+void postcards_start(void); /* makes them apart, the first time */
+extern int g_field_mode, g_field_progress, g_field_arg; /* state.c: --field MODE --progress N */
+extern int g_field_sets[64][2], g_field_set_count; /* --set CODE=VALUE (hex code), repeated */
+extern int g_field_party; /* --party N: the starter set given when there is no party */
+extern int g_field_at_x, g_field_at_y; /* --at X,Y: the player's start in the first field (map pixels), x -1 for none */
+
+#endif /* PLATFORM_H */

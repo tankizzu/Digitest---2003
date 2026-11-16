@@ -1,0 +1,876 @@
+/* BladeGarurumon as a partner's Digimon (the 45th: patches/src/main/game,
+   stfgtrep): the DNA form, whose model (M469GARM) has no animations of its
+   own, gets MetalGarurumon's (M196MGAR), retargeted node by node, and its
+   signature Solar Laser: a model 471 of its own, with a record of its own in
+   the fighters' file. Both are made at start from the player's files; the
+   DNA keeps its 469 as it is.
+
+   Retargeting (kb: battle_models): MetalGarurumon's rotation tracks on the
+   nodes that match (both skeletons rest at rotation 0), BladeGarurumon's
+   translations (its bones' lengths), the roots with MetalGarurumon's moves
+   scaled by height; nodes without a match hold their rest pose. The timeline
+   keeps BladeGarurumon's idle (to t 110), then MetalGarurumon's, plus the
+   DNA's attack (t 230-469) moved past it to replace the signature's moves. */
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include "platform.h"
+#include "../include/native.h"
+
+#define FIGHTERS_FILE NATIVE_FIGHTERS_FILE
+#define NEW_FID 1           /* the Japanese MSAMTMAP, which the European game never reads */
+#define NEW_MODEL 471
+#define OLD_MODEL 469 /* BladeGarurumon's DNA form */
+#define MG_MODEL 196  /* MetalGarurumon */
+#define RECORD 196    /* a partner's FighterInfo, in bytes */
+#define BG_SKEL 73
+#define BG_ANIM 36
+#define MG_SKEL 51
+#define MG_ANIM 39
+#define END 30000
+#define IDLE_END 110 /* BladeGarurumon's idle, kept: motion 0, t 10-109 */
+#define REF_T 10     /* both models' pose of reference: their idle's start */
+#define ATK_FROM 230 /* the DNA's attack (motion 56), its nodes 29-34 the beam and blades */
+#define ATK_TO 469
+#define ATK_SHIFT 2000
+
+static int s_launch_ready;
+
+int native_bladegarurumon_launch_ready(void) {
+    return s_launch_ready;
+}
+
+/* BladeGarurumon's node -> MetalGarurumon's, by shape and side */
+static const int NODE_MAP[][2] = {{0, 0},   {2, 7},   {3, 8},   {4, 9},   {6, 1},   {7, 2},   {8, 3},
+                                  {11, 4},  {12, 5},  {13, 6},  {16, 10}, {17, 14}, {18, 15}, {19, 16},
+                                  {22, 11}, {23, 12}, {24, 13}, {27, 17}, {28, 18}};
+/* the start of the motions' segments (sub 0): MetalGarurumon's signature's, the DNA attack's */
+static const int16_t MG_SIG_SEGS[8] = {0, 10, 0, 0, 10, 51, 1450, 1500};
+static const int16_t BG_ATK_SEGS[8] = {0, 15, 0, 0, 15, 50, 230, 279};
+/* the record's cameras the DNA forms have at 0 (6, 7, 10, 11: the portrait,
+   the views out of battle), in bytes: MetalGarurumon's, whose others match */
+static const int CAM_FILL[][2] = {{62, 74}, {86, 98}, {136, 146}, {158, 170}, {182, 186}, {190, 194}};
+
+/* Action script 11, the signature: Solar Laser. The signatures' common start
+   (the attacker close, sprites 1020 and 1009, the dark stage 55), then the
+   DNA's attack (Growlmon's script 12: BladeGarurumon's motion 56, its camera
+   cuts, sounds and hits). Its cameras are the DNA's, in the stage's
+   coordinates: the script puts the attacker at the origin as the DNA does,
+   and the common end puts it back. Opcodes (FIGHTSTG's battle scripts): 1
+   damage, 2 actor, 3 effect, 4 stage, 5 camera, 7 fade, 10 sound, 11 wait */
+#define CAM(ex, ey, ez, ax, ay, az, fov) 5, 0, 1, ex, ey, ez, ax, ay, az, 0, 0, 0, 0, 0, 0, 0, fov
+static const int16_t SOLAR_LASER[] = {
+    3, 1, 1020, 3, 1, 1009, 3, 1, 2, 3, 1, 65, 3, 1, 17, 4, 1, 55, /* preload */
+    2, 2, 4,                                                         /* the target hidden */
+    2, 3, 0, 0, 0, 0, 0,                                             /* the attacker at the origin */
+    CAM(-2816, 1408, -5824, 448, 1728, -1600, 226),
+    3, 0, 1020, 0, 0, -1, 11, 10, 3, 0, 1009, 0, 0, 32767,
+    10, 28, 0, 10, 89, 0, 4, 0, 55, 1, 1, 11, 10,
+    2, 0, 0, 50, /* motion 50: BladeGarurumon's 56 */
+    CAM(-2816, 1408, -5824, 448, 1728, -1600, 226), 11, 50, 10, 15, 0, 11, 5,
+    CAM(-3904, 576, 3264, 1344, 1920, -384, 226), 11, 15, 10, 62, 0, 11, 45,
+    CAM(-2816, 1408, -5824, 448, 1728, -1600, 226), 11, 30,
+    CAM(-3712, 1344, -5184, -192, 1408, -2240, 448), 10, 24, 0, 11, 55,
+    CAM(-4480, 1472, -4160, -128, 1472, -1600, 226), 10, 53, 120, 11, 30,
+    CAM(3712, 1024, -8192, -1600, 2048, -3520, 226), 11, 30,
+    CAM(-4480, 2816, 3136, 448, 1472, -1024, 226), 11, 15,
+    7, 0, 15, 11, 15, /* the hit, as the DNA's */
+    5, 0, 0, 5, 2, 1, 4, 2, 2, 0, 7, 1, 30, 11, 30,
+    3, 0, 2, 0, 0, 32767, 3, 0, 65, 0, 0, 32767, 3, 0, 17, 0, 0, 32767, 10, 99, 0, 1, 0, 11, 20,
+    3, 0, 65, 0, 0, 32767, 3, 0, 17, 0, 0, 32767, 10, 64, 0, 11, 60,
+    5, 0, 0, 0, 10, 91, 0, 2, 1, 0, 2, 7, 0, 0, 2, 0, 0, 1, 4, 0, 0, 15, 15, 11, 60, 255, /* the common end */
+};
+
+static uint32_t rd32(const uint8_t *p) {
+    return p[0] | p[1] << 8 | p[2] << 16 | (uint32_t)p[3] << 24;
+}
+
+static void wr32(uint8_t *p, uint32_t v) {
+    p[0] = (uint8_t)v, p[1] = (uint8_t)(v >> 8), p[2] = (uint8_t)(v >> 16), p[3] = (uint8_t)(v >> 24);
+}
+
+/* --- a file of subs: u32 offsets, then the subs one after another --- */
+
+typedef struct {
+    uint8_t *p;
+    uint32_t n;
+} Blob;
+
+static int split(const uint8_t *b, long size, Blob **out) {
+    uint32_t n = size >= 4 ? rd32(b) / 4 : 0, i, from, to;
+
+    *out = native_must(calloc(n ? n : 1, sizeof(Blob)), "a model's entries");
+    for (i = 0; i < n; i++) {
+        from = rd32(b + 4 * i);
+        to = i + 1 < n ? rd32(b + 4 * (i + 1)) : (uint32_t)size;
+        if (from > to || to > (uint32_t)size) {
+            return -1;
+        }
+        (*out)[i].p = (uint8_t *)b + from;
+        (*out)[i].n = to - from;
+    }
+    return (int)n;
+}
+
+static uint8_t *join(const Blob *subs, int n, long *size) {
+    uint32_t at = 4 * n;
+    int i;
+    uint8_t *out;
+
+    for (i = 0; i < n; i++) {
+        at += subs[i].n;
+    }
+    out = native_must(malloc(at), "a model file");
+    *size = at;
+    at = 4 * n;
+    for (i = 0; i < n; i++) {
+        wr32(out + 4 * i, at);
+        memcpy(out + at, subs[i].p, subs[i].n);
+        at += subs[i].n;
+    }
+    return out;
+}
+
+/* --- keyframe tracks: 4 sections (translation, rotation, scale, extra) of {x, y, z, t} --- */
+
+typedef struct {
+    int v[4];
+} Key;
+
+typedef struct {
+    Key *k;
+    int n, cap;
+} Keys;
+
+static void push(Keys *s, int x, int y, int z, int t) {
+    if (s->n == s->cap) {
+        s->cap = s->cap ? s->cap * 2 : 16;
+        s->k = native_must(realloc(s->k, s->cap * sizeof(Key)), "a motion's keys");
+    }
+    s->k[s->n].v[0] = x, s->k[s->n].v[1] = y, s->k[s->n].v[2] = z, s->k[s->n].v[3] = t;
+    s->n++;
+}
+
+static int parse_track(Blob b, Keys out[4]) {
+    uint32_t h[5], p;
+    int k;
+
+    memset(out, 0, 4 * sizeof(Keys));
+    if (b.n < 16) {
+        return 0;
+    }
+    for (k = 0; k < 4; k++) {
+        h[k] = rd32(b.p + 4 * k);
+    }
+    h[4] = b.n;
+    for (k = 0; k < 4; k++) {
+        for (p = h[k]; p + 8 <= h[k + 1] && h[k + 1] <= b.n; p += 8) {
+            push(&out[k], (int16_t)(b.p[p] | b.p[p + 1] << 8), (int16_t)(b.p[p + 2] | b.p[p + 3] << 8),
+                 (int16_t)(b.p[p + 4] | b.p[p + 5] << 8), (int16_t)(b.p[p + 6] | b.p[p + 7] << 8));
+        }
+    }
+    return out[0].n > 0;
+}
+
+static Blob build_track(Keys secs[4]) {
+    Blob b;
+    uint32_t at = 16;
+    int k, i, j;
+
+    b.n = 16;
+    for (k = 0; k < 4; k++) {
+        b.n += 8 * secs[k].n;
+    }
+    b.p = native_must(malloc(b.n), "a motion track");
+    for (k = 0; k < 4; k++) {
+        wr32(b.p + 4 * k, at);
+        for (i = 0; i < secs[k].n; i++, at += 8) {
+            for (j = 0; j < 4; j++) {
+                b.p[at + 2 * j] = (uint8_t)secs[k].k[i].v[j];
+                b.p[at + 2 * j + 1] = (uint8_t)(secs[k].k[i].v[j] >> 8);
+            }
+        }
+    }
+    return b;
+}
+
+/* round(a + d * f) as the Python that made the PSX mod: each step a double
+   (volatile: x87's longer ones rounded), the half to even */
+static int to_int(int a, int d, double f) {
+    volatile double prod = d * f, sum = a + prod;
+
+    return (int)nearbyint(sum);
+}
+
+/* a section's value at t, between its keys */
+static void sample(const Keys *s, int t, int out[3]) {
+    const Key *prev = &s->k[0];
+    int i, j;
+
+    for (i = 0; i < s->n; i++) {
+        const Key *k = &s->k[i];
+
+        if (k->v[3] == t) {
+            memcpy(out, k->v, 3 * sizeof(int));
+            return;
+        }
+        if (k->v[3] > t) {
+            volatile double f = (double)(t - prev->v[3]) / (k->v[3] - prev->v[3] > 1 ? k->v[3] - prev->v[3] : 1);
+
+            for (j = 0; j < 3; j++) {
+                out[j] = to_int(prev->v[j], k->v[j] - prev->v[j], f);
+            }
+            return;
+        }
+        prev = k;
+    }
+    memcpy(out, s->k[s->n - 1].v, 3 * sizeof(int));
+}
+
+/* BladeGarurumon's idle, then MetalGarurumon's keys as a change from its pose of reference */
+static Keys splice(const Keys *bg, const Keys *mg, double scale) {
+    Keys out = {0};
+    int bref[3], mref[3], i;
+
+    sample(bg, REF_T, bref);
+    sample(mg, REF_T, mref);
+    for (i = 0; i < bg->n; i++) {
+        if (bg->k[i].v[3] < IDLE_END) {
+            push(&out, bg->k[i].v[0], bg->k[i].v[1], bg->k[i].v[2], bg->k[i].v[3]);
+        }
+    }
+    for (i = 0; i < mg->n; i++) {
+        const int *m = mg->k[i].v;
+
+        if (m[3] >= IDLE_END) {
+            push(&out, to_int(bref[0], m[0] - mref[0], scale), to_int(bref[1], m[1] - mref[1], scale),
+                 to_int(bref[2], m[2] - mref[2], scale), m[3]);
+        }
+    }
+    return out;
+}
+
+/* a node without a match: its idle, then its pose of reference */
+static Keys hold(const Keys *bg) {
+    Keys out = {0};
+    int ref[3], i;
+
+    sample(bg, REF_T, ref);
+    for (i = 0; i < bg->n; i++) {
+        if (bg->k[i].v[3] < IDLE_END) {
+            push(&out, bg->k[i].v[0], bg->k[i].v[1], bg->k[i].v[2], bg->k[i].v[3]);
+        }
+    }
+    push(&out, ref[0], ref[1], ref[2], IDLE_END);
+    push(&out, ref[0], ref[1], ref[2], END);
+    return out;
+}
+
+/* the DNA attack's own keys, moved past the timeline, before its end */
+static Keys graft(const Keys *keys, const Keys *orig) {
+    Keys out = {0};
+    int v[3], i;
+
+    for (i = 0; i < keys->n; i++) {
+        if (keys->k[i].v[3] < END) {
+            push(&out, keys->k[i].v[0], keys->k[i].v[1], keys->k[i].v[2], keys->k[i].v[3]);
+        }
+    }
+    sample(orig, ATK_FROM, v);
+    push(&out, v[0], v[1], v[2], ATK_FROM + ATK_SHIFT);
+    for (i = 0; i < orig->n; i++) {
+        if (orig->k[i].v[3] > ATK_FROM && orig->k[i].v[3] < ATK_TO) {
+            push(&out, orig->k[i].v[0], orig->k[i].v[1], orig->k[i].v[2], orig->k[i].v[3] + ATK_SHIFT);
+        }
+    }
+    sample(orig, ATK_TO, v);
+    push(&out, v[0], v[1], v[2], ATK_TO + ATK_SHIFT);
+    for (i = 0; i < keys->n; i++) {
+        if (keys->k[i].v[3] >= END) {
+            push(&out, keys->k[i].v[0], keys->k[i].v[1], keys->k[i].v[2], keys->k[i].v[3]);
+        }
+    }
+    return out;
+}
+
+/* a skeleton's node: {parent + 1, geometry sub, track sub} */
+static int skeleton(Blob b, uint32_t node, int what) {
+    uint32_t i = 2 + 3 * node + what;
+
+    return b.n >= 8 && node < rd32(b.p + 4) && 4 * i + 4 <= b.n ? (int)rd32(b.p + 4 * i) : -1;
+}
+
+/* the motion table's 10 segments (4 s16 each) of the motion that starts with head */
+static long segments(Blob b, const int16_t head[8]) {
+    uint8_t pat[16];
+    long at = -1, i;
+    int j;
+
+    for (j = 0; j < 8; j++) {
+        pat[2 * j] = (uint8_t)head[j], pat[2 * j + 1] = (uint8_t)(head[j] >> 8);
+    }
+    for (i = 0; i + 80 <= (long)b.n; i += 2) {
+        if (memcmp(b.p + i, pat, 16) == 0) {
+            if (at >= 0) {
+                return -1; /* not one: the files aren't the ones this was made for */
+            }
+            at = i;
+        }
+    }
+    return at;
+}
+
+static void free_keys(Keys k[4]) {
+    int i;
+
+    for (i = 0; i < 4; i++) {
+        free(k[i].k);
+    }
+}
+
+/* The model 471: M469GARM's subs with the tracks, motions and scripts made anew */
+static uint8_t *build_model(const uint8_t *bgf, long bgsize, const uint8_t *mgf, long mgsize, long *size) {
+    Blob *bg = NULL, *mg = NULL, *out = NULL, ev, scripts;
+    int nb = split(bgf, bgsize, &bg), nm = split(mgf, mgsize, &mg), node, i, k, mapped;
+    uint8_t *made = NULL;
+    long mi, bi;
+    double scale;
+    volatile double height;
+    Keys t0[4], m0[4];
+
+    if (nb <= BG_SKEL || nm <= MG_SKEL || nb <= BG_ANIM || nm <= MG_ANIM) {
+        goto done;
+    }
+    if (!parse_track(bg[skeleton(bg[BG_SKEL], 0, 2)], t0) || !parse_track(mg[skeleton(mg[MG_SKEL], 0, 2)], m0) ||
+        m0[0].k[0].v[1] == 0) {
+        goto done;
+    }
+    height = (double)t0[0].k[0].v[1] / m0[0].k[0].v[1]; /* the roots' heights, a double */
+    scale = height;
+    free_keys(t0), free_keys(m0);
+    out = native_must(calloc(nb, sizeof(Blob)), "BladeGarurumon's model");
+    memcpy(out, bg, nb * sizeof(Blob));
+    for (node = 0; skeleton(bg[BG_SKEL], node, 2) >= 0; node++) {
+        int trk = skeleton(bg[BG_SKEL], node, 2);
+        Keys orig[4], now[4], m[4], g[4];
+
+        if (trk <= 0 || trk >= nb || !parse_track(bg[trk], orig)) {
+            goto done;
+        }
+        parse_track(bg[trk], now);
+        for (mapped = -1, i = 0; i < (int)(sizeof NODE_MAP / sizeof NODE_MAP[0]); i++) {
+            if (NODE_MAP[i][0] == node) {
+                mapped = NODE_MAP[i][1];
+            }
+        }
+        if (mapped >= 0) {
+            int mtrk = skeleton(mg[MG_SKEL], mapped, 2);
+            Keys spliced;
+
+            if (mtrk <= 0 || mtrk >= nm || !parse_track(mg[mtrk], m)) {
+                goto done;
+            }
+            if (node == 0 || node == 16) { /* the roots */
+                spliced = splice(&now[0], &m[0], scale);
+                free(now[0].k), now[0] = spliced;
+            }
+            spliced = splice(&now[1], &m[1], 1.0);
+            free(now[1].k), now[1] = spliced;
+            free_keys(m);
+        } else {
+            /* scale too: the DNA's effect nodes (29-34) are hidden at t 10 and only show in its attack */
+            for (k = 0; k < 3; k++) {
+                Keys h = hold(&now[k]);
+
+                free(now[k].k), now[k] = h;
+            }
+        }
+        for (k = 0; k < 3; k++) {
+            g[k] = graft(&now[k], &orig[k]);
+        }
+        g[3] = now[3];
+        out[trk] = build_track(g);
+        for (k = 0; k < 3; k++) {
+            free(g[k].k), free(now[k].k);
+        }
+        free(now[3].k);
+        free_keys(orig);
+    }
+    /* the motions: MetalGarurumon's table, with BladeGarurumon's idle (motion 0)
+       and its DNA attack, moved, in place of the signature's segments */
+    ev.n = mg[0].n;
+    ev.p = native_must(malloc(ev.n), "BladeGarurumon's motions");
+    memcpy(ev.p, mg[0].p, ev.n);
+    if (rd32(ev.p) + 24 > ev.n || rd32(bg[0].p) + 24 > bg[0].n) {
+        goto done;
+    }
+    memcpy(ev.p + rd32(ev.p), bg[0].p + rd32(bg[0].p), 24);
+    mi = segments(ev, MG_SIG_SEGS);
+    bi = segments(bg[0], BG_ATK_SEGS);
+    if (mi < 0 || bi < 0) {
+        free(ev.p);
+        goto done;
+    }
+    for (i = 0; i < 40; i += 4) {
+        int16_t s[4];
+
+        memcpy(s, bg[0].p + bi + 2 * i, 8);
+        if (s[2] > 0) { /* a real segment's t0 and t1 (not a loop, the end or a pause) */
+            s[2] += ATK_SHIFT, s[3] += ATK_SHIFT;
+        }
+        memcpy(ev.p + mi + 2 * i, s, 8);
+    }
+    out[0] = ev;
+    /* MetalGarurumon's 18 action scripts, with Solar Laser as 11 */
+    {
+        Blob parts[18];
+        uint32_t at = 18 * 4, code = sizeof SOLAR_LASER, pad = (4 - code % 4) % 4;
+        Blob src = mg[MG_ANIM];
+
+        if (src.n < 72) {
+            goto done;
+        }
+        for (i = 0; i < 18; i++) {
+            uint32_t from = rd32(src.p + 4 * i), to = i < 17 ? rd32(src.p + 4 * (i + 1)) : src.n;
+
+            parts[i].p = src.p + from, parts[i].n = to - from;
+        }
+        scripts.n = at;
+        for (i = 0; i < 18; i++) {
+            scripts.n += i == 11 ? code + pad : parts[i].n;
+        }
+        scripts.p = native_must(calloc(1, scripts.n), "BladeGarurumon's scripts");
+        for (i = 0; i < 18; i++) {
+            wr32(scripts.p + 4 * i, at);
+            if (i == 11) {
+                memcpy(scripts.p + at, SOLAR_LASER, code); /* little-endian s16, as the file's */
+                at += code + pad;
+            } else {
+                memcpy(scripts.p + at, parts[i].p, parts[i].n);
+                at += parts[i].n;
+            }
+        }
+        out[BG_ANIM] = scripts;
+    }
+    made = join(out, nb, size);
+done:
+    if (made == NULL) {
+        LOG("bladegarurumon: its model can't be made from M469GARM and M196MGAR");
+    }
+    free(bg);
+    free(mg);
+    free(out); /* ponytail: the made tracks leak once, at start; nothing to free them for */
+    return made;
+}
+
+/* --- the fighters' file: an entry and a partner's record for 471 --- */
+
+/* the key {s16 model, u8 index, u8 kind} of a model, its offset, or -1; *end: the list's end */
+static long find_key(const uint8_t *f, long size, int model, uint32_t *end) {
+    uint32_t at = rd32(f + 4);
+    long found = -1;
+
+    for (; (uint64_t)at + 4 <= (uint64_t)size && (f[at] | f[at + 1] << 8) != 0; at += 4) {
+        if ((int16_t)(f[at] | f[at + 1] << 8) == model) {
+            found = at;
+        }
+    }
+    *end = at;
+    return found;
+}
+
+/* The fighters' file with a partner's record for MODEL, REC, past the partners' table, and a key for it
+   past the list's last. The records' face pointers past the keys move with the 4 bytes inserted */
+static uint8_t *insert_record(const uint8_t *f, long size, long *out_size, int model, const uint8_t *rec, int kind) {
+    uint32_t base = rd32(f), o2 = rd32(f + 8), o3 = rd32(f + 12), end, off, ptr, n_player = (o3 - o2) / RECORD;
+    uint8_t *out;
+    int i;
+
+    if (find_key(f, size, model, &end) >= 0) {
+        return NULL;
+    }
+    *out_size = size + 4 + RECORD;
+    out = native_must(malloc(*out_size), "the fighters' file");
+    memcpy(out, f, end);
+    out[end] = (uint8_t)model, out[end + 1] = model >> 8, out[end + 2] = (uint8_t)n_player, out[end + 3] = (uint8_t)kind;
+    memcpy(out + end + 4, f + end, o3 - end);
+    memcpy(out + o3 + 4, rec, RECORD);
+    memcpy(out + o3 + 4 + RECORD, f + o3, size - o3);
+    wr32(out + 8, o2 + 4);
+    wr32(out + 12, o3 + 4 + RECORD);
+    for (i = 0; i < 2; i++) { /* the partners' records, then the enemies' */
+        uint32_t from = i ? o3 + 4 + RECORD : o2 + 4, to = i ? (uint32_t)*out_size : o3 + 4 + RECORD;
+
+        for (off = from; off < to && off + 16 <= (uint32_t)*out_size; off += i ? 72 : RECORD) {
+            ptr = rd32(out + off + 12);
+            if (ptr >= base && ptr - base >= end && ptr - base < o2) {
+                wr32(out + off + 12, ptr + 4);
+            }
+        }
+    }
+    return out;
+}
+
+/* SMDLDATA with model 471: a key past the list's last and a partner's record
+   past the partners' table (469's, its files 1's, and MetalGarurumon's
+   cameras where the DNA forms have none). The records' face pointers past
+   the keys move with the 4 bytes inserted */
+static uint8_t *build_fighters(const uint8_t *f, long size, long *out_size, int *bg_fid, int *mg_fid) {
+    uint32_t o1, o2, o3, end;
+    long old, donor;
+    uint8_t rec[RECORD];
+    int i;
+
+    if (size < 16) {
+        return NULL;
+    }
+    o1 = rd32(f + 4), o2 = rd32(f + 8), o3 = rd32(f + 12);
+    old = find_key(f, size, OLD_MODEL, &end);
+    donor = find_key(f, size, MG_MODEL, &end);
+    if (o1 >= o2 || o2 >= o3 || o3 > (uint32_t)size || old < 0 || donor < 0 || find_key(f, size, NEW_MODEL, &end) >= 0) {
+        return NULL;
+    }
+    if (o2 + (f[old + 2] + 1) * RECORD > o3 || o2 + (f[donor + 2] + 1) * RECORD > o3) {
+        return NULL;
+    }
+    memcpy(rec, f + o2 + f[old + 2] * RECORD, RECORD);
+    for (i = 0; i < (int)(sizeof CAM_FILL / sizeof CAM_FILL[0]); i++) {
+        memcpy(rec + CAM_FILL[i][0], f + o2 + f[donor + 2] * RECORD + CAM_FILL[i][0], CAM_FILL[i][1] - CAM_FILL[i][0]);
+    }
+    *bg_fid = (int)(rd32(rec) >> 16);
+    *mg_fid = (int)(rd32(f + o2 + f[donor + 2] * RECORD) >> 16);
+    for (i = 0; i < 3; i++) { /* its skeleton, motions and effects: (fid, sub) */
+        wr32(rec + 4 * i, NEW_FID << 16 | (rd32(rec + 4 * i) & 0xFFFF));
+    }
+    return insert_record(f, size, out_size, NEW_MODEL, rec, f[old + 3]);
+}
+
+/* The key of MODEL in the fighters' file F when a whole partner's record is there for it (what a mod's "like" copies), else -1 */
+static long partner_key(const uint8_t *f, long size, int model) {
+    uint32_t o2, o3, end;
+    long k;
+
+    if (f == NULL || size < 16) {
+        return -1;
+    }
+    o2 = rd32(f + 8), o3 = rd32(f + 12);
+    k = find_key(f, size, model, &end);
+    return k >= 0 && o3 <= (uint32_t)size && (uint64_t)o2 + (f[k + 2] + 1) * RECORD <= o3 ? k : -1;
+}
+
+/* For the manifest's check (digimon_mods.c): is MODEL a partner of the fighters' file F? 471 is the port's own, added after the file is read */
+int native_fighter_has_record(const uint8_t *f, long size, int model) {
+    return model == NEW_MODEL || partner_key(f, size, model) >= 0;
+}
+
+/* A Digimon mod (native.h): a partner's record for its id, that of its "like" model (ExVeemon's: cameras, face, distance) with the file the
+   model is in and the entries its manifest names (dw2-extractor's converter puts them there). NULL when it can't be made */
+static uint8_t *add_mod(const uint8_t *f, long size, long *out_size, const NativeMod *mod) {
+    long ex = partner_key(f, size, mod->like);
+    uint8_t rec[RECORD], *out;
+    uint32_t o3;
+    int i;
+
+    if (ex < 0) {
+        return NULL;
+    }
+    o3 = rd32(f + 12);
+    memcpy(rec, f + rd32(f + 8) + f[ex + 2] * RECORD, RECORD);
+    for (i = 0; i < 3; i++) {
+        wr32(rec + 4 * i, (uint32_t)mod->fid << 16 | mod->subs[i]);
+    }
+    /* the portrait cameras (6 and 7) are the like model's, whose head may lean back where this one's is level: the cameras' eye and
+       target both move portrait_dz along the facing to keep it in the middle of the frame (Flamedramon's is 380) */
+    for (i = 6; i < 8 && mod->portrait_dz != 0; i++) {
+        int at;
+
+        for (at = 0x1A + 6 * i + 4; at < 0x62 + 6 * i + 5; at += 0x62 - 0x1A) {
+            int16_t z = (int16_t)(rec[at] | rec[at + 1] << 8) + mod->portrait_dz;
+
+            rec[at] = (uint8_t)z, rec[at + 1] = (uint8_t)(z >> 8);
+        }
+    }
+    out = insert_record(f, size, out_size, mod->id, rec, f[ex + 3]);
+    if (out != NULL && mod->face_n > 0) {
+        /* the like model's face parts are rectangles of its own image: over this model's they would paint the wrong place. The mod's own
+           face (Flamedramon's is its eyes, dw2-extractor's blink.py: a part of the model's image with the open, half shut and shut frames
+           beside it) is the table's end mark's before, past the file's end */
+        uint8_t *g = realloc(out, *out_size + 20);
+
+        if (g == NULL) {
+            free(out);
+            return NULL;
+        }
+        memset(g + *out_size, 0, 20);
+        memcpy(g + *out_size, mod->face, mod->face_n);
+        g[*out_size + mod->face_n] = 0xFF;
+        wr32(g + o3 + 4 + 12, rd32(g) + (uint32_t)*out_size);
+        *out_size += 20;
+        out = g;
+    }
+    return out;
+}
+
+/* The mods' effect models (native.h): their files hold the model's bones last. Flamedramon's: the rocket (450) and the dome (451), then Digital Card
+   Battle's fire (dw2-extractor/flame_fx.py: the fire dome, two spirals and the burst of Fire Rocket, 452-455, the fist's flame, its glow and the
+   fireball of Knuckle Fire, 456-458) */
+int native_effect_model(int id, int *file, int *motionFile) {
+    static struct {
+        int fid, bones;
+    } cache[32];
+    static int n;
+    int fid, i;
+
+    if (native_mod_for_effect(id, &fid) == NULL) {
+        return 0;
+    }
+    for (i = 0; i < n && cache[i].fid != fid; i++) {
+    }
+    if (i == n && n < 32) {
+        uint8_t *f;
+        long size = native_read_raw(fid, &f);
+
+        cache[n].fid = fid;
+        cache[n].bones = size >= 4 && rd32(f) >= 8 ? (int)(rd32(f) / 4) - 1 : 0;
+        free(f);
+        n++;
+    }
+    if (i >= n || cache[i].bones == 0) {
+        return 0;
+    }
+    *file = fid << 16 | cache[i].bones;
+    *motionFile = fid << 16;
+    return 1;
+}
+
+/* Digital Card Battle's scrolling textures (SUG_scrollTexture), for the fire of dw2-extractor/flame_fx.py: the image's 32x56 halfwords at the model's
+   texture position roll STEP halfwords to the right every PERIOD ticks (the first on its first). A model DCB starts later than the one before it
+   (the burst after the dome, the ball after the fist) shares the image the scroll has been rolling all along, so it starts START ticks in. The
+   spirals and the glow go to the page next to the others': their images are not the dome's and the fist's, and one page holds one image */
+static const struct {
+    int id, step, period, start, page;
+} SCROLLS[] = {
+    {452, 3, 1, 0, 0x280}, {453, 0, 0, 0, 0x2C0}, {454, 0, 0, 0, 0x2C0}, {455, 3, 1, 43, 0x280},
+    {456, 3, 1, 0, 0x280}, {457, 1, 2, 0, 0x2C0},  {458, 3, 1, 124, 0x280},
+};
+static int scroll_age[7];
+
+static int scroll_of(int id) {
+    int i;
+
+    for (i = 0; i < 7; i++) {
+        if (SCROLLS[i].id == id) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+int native_effect_texture_x(int id) {
+    int i = scroll_of(id);
+
+    return i < 0 ? 0x280 : SCROLLS[i].page;
+}
+
+void native_effect_scroll_begin(int id) {
+    int i = scroll_of(id);
+
+    if (i >= 0) {
+        scroll_age[i] = 0;
+    }
+}
+
+/* once a tick while the model runs. Its image is loaded by the tick after it is made: the first roll is the one the model is late by */
+void native_effect_scroll(int id, int x, int y) {
+    int i = scroll_of(id), a;
+
+    if (i < 0 || SCROLLS[i].step == 0) {
+        return;
+    }
+    a = ++scroll_age[i];
+    if (a == 1) {
+        native_vram_roll(x, y, 32, 56, SCROLLS[i].step * ((SCROLLS[i].start + SCROLLS[i].period - 1) / SCROLLS[i].period));
+    } else if ((a - 1) % SCROLLS[i].period == 0) {
+        native_vram_roll(x, y, 32, 56, SCROLLS[i].step);
+    }
+}
+
+/* Solar Laser, technique 444 (past the game's 443: NATIVE_SOLAR_LASER), in
+   the techniques' texts, a copy a language from English to Spanish: its
+   name (SKLNAM, by technique) and its help (SKLINF, which has strings up to
+   219: the ones between are empty, as they read now). A file that has it
+   already, a translation's, stays */
+#define SKILL_NAMES 0xA4 /* TEXT_FILE(TEXT_SKILL_NAMES) in English */
+#define SKILL_INFO 0x9D  /* TEXT_FILE(TEXT_SKILL_INFO) */
+#define SOLAR_LASER_TECH 444
+static const uint8_t SOLAR_LASER_NAME[] = {0x20, 0x36, 0x33, 0x28, 0x39, 0x01, 0x01, 0x19, 0x28, 0x3A, 0x2C, 0x39, 0x00};
+static const uint8_t *const SOLAR_LASER_HELP[5] = {
+    /* Solar laser. Magic attack. */
+    (const uint8_t[]){0x20, 0x36, 0x33, 0x28, 0x39, 0x01, 0x01, 0x33, 0x28, 0x3A, 0x2C, 0x39, 0x01, 0x05, 0x01, 0x01, 0x1A, 0x28,
+                      0x2E, 0x30, 0x2A, 0x01, 0x01, 0x28, 0x3B, 0x3B, 0x28, 0x2A, 0x32, 0x01, 0x05, 0x00},
+    /* Atq magique, laser solaire. */
+    (const uint8_t[]){0x0E, 0x3B, 0x38, 0x01, 0x01, 0x34, 0x28, 0x2E, 0x30, 0x38, 0x3C, 0x2C, 0x01, 0x04, 0x01, 0x01, 0x33,
+                      0x28, 0x3A, 0x2C, 0x39, 0x01, 0x01, 0x3A, 0x36, 0x33, 0x28, 0x30, 0x39, 0x2C, 0x01, 0x05, 0x00},
+    /* Laser solare, attacco magico. */
+    (const uint8_t[]){0x19, 0x28, 0x3A, 0x2C, 0x39, 0x01, 0x01, 0x3A, 0x36, 0x33, 0x28, 0x39, 0x2C, 0x01, 0x04, 0x01, 0x01, 0x28,
+                      0x3B, 0x3B, 0x28, 0x2A, 0x2A, 0x36, 0x01, 0x01, 0x34, 0x28, 0x2E, 0x30, 0x2A, 0x36, 0x01, 0x05, 0x00},
+    /* Sonnenlaser. Magieattacke. */
+    (const uint8_t[]){0x20, 0x36, 0x35, 0x35, 0x2C, 0x35, 0x33, 0x28, 0x3A, 0x2C, 0x39, 0x01, 0x05, 0x01, 0x01, 0x1A, 0x28, 0x2E,
+                      0x30, 0x2C, 0x28, 0x3B, 0x3B, 0x28, 0x2A, 0x32, 0x2C, 0x01, 0x05, 0x00},
+    /* Láser solar. Ataque mágico. */
+    (const uint8_t[]){0x19, 0x01, 0x5F, 0x3A, 0x2C, 0x39, 0x01, 0x01, 0x3A, 0x36, 0x33, 0x28, 0x39, 0x01, 0x05, 0x01, 0x01, 0x0E,
+                      0x3B, 0x28, 0x38, 0x3C, 0x2C, 0x01, 0x01, 0x34, 0x01, 0x5F, 0x2E, 0x30, 0x2A, 0x36, 0x01, 0x05, 0x00},
+};
+
+typedef struct {
+    uint32_t index;
+    const uint8_t *text;
+} Add;
+
+/* a text file with the strings ADD names (past its last, in order), the ones between empty; NULL when it has
+   them already (a translation's file stays) */
+static uint8_t *with_strings(int fid, const Add *add, int n_add, long *size) {
+    uint8_t *f, *out;
+    long fsize = native_read_raw(fid, &f);
+    uint32_t n = fsize >= 4 ? rd32(f) : 0, count = 0, i, at, room = 0;
+    int k;
+
+    for (k = 0; k < n_add; k++) {
+        count = add[k].index + 1 > count ? add[k].index + 1 : count;
+        room += (uint32_t)strlen((const char *)add[k].text) + 1;
+    }
+    if (n == 0 || n >= count || 4 + 4 * n > (uint32_t)fsize) { /* not a text file, or it has them */
+        free(f);
+        return NULL;
+    }
+    room += (uint32_t)fsize + 4 * count + 2 + count;
+    out = native_must(calloc(1, room + 2048), "a text file");
+    wr32(out, count);
+    at = 4 + 4 * count;
+    for (i = 0; i < count; i++) {
+        const uint8_t *str = (const uint8_t *)"";
+        size_t len;
+
+        for (k = 0; k < n_add; k++) {
+            str = add[k].index == i ? add[k].text : str;
+        }
+        if (i < n) {
+            str = f + rd32(f + 4 + 4 * i);
+            len = strnlen((const char *)str, fsize - (str - f)) + 1;
+        } else {
+            len = strlen((const char *)str) + 1;
+        }
+        wr32(out + 4 + 4 * i, at);
+        memcpy(out + at, str, len);
+        at += len;
+    }
+    *size = (at + 2047) / 2048 * 2048;
+    free(f);
+    return out;
+}
+
+/* ASCII (letters, space, comma, full stop) in the game's glyphs: A-Z from 0x0E, a-z from 0x28, and a prefix 0x01 before
+   a space (01), a comma (04) and a full stop (05); 0 ends. Into OUT (room for 2 bytes a character) */
+static uint8_t *glyphs(const char *s, uint8_t *out) {
+    uint8_t *w = out;
+
+    for (; *s; s++) {
+        if (*s >= 'A' && *s <= 'Z') {
+            *w++ = 0x0E + *s - 'A';
+        } else if (*s >= 'a' && *s <= 'z') {
+            *w++ = 0x28 + *s - 'a';
+        } else {
+            *w++ = 0x01, *w++ = *s == ',' ? 0x04 : *s == '.' ? 0x05 : 0x01;
+        }
+    }
+    *w = 0;
+    return out;
+}
+
+#define DIGIMON_NAMES 0x4E /* DIGNAM: the files 78-84, of which the languages are some */
+
+/* The fighters' file and model 471, made the first time either is read;
+   NULL for the game's own (or when they can't be made: logged) */
+const uint8_t *bladegaru_file(int fid, long *size) {
+    static uint8_t *fighters, *model, *texts[20];
+    static long fighters_size, model_size, texts_size[20];
+    static int tried, made[20];
+    int t = fid >= SKILL_NAMES && fid < SKILL_NAMES + 5 ? fid - SKILL_NAMES
+          : fid >= SKILL_INFO && fid < SKILL_INFO + 5 ? 5 + fid - SKILL_INFO
+          : fid >= DIGIMON_NAMES && fid < DIGIMON_NAMES + 7 ? 10 + fid - DIGIMON_NAMES : -1;
+
+    if (t >= 0) {
+        if (!made[t]) {
+            Add add[1 + 6 * NATIVE_MAX_MODS];
+            uint8_t buf[1 + 6 * NATIVE_MAX_MODS][220]; /* two bytes a glyph, a space or a stop three */
+            int i, k, n = 0;
+
+            made[t] = 1;
+            if (t >= 10) { /* the Digimon mods' names */
+                for (k = 0; k < NATIVE_MAX_MODS; k++) {
+                    if (native_mod_at(k) != NULL) {
+                        add[n].index = native_mod_at(k)->name_id, add[n].text = glyphs(native_mod_at(k)->name, buf[n]);
+                        n++;
+                    }
+                }
+            } else {
+                add[n].index = SOLAR_LASER_TECH, add[n++].text = t < 5 ? SOLAR_LASER_NAME : SOLAR_LASER_HELP[t - 5];
+                for (k = 0; k < NATIVE_MAX_MODS; k++) { /* and their techniques': names, then helps in the languages' order */
+                    for (i = 0; native_mod_at(k) != NULL && i < 6; i++, n++) {
+                        const NativeModTech *x = &native_mod_at(k)->techs[i];
+
+                        add[n].index = native_mod_at(k)->tech + i;
+                        add[n].text = glyphs(t < 5 ? x->name : x->help[t - 5], buf[n]);
+                    }
+                }
+            }
+            texts[t] = with_strings(fid, add, n, &texts_size[t]);
+        }
+        *size = texts_size[t];
+        return texts[t];
+    }
+    if (fid != FIGHTERS_FILE && fid != NEW_FID) {
+        return NULL;
+    }
+    if (!tried) {
+        uint8_t *f, *bg, *mg;
+        long fsize = native_read_raw(FIGHTERS_FILE, &f), bgsize, mgsize;
+        int bg_fid = 0, mg_fid = 0;
+
+        tried = 1;
+        fighters = build_fighters(f, fsize, &fighters_size, &bg_fid, &mg_fid);
+        if (fighters != NULL) {
+            int donor_prepared = native_launch_generated_source(mg_fid);
+
+            bgsize = native_read_raw(bg_fid, &bg);
+            mgsize = native_read_raw(mg_fid, &mg);
+            model = build_model(bg, bgsize, mg, mgsize, &model_size);
+            s_launch_ready = model != NULL && donor_prepared;
+            free(bg);
+            free(mg);
+        }
+        if (model == NULL) { /* the record without its model would crash a battle */
+            free(fighters);
+            fighters = NULL;
+            LOG("bladegarurumon: the fighters' file stays the game's");
+        }
+        for (int k = 0; fsize > 0 && k < NATIVE_MAX_MODS; k++) { /* and the Digimon mods', past BladeGarurumon's */
+            long gsize;
+            uint8_t *g = native_mod_at(k) == NULL ? NULL : add_mod(fighters != NULL ? fighters : f, fighters != NULL ? fighters_size : fsize, &gsize, native_mod_at(k));
+
+            if (g != NULL) {
+                free(fighters);
+                fighters = g, fighters_size = gsize;
+            } else if (native_mod_at(k) != NULL) {
+                LOG("digimon mod %s: its record can't be added to the fighters' file", native_mod_at(k)->name);
+            }
+        }
+        free(f);
+    }
+    if (fid == FIGHTERS_FILE) {
+        *size = fighters_size;
+        return fighters;
+    }
+    *size = model_size;
+    return model;
+}

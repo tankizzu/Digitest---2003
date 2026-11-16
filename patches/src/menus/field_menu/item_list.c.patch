@@ -1,0 +1,949 @@
+--- a/src/menus/field_menu/item_list.c
++++ b/src/menus/field_menu/item_list.c
+@@ -142,11 +142,17 @@
+         if (panel->cursor < first) {
+             panel->cursor = first;
+         }
++#ifdef NATIVE
++        panel->cursor = native_wrap_grid(cursor, panel->cursor, first, last, -1);
++#endif
+     } else if (PAD_PRESSED(PAD_DOWN) || PAD_REPEATED(PAD_DOWN)) {
+         panel->cursor += 2;
+         if (panel->cursor > last) {
+             panel->cursor = last;
+         }
++#ifdef NATIVE
++        panel->cursor = native_wrap_grid(cursor, panel->cursor, first, last, 1);
++#endif
+     }
+     if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
+         if (!PAD_HELD(PAD_DOWN)) {
+@@ -367,3 +373,928 @@
+     panel->list = list;
+     return panel;
+ }
++
++#ifdef NATIVE
++/*
++ * DIGILOG, the journal (native.h), the field menu's last row: two tabs,
++ * turned with left and right, in panels of its own and the item list's pages. Active:
++ * the story's current step (main, highlighted), then the side quests found
++ * and not done; Done: the story's steps behind, then the side quests done.
++ * The list is the left panel; the right one is the chosen entry's: its
++ * place's picture (its field from afar, drawJournalPicture), the
++ * place (the field banner's name), its title and kind, how it stands or
++ * what it needs, and a side quest's reward.
++ * Its text goes in the panel below; cross shows its area on the map screen
++ * (STSTATUS_runScreens), then comes back. Its texts are the
++ * port's own (native_packs_text) but the side quests' titles, their reward's
++ * item name
++ */
++#define JOURNAL_ROWS 8
++#define JOURNAL_LAST_STEP 0x2D /* the European extra chapter's */
++#define TEXT_DIGILOG 15
++#define TEXT_TAB(tab) (16 + (tab)) /* "< ACTIVE >", "< DONE >" */
++#define TEXT_STEP(step) (18 + (step) * 2) /* its title, then its text */
++#define TEXT_MAIN 110 /* the bar's kinds */
++#define TEXT_SIDE 111
++#define TEXT_DONE 112
++#define TEXT_SIDE_QUEST(quest) (113 + (quest)) /* its text */
++#define TEXT_NEEDS 148 /* "NEEDS", above the item */
++/* the port's own labels, a tab's each */
++#define TEXT_LIST_LABEL(tab) (149 + (tab)) /* "QUEST LOG", "QUEST ARCHIVE" */
++#define TEXT_PLACE_LABEL 151
++#define TEXT_RECORD_LABEL(tab) (152 + (tab)) /* "QUEST STATUS", "COMPLETION RECORD" */
++#define TEXT_RECORD(tab) (154 + (tab)) /* "In progress.", "Completed." */
++#define TEXT_REWARD_LABEL(tab) (156 + (tab)) /* "REWARD", "ACHIEVEMENT" */
++#define TEXT_HELP_LABEL 158
++#define TEXT_KEY(key) (159 + (key)) /* the foot's: select, the tabs, back, the map; their buttons are the
++                                       font's icons, which the port draws as the keys' or the pad's */
++
++/*
++ * The screen's layout: panels of its own, drawn as flat boxes and lines in
++ * the menus' colours (journalPanel), not the item list's sprites. The head
++ * (the title and the tab), the list, the chosen entry's detail (its place's
++ * picture, its title and kind, its record and its reward), its text and the
++ * keys at the foot
++ */
++#define HEAD_Y 6
++#define PANELS_Y 30
++#define PANELS_H 148
++#define LIST_X 8
++#define LIST_W 128
++#define LIST_ROW(row) (PANELS_Y + 19 + (row) * 14)
++#define LIST_FOOT_Y (PANELS_Y + 134) /* the page number's */
++#define DETAIL_X 142
++#define DETAIL_W 170
++#define INNER_X (DETAIL_X + 6) /* what is inside the detail's panel */
++#define INNER_W (DETAIL_W - 12)
++#define CANVAS_Y (PANELS_Y + 17)
++#define CANVAS_H 52
++#define TITLE_Y (CANVAS_Y + CANVAS_H + 4)
++#define BADGE_W 60
++#define RECORD_Y (TITLE_Y + 18) /* its label's, then its row */
++#define REWARD_Y (RECORD_Y + 27) /* its box's */
++#define HELP_Y 182
++#define HELP_H 42
++#define FOOT_Y 226
++#define JRGB(r, g, b) ((r) | (g) << 8 | (b) << 16)
++#define COLOR_FILL JRGB(0x00, 0x00, 0x21) /* the game's panels' */
++#define COLOR_BORDER JRGB(0x6B, 0x6B, 0xD6)
++#define COLOR_RULE JRGB(0x32, 0x32, 0x8B)
++#define COLOR_CHOSEN JRGB(0x14, 0x3B, 0x65)
++#define COLOR_MARK JRGB(0x34, 0xC5, 0xF4)
++#define COLOR_DONE JRGB(0x91, 0xDB, 0xB6)
++#define COLOR_DONE_FILL JRGB(0x10, 0x34, 0x2F)
++#define COLOR_DONE_BORDER JRGB(0x56, 0x8F, 0x80)
++#define COLOR_BOX_FILL JRGB(0x10, 0x13, 0x2E)
++#define COLOR_BOX_BORDER JRGB(0x35, 0x37, 0x67)
++/* A title wider than its box is cut at the box's edge and scrolls left, as a
++   marquee: it waits, scrolls a pixel every MARQUEE_FRAMES until its end
++   shows, waits again and starts over */
++#define ROW_LEFT (LIST_X + 20) /* a list row's box */
++#define ROW_RIGHT (LIST_X + LIST_W - 6)
++#define TITLE_RIGHT (INNER_X + INNER_W - BADGE_W - 4) /* the detail's title's, short of the kind's badge */
++#define MARQUEE_WAIT 60
++#define MARQUEE_FRAMES 2
++/* what is drawn over what, from the journal's depth to the front */
++#define OVER_FILL 0
++#define OVER_MAP 1
++#define OVER_LINES 2
++#define OVER_BOXES 3
++#define OVER_TEXT 4
++#define TAB_ACTIVE 0
++#define TAB_DONE 1
++s32 STSTATUS_objectiveModeAt(s32 progress); /* map_screen.c */
++/* the field banner's names (FIELDSTG's AreaName) */
++extern struct {
++    u8 area;
++    u8 place;
++    s16 mode;
++} FIELDSTG_areaNames[];
++
++/*
++ * The side quests: an optional fight or errand whose event gives an item
++ * and sets a flag. Found once the field it is on has been visited (the
++ * field's flag) while the story is not past `last`; done once that flag is
++ * set
++ */
++typedef struct SideQuest {
++    u16 item; /* its reward, the title */
++    u16 mode; /* its field */
++    u16 done; /* a flag code (FLAG) */
++    u16 last; /* the last story step it can be done at */
++    u16 req; /* an item it needs first (0 for none), shown while the player lacks it */
++    u16 from; /* the field it is found at, when not its own */
++    u16 since; /* the story step it is found at, whatever the fields visited */
++    u16 owned; /* a condition (SPECIAL_*_UNLOCKED) that also completes it: the partner is already had */
++    u16 ask; /* a flag code: the DRI agent's request is made, so the Digimon is there whatever the story step */
++    u16 gate; /* 1 + the DRI_WINDOWS entry that finds it while the agent is there (0 for none) */
++} SideQuest;
++#define ANY_STEP 0xFF
++
++/* The story steps a DRI agent stands in his field at (his actors'), as two
++   ranges: before and after the movie battles' step */
++static const struct {
++    u8 first, last, first2, last2;
++} DRI_WINDOWS[] = {
++    { 0x05, 0x26, 0x2B, 0x2B }, /* Johann, Jimmy */
++    { 0x0E, 0x26, 0x2B, 0x2B }, /* Kazuki, Michael */
++    { 0x11, 0x26, 0x2B, 0x2B }, /* Bob */
++    { 0x0F, 0x26, 0x29, 0x63 }, /* Ken, Yuji, Yang (and the entrance they are at) */
++};
++
++static const SideQuest SIDE_QUESTS[] = {
++    { 0x006, 0x233, FLAG(0x40, 0x24), 0, 0, 0, 0, SPECIAL_AGUMON_UNLOCKED, FLAG(6, 0), 1 }, /* Agumon DDNA, MetalGreymon */
++    { 0x022, 0x23C, FLAG(0x40, 0x26), 0, 0, 0, 0, SPECIAL_GUILMON_UNLOCKED, FLAG(6, 1), 1 }, /* Guilmon DDNA, WarGrowlmon */
++    { 0x027, 0x247, FLAG(0x40, 0x28), 0, 0, 0, 0, SPECIAL_PATAMON_UNLOCKED, FLAG(6, 2), 2 }, /* Patamon DDNA, MagnaAngemon */
++    { 0x026, 0x24A, FLAG(0x40, 0x2A), 0, 0, 0, 0, SPECIAL_RENAMON_UNLOCKED, FLAG(6, 3), 2 }, /* Renamon DDNA, Taomon */
++    { 0x013, 0x241, FLAG(0x40, 0x2C), 0, 0, 0, 0, SPECIAL_KOTEMON_UNLOCKED, FLAG(6, 4), 4 }, /* Kotemon DDNA, Kyukimon */
++    { 0x168, 0x228, FLAG(0x40, 0x2E), 0, 0, 0, 0, SPECIAL_MONMON_UNLOCKED, FLAG(6, 6), 4 }, /* Monmon DDNA, Armormon */
++    { 0x18B, 0x23C, FLAG(0x40, 0x30), 0, 0, 0, 0, SPECIAL_KUMAMON_UNLOCKED, FLAG(6, 5), 4 }, /* Kumamon DDNA, GrapLeomon */
++    { 0x023, 0x234, FLAG(0x40, 0x32), 0, 0, 0, 0, SPECIAL_VEEMON_UNLOCKED, FLAG(6, 7), 3 }, /* Veemon DDNA, Paildramon */
++    { 0x066, 0x243, FLAG(0x40, 0x56) }, /* Rusty Katana, Zanbamon */
++    { 0x074, 0x21C, FLAG(0x40, 0x09) }, /* Rusty Glove, Datamon */
++    { 0x099, 0x22B, FLAG(0x40, 0x10) }, /* Old Claw, MasterTyranno */
++    { 0x08D, 0x226, FLAG(0x40, 0x54) }, /* Old Wand, Pharaohmon */
++    { 0x0DD, 0x26A, FLAG(0x40, 0x19) }, /* Yin Yang Hat, Ice Witch */
++    { 0x088, 0x26B, FLAG(0x40, 0x40) }, /* Divine Rod, Fire Knight */
++    { 0x0A3, 0x26C, FLAG(0x40, 0x42) }, /* Brave Sword, Dark Knight */
++    { 0x030, 0x2D2, FLAG(0x40, 0x83) }, /* MP Chip, Ice Master */
++    { 0x033, 0x2D3, FLAG(0x40, 0x85) }, /* Mind Chip, Fire Master */
++    { 0x141, 0x2D4, FLAG(0x40, 0x87) }, /* EXP Adapter, Dark Master */
++    { 0x18C, 0x293, FLAG(0x40, 0x1D), 0x1B, 0, 0, 0x1B }, /* Crony ID, Kenny: only at that step, its event's */
++    { 0x004, 0x229, FLAG(0x1A, 0x28), 0, 0x192, 0x220 }, /* Tree Boots, Veemon (Hide's event, at Plug Cape, needs the Folder Bag) */
++    { 0x192, 0x211, FLAG(0x40, 0xA1) }, /* Folder Bag, the tamers */
++    { 0x02A, 0x28B, FLAG(0x40, 0x77) }, /* Platinum ID, BK WarGreymon */
++    { 0x0F2, 0x295, FLAG(0x40, 0x79) }, /* Wild Helmet, BK MegaGargomon */
++    { 0x0F5, 0x29A, FLAG(0x40, 0x7B) }, /* Hazard Helmet, BK Imperialdramon */
++    { 0x100, 0x2B0, FLAG(0x40, 0x7D) }, /* Sniper Suit, BK Seraphimon */
++    { 0x10E, 0x2BC, FLAG(0x40, 0x7F) }, /* Hazard Armor, BK WarGrowlmon */
++    { 0x142, 0x2BE, FLAG(0x40, 0x81) }, /* BIT Adapter, BK KingNumemon */
++    /* the Undersea Base's, only while the story is there (shops sell both later);
++       the Wing Helmet's event follows the fight that sets 0x46 */
++    { 0x0CB, 0x2DB, FLAG(0x40, 0x45), 0x20 }, /* Dramon Guard */
++    { 0x0F0, 0x2DC, FLAG(0x40, 0x46), 0x20 }, /* Wing Helmet */
++};
++#define SIDE_QUEST_COUNT (s32)(sizeof SIDE_QUESTS / sizeof SIDE_QUESTS[0])
++
++/*
++ * The steps within an entry: what the story's step or the side quest asks
++ * for now, by the flags and items its events test (dw3_decomp's story.h).
++ * An entry's first rule whose condition holds gives its field and its text
++ * (code 0 always holds); without one, the entry's own. Only for what is
++ * still to do
++ */
++typedef struct JournalRule {
++    s16 entry; /* a story step, or minus a side quest's item */
++    u16 code; /* a condition's (FLAGS_00.checkCondition) */
++    u16 value;
++    u16 mode; /* its field */
++    u16 text;
++} JournalRule;
++#define TEXT_RULE(n) (163 + (n))
++
++static const JournalRule JOURNAL_RULES[] = {
++    /* the Tree Boots: Hide's card, Debbie, then Veemon's hide and seek (given up, back to Debbie) */
++    { -0x004, FLAG(0x1A, 0x22), 0, 0x220, TEXT_RULE(0) }, /* Hide, Plug Cape (with the Folder Bag) */
++    { -0x004, FLAG(0x1A, 0x23), 0, 0x20A, TEXT_RULE(1) }, /* the Gabumon card, Asuka Inn */
++    { -0x004, FLAG(0x1A, 0x24), 0, 0x220, TEXT_RULE(2) }, /* back to Hide */
++    { -0x004, FLAG(0x1A, 0x27), 1, 0x229, TEXT_RULE(6) }, /* found: Veemon, Wind Prairie */
++    { -0x004, FLAG(0x1A, 0x26), 1, 0x22A, TEXT_RULE(5) }, /* hiding in Kicking Forest */
++    { -0x004, FLAG(0x1A, 0x25), 1, 0x229, TEXT_RULE(4) }, /* Veemon, Wind Prairie */
++    { -0x004, 0, 0, 0x20F, TEXT_RULE(3) }, /* Debbie, Lamb Chop */
++    /* Sepikmon's mask (step 8) */
++    { 0x08, FLAG(0x1C, 0x43), 0, 0x238, TEXT_RULE(7) }, /* Gatomon's hint, Swamp Inn */
++    { 0x08, FLAG(0x1A, 0x17), 0, 0x239, TEXT_RULE(8) }, /* Sepikmon, Shaman House */
++    { 0x08, FLAG(0x1A, 0x18), 0, 0x226, TEXT_RULE(9) }, /* Baronmon, Protocol Ruins */
++    { 0x08, FLAG(0x1A, 0x19), 0, 0x202, TEXT_RULE(10) }, /* the false Sepikmon, Asuka Bridge */
++    { 0x08, FLAG(0x1A, 0x1A), 0, 0x201, TEXT_RULE(11) }, /* Etemon */
++    { 0x08, 0, 0, 0x227, TEXT_RULE(12) }, /* Divermon's Lake */
++    /* the mask back (step 9): who knows of it, who holds it, then Sepikmon */
++    { 0x09, ITEM(0, 0x15), 1, 0x239, TEXT_RULE(47) }, /* the mask: Sepikmon, Shaman House */
++    { 0x09, FLAG(0x1A, 0x1B), 1, 0x21B, TEXT_RULE(46) }, /* the mask, Asuka Sewers */
++    { 0x09, 0, 0, 0x201, TEXT_RULE(48) }, /* Etemon, Asuka City */
++    /* the Seiryu Leader (step 4): he trains away, and wants MasterTyranno beaten first */
++    { 0x04, FLAG(0x1C, 0x11), 1, 0, 0 }, /* back in Seiryu City */
++    { 0x04, FLAG(0x1C, 0x10), 1, 0x22B, TEXT_RULE(21) }, /* MasterTyranno, Tyranno Valley */
++    { 0x04, FLAG(0x1C, 0x0F), 1, 0x226, TEXT_RULE(20) }, /* the Leader, Protocol Ruins */
++    { 0x04, 0, 0, 0x230, TEXT_RULE(19) }, /* Tom, Seiryu Tower */
++    /* the Blue Card (step 6): the Guilmons' fake, then the real one */
++    { 0x06, ITEM(0, 0x18E), 1, 0, 0 }, /* the Blue Card */
++    { 0x06, FLAG(0x1C, 0x47), 1, 0x224, TEXT_RULE(27) }, /* the Trickster, under Forest Inn */
++    { 0x06, FLAG(0x1C, 0x46), 1, 0x22E, TEXT_RULE(26) }, /* the fake tried: a Guilmon, Seiryu City */
++    { 0x06, ITEM(0, 0x18F), 1, 0x22C, TEXT_RULE(25) }, /* the fake: East Station */
++    { 0x06, FLAG(0x1C, 0x45), 1, 0x22F, TEXT_RULE(24) }, /* Tricky Guilmon, Seiryu City's inn */
++    { 0x06, FLAG(0x1C, 0x44), 1, 0x223, TEXT_RULE(23) }, /* a Guilmon, Forest Inn */
++    { 0x06, 0, 0, 0x20C, TEXT_RULE(22) }, /* a Guilmon, Asuka Inn 2F */
++    /* the Agumon Suits (step 0xC): how to get into the Admin Center */
++    { 0x0C, ITEM(0, 0xF), 1, 0, 0 }, /* the suit */
++    { 0x0C, FLAG(0x1A, 0x16), 1, 0x21B, TEXT_RULE(33) }, /* the Mischievous Mat again, Asuka Sewers */
++    { 0x0C, FLAG(0x1A, 0x15), 1, 0x203, TEXT_RULE(32) }, /* Kail, Main Lobby */
++    { 0x0C, FLAG(0x1A, 0x14), 1, 0x21B, TEXT_RULE(31) }, /* Etemon's place, Asuka Sewers */
++    { 0x0C, FLAG(0x1A, 0x0C), 1, 0x201, TEXT_RULE(30) }, /* Jake and Grandma Beth */
++    { 0x0C, 0, 0, 0x20F, TEXT_RULE(29) }, /* Master John, Lamb Chop */
++    /* in the Agumon Suit (step 0xD): the Admin Center, up to the Master Room, then the Main Lobby */
++    { 0x0D, FLAG(0x1C, 0x0D), 1, 0, 0 }, /* the Game Master met */
++    { 0x0D, FLAG(0x1C, 0x0C), 1, 0x218, TEXT_RULE(37) }, /* Kail gone: the Master Room */
++    { 0x0D, 0, 0, 0x214, TEXT_RULE(36) }, /* Admin Center 1F */
++    /* the bomb for Bios Swamp's wall (step 0xE), until the Reliability Spot behind it is reached */
++    { 0x0E, FLAG(0x40, 0x07), 1, 0x236, TEXT_RULE(51) }, /* the wall is down: the Reliability Spot */
++    { 0x0E, ITEM(0, 0xE), 1, 0x235, TEXT_RULE(18) }, /* the TNT Chip: the wall */
++    { 0x0E, FLAG(0x1A, 0x02), 0, 0x23B, TEXT_RULE(28) }, /* Nami saw it, Phoenix Bay */
++    { 0x0E, FLAG(0x1A, 0x2A), 0, 0x235, TEXT_RULE(13) }, /* the symbol behind the wall */
++    { 0x0E, FLAG(0x1A, 0x2B), 0, 0x239, TEXT_RULE(14) }, /* Sepikmon's hint, Shaman House */
++    { 0x0E, FLAG(0x1C, 0x4F), 0, 0x226, TEXT_RULE(15) }, /* Baronmon, Protocol Ruins */
++    { 0x0E, ITEM(1, 0x5A), 0, 0x22B, TEXT_RULE(16) }, /* the TNT Ball: Triceramon, Tyranno Valley */
++    { 0x0E, 0, 0, 0x226, TEXT_RULE(17) }, /* the ball to Baronmon */
++    /* the Staff Pass (step 0x14): Keith and Nick, then the hideout */
++    { 0x14, FLAG(0x40, 0x03), 1, 0x255, TEXT_RULE(35) }, /* the security hole seen */
++    { 0x14, FLAG(0x1C, 0x1C), 1, 0x241, TEXT_RULE(34) }, /* Suzaku UG Lake */
++    /* the DDNA of a Digimon: the DRI agent's request comes first (flag 6, set by his talk at the right level total) */
++    { -0x006, FLAG(6, 0), 0, 0x22B, TEXT_RULE(38) }, /* DRI Johann */
++    { -0x022, FLAG(6, 1), 0, 0x22E, TEXT_RULE(39) }, /* DRI Jimmy */
++    { -0x027, FLAG(6, 2), 0, 0x21D, TEXT_RULE(40) }, /* DRI Kazuki */
++    { -0x026, FLAG(6, 3), 0, 0x21D, TEXT_RULE(41) }, /* DRI Michael */
++    { -0x013, FLAG(6, 4), 0, 0x258, TEXT_RULE(42) }, /* DRI Ken */
++    { -0x18B, FLAG(6, 5), 0, 0x258, TEXT_RULE(43) }, /* DRI Yuji */
++    { -0x168, FLAG(6, 6), 0, 0x258, TEXT_RULE(44) }, /* DRI Yang */
++    { -0x023, FLAG(6, 7), 0, 0x226, TEXT_RULE(45) }, /* DRI Bob */
++};
++
++static s32 sideQuestDone(s32 quest);
++
++/* An entry's rule now, or NULL: none, or one without a text (the entry's own) */
++static const JournalRule *journalRule(s32 entry) {
++    s32 key = entry >= 0 ? entry : -SIDE_QUESTS[-1 - entry].item;
++    s32 i;
++
++    if (entry >= 0 ? entry != GAME.progress : sideQuestDone(-1 - entry)) {
++        return NULL;
++    }
++    for (i = 0; i < (s32)(sizeof JOURNAL_RULES / sizeof JOURNAL_RULES[0]); i++) {
++        const JournalRule *rule = &JOURNAL_RULES[i];
++
++        if (rule->entry == key && (rule->code == 0 || FLAGS_00.checkCondition(rule->code, rule->value) != 0)) {
++            return rule->text != 0 ? rule : NULL;
++        }
++    }
++    return NULL;
++}
++#define JOURNAL_MAX (JOURNAL_LAST_STEP + 1 + SIDE_QUEST_COUNT)
++
++/* 1: the map screen opens once the journal closes, 2: it is open, 3: the
++   journal opens again on journalTab and journalCursor (STSTATUS_runScreens) */
++s32 STSTATUS_journalMap;
++s32 STSTATUS_journalGoal; /* the field the map shows */
++static s32 journalTab;
++static s32 journalCursor;
++
++typedef struct Journal {
++    TASK_HEADER(Journal);
++    FieldMenuScreen *menu;
++    s32 layer;
++    s32 depth;
++    s32 current; /* the story's step */
++    s32 tab;
++    s32 count;
++    s16 entries[JOURNAL_MAX]; /* a story step, or -1 - a side quest */
++    s32 cursor;
++    s32 page;
++    s32 pageCount;
++    s32 placeWidth; /* the chosen entry's place name's */
++    s32 hasPrev;
++    s32 hasNext;
++    s32 arrowFrame;
++    s32 time;
++    s32 tick; /* the titles' marquee, from the entry or page shown */
++    s32 rowWidth[JOURNAL_ROWS]; /* the list rows' text widths, and the detail title's */
++    s32 titleWidth;
++    PanelAnim fades[3]; /* [0] opens the panels; the item list's other two run with it */
++} Journal;
++
++/* Its text windows (showJournal hides them as an array), then the cursor */
++typedef struct JournalWindows {
++    TextWindow *title; /* "DIGILOG" */
++    TextWindow *tab;
++    TextWindow *listLabel;
++    TextWindow *count; /* the tab's entries */
++    TextWindow *entries[JOURNAL_ROWS];
++    TextWindow *page;
++    TextWindow *pageSeparator;
++    TextWindow *pageCount;
++    TextWindow *placeLabel;
++    TextWindow *area; /* the chosen entry's place, on its picture */
++    TextWindow *questTitle;
++    TextWindow *state; /* MAIN, SIDE or DONE */
++    TextWindow *recordLabel;
++    TextWindow *record; /* how it stands, or "NEEDS" */
++    TextWindow *need; /* the item the entry needs */
++    TextWindow *rewardLabel;
++    TextWindow *reward; /* a side quest's item */
++    TextWindow *helpLabel;
++    TextWindow *help;
++    TextWindow *keys[4]; /* the last, the map's, on an entry with an area */
++    Cursor *cursor;
++} JournalWindows;
++#define JOURNAL_WINDOW_COUNT (s32)(__builtin_offsetof(JournalWindows, cursor) / sizeof(TextWindow *))
++
++static void *journalTexts(void) {
++    return (void *)native_packs_text(LANGUAGE);
++}
++
++static s32 sideQuestFound(s32 quest) {
++    const SideQuest *q = &SIDE_QUESTS[quest];
++
++    if (q->gate != 0) {
++        /* found while his agent is there, or once he has made his request */
++        u8 p = GAME.progress;
++        const typeof(DRI_WINDOWS[0]) *w = &DRI_WINDOWS[q->gate - 1];
++
++        return (p >= w->first && p <= w->last) || (p >= w->first2 && p <= w->last2) || FLAGS_00.checkCondition(q->ask, 1) == 1;
++    }
++    return (q->since ? GAME.progress >= q->since : FLAGS_00.checkCondition(((q->from ? q->from : q->mode) & 0xFF) | 0x2000, 1) == 1) && GAME.progress <= (q->last ? q->last : ANY_STEP);
++}
++
++/* The item an entry needs and the player lacks, or 0 */
++static s32 journalNeeds(s32 entry) {
++    s32 req = entry < 0 ? SIDE_QUESTS[-1 - entry].req : 0;
++
++    return req != 0 && FLAGS_00.checkCondition(ITEM(0, req), 1) != 1 ? req : 0;
++}
++
++static s32 sideQuestDone(s32 quest) {
++    const SideQuest *q = &SIDE_QUESTS[quest];
++
++    return FLAGS_00.checkCondition(q->done, 1) == 1 || (q->owned != 0 && FLAGS_00.checkCondition(q->owned, 1) == 1);
++}
++
++/* The tab's entries */
++static void fillJournal(Journal *journal) {
++    s32 i;
++
++    journal->count = 0;
++    if (journal->tab == TAB_ACTIVE) {
++        journal->entries[journal->count++] = journal->current;
++        for (i = 0; i < SIDE_QUEST_COUNT; i++) {
++            if (sideQuestFound(i) && !sideQuestDone(i)) {
++                journal->entries[journal->count++] = -1 - i;
++            }
++        }
++    } else {
++        for (i = journal->current - 1; i >= 0; i--) {
++            journal->entries[journal->count++] = i;
++        }
++        for (i = 0; i < SIDE_QUEST_COUNT; i++) {
++            if (sideQuestDone(i)) {
++                journal->entries[journal->count++] = -1 - i;
++            }
++        }
++    }
++    journal->pageCount = journal->count != 0 ? (journal->count + JOURNAL_ROWS - 1) / JOURNAL_ROWS : 1;
++}
++
++/* An entry's field */
++static s32 journalMode(s32 entry) {
++    const JournalRule *rule = journalRule(entry);
++
++    if (rule != NULL) {
++        return rule->mode;
++    }
++    return entry >= 0 ? STSTATUS_objectiveModeAt(entry) : SIDE_QUESTS[-1 - entry].mode;
++}
++
++/* The field of the story's objective now (the map's too) */
++s32 STSTATUS_objectiveModeNow(void) {
++    return journalMode(GAME.progress);
++}
++
++/* A field's place name, as its banner's, or 0 */
++static s32 journalPlace(s32 mode) {
++    s32 i;
++
++    for (i = 0; mode != 0 && FIELDSTG_areaNames[i].mode != 0; i++) {
++        if (FIELDSTG_areaNames[i].mode == mode) {
++            return FIELDSTG_areaNames[i].place;
++        }
++    }
++    return 0;
++}
++
++/* Whether the map screen shows a field */
++static s32 journalOnMap(s32 mode) {
++    return mode >= 0x200 && mode <= 0x2D6;
++}
++
++/* A side quest's item, or 0 */
++static s32 journalReward(s32 entry) {
++    return entry < 0 ? SIDE_QUESTS[-1 - entry].item : 0;
++}
++
++/* Centres a window's text on x */
++static void centerJournalText(TextWindow *window, s32 x, s32 y) {
++    window->setRightAlign(window, 1);
++    window->setPos(window, x + window->alignWidth / 2, y);
++}
++
++static void setJournalLabel(TextWindow *window, s32 text) {
++    window->setString(window, journalTexts(), text);
++    window->setPalette(window, PALETTE_PURPLE);
++}
++
++/* A text's width in pixels */
++static s32 journalTextWidth(TextWindow *window) {
++    s32 width;
++
++    window->setRightAlign(window, 1);
++    width = window->alignWidth;
++    window->setRightAlign(window, 0);
++    return width;
++}
++
++/* How far a text of `width` has scrolled at `tick` in a box of `room` pixels */
++static s32 journalScroll(s32 tick, s32 width, s32 room) {
++    s32 over = width - room;
++    s32 t;
++
++    if (over <= 0) {
++        return 0;
++    }
++    t = tick % (MARQUEE_WAIT * 2 + over * MARQUEE_FRAMES);
++    if (t < MARQUEE_WAIT) {
++        return 0;
++    }
++    t = (t - MARQUEE_WAIT) / MARQUEE_FRAMES;
++    return t < over ? t : over;
++}
++
++/* The chosen row's title and the detail's, one frame on */
++static void scrollJournal(Journal *journal, JournalWindows *windows) {
++    s32 i;
++    s32 scroll;
++
++    journal->tick++;
++    for (i = 0; i < JOURNAL_ROWS; i++) {
++        scroll = i == journal->cursor % JOURNAL_ROWS ? journalScroll(journal->tick, journal->rowWidth[i], ROW_RIGHT - ROW_LEFT) : 0;
++        windows->entries[i]->setPos(windows->entries[i], ROW_LEFT - scroll, LIST_ROW(i));
++    }
++    scroll = journalScroll(journal->tick, journal->titleWidth, TITLE_RIGHT - INNER_X);
++    windows->questTitle->setPos(windows->questTitle, INNER_X - scroll, TITLE_Y);
++}
++
++/* The chosen entry: its place, its title and kind, its record, its reward
++   and its text */
++static void showJournalEntry(Journal *journal, JournalWindows *windows) {
++    void *items = FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_NAMES));
++    s32 done = journal->tab == TAB_DONE;
++    s32 entry;
++    s32 place;
++    s32 need;
++
++    windows->area->setVisible(windows->area, 0);
++    windows->need->setVisible(windows->need, 0);
++    windows->keys[3]->setVisible(windows->keys[3], 0);
++    windows->rewardLabel->setVisible(windows->rewardLabel, 0);
++    windows->reward->setVisible(windows->reward, 0);
++    if (journal->count == 0) {
++        windows->questTitle->setVisible(windows->questTitle, 0);
++        windows->state->setVisible(windows->state, 0);
++        windows->record->setVisible(windows->record, 0);
++        windows->help->setVisible(windows->help, 0);
++        return;
++    }
++    entry = journal->entries[journal->cursor];
++    need = done ? 0 : journalNeeds(entry);
++    place = journalPlace(journalMode(entry));
++    if (place != 0) {
++        windows->area->setString(windows->area, FILE_CACHE.load(TEXT_FILE(TEXT_STAGE_NAMES)), place);
++        windows->area->setRightAlign(windows->area, 1);
++        journal->placeWidth = windows->area->alignWidth;
++        windows->area->setRightAlign(windows->area, 0);
++    }
++    if (entry >= 0) {
++        windows->questTitle->setString(windows->questTitle, journalTexts(), TEXT_STEP(entry));
++    } else {
++        windows->questTitle->setString(windows->questTitle, items, journalReward(entry));
++    }
++    journal->titleWidth = journalTextWidth(windows->questTitle);
++    journal->tick = 0;
++    windows->state->setString(windows->state, journalTexts(), done ? TEXT_DONE : entry >= 0 ? TEXT_MAIN : TEXT_SIDE);
++    windows->state->setPalette(windows->state, done ? PALETTE_GREEN : PALETTE_WHITE);
++    centerJournalText(windows->state, INNER_X + INNER_W - BADGE_W / 2, TITLE_Y);
++    if (journalOnMap(journalMode(entry))) {
++        /* left of "back", whatever its width */
++        setJournalLabel(windows->keys[3], TEXT_KEY(3));
++        windows->keys[3]->setRightAlign(windows->keys[3], 1);
++        windows->keys[3]->setPos(windows->keys[3], windows->keys[2]->x - windows->keys[2]->alignWidth - 8, FOOT_Y + 1);
++    }
++    windows->record->setString(windows->record, journalTexts(), need != 0 ? TEXT_NEEDS : TEXT_RECORD(journal->tab));
++    windows->record->setPalette(windows->record, need != 0 ? PALETTE_YELLOW : PALETTE_WHITE);
++    windows->record->setPos(windows->record, done ? INNER_X + 12 : INNER_X, RECORD_Y + 13);
++    if (need != 0) {
++        windows->need->setString(windows->need, items, need);
++    }
++    if (journalReward(entry) != 0) {
++        setJournalLabel(windows->rewardLabel, TEXT_REWARD_LABEL(journal->tab));
++        windows->reward->setString(windows->reward, items, journalReward(entry));
++        windows->reward->setPalette(windows->reward, PALETTE_GREEN);
++    }
++    windows->help->setString(windows->help, journalTexts(),
++                             journalRule(entry) != NULL ? journalRule(entry)->text
++                             : entry >= 0               ? TEXT_STEP(entry) + 1
++                                                        : TEXT_SIDE_QUEST(-1 - entry));
++}
++
++/* The page's titles, the story's highlighted; its number */
++static void showJournalPage(Journal *journal, JournalWindows *windows) {
++    TextWindow *window;
++    s32 i;
++    s32 n;
++
++    for (i = 0; i < JOURNAL_ROWS; i++) {
++        n = journal->page * JOURNAL_ROWS + i;
++        window = windows->entries[i];
++        if (n >= journal->count) {
++            window->setVisible(window, 0);
++        } else if (journal->entries[n] >= 0) {
++            window->setString(window, journalTexts(), TEXT_STEP(journal->entries[n]));
++            window->setPalette(window, journal->tab == TAB_ACTIVE ? PALETTE_BLUE : PALETTE_WHITE);
++        } else {
++            window->setString(window, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_NAMES)), journalReward(journal->entries[n]));
++            window->setPalette(window, PALETTE_WHITE);
++        }
++        journal->rowWidth[i] = n < journal->count ? journalTextWidth(window) : 0;
++    }
++    journal->tick = 0;
++    journal->hasPrev = journal->page != 0;
++    journal->hasNext = journal->page != journal->pageCount - 1;
++    windows->page->setNumber(windows->page, 0, journal->page + 1);
++    windows->page->setRightAlign(windows->page, 1);
++    windows->pageSeparator->setString(windows->pageSeparator, FILE_CACHE.load(TEXT_FILE(TEXT_STATUS)), 4);
++    windows->pageCount->setNumber(windows->pageCount, 0, journal->pageCount);
++    windows->pageCount->setRightAlign(windows->pageCount, 1);
++    windows->cursor->setPos(windows->cursor, LIST_X + 8, LIST_ROW(journal->cursor % JOURNAL_ROWS));
++    windows->cursor->setVisible(windows->cursor, journal->count != 0);
++}
++
++static void showJournal(Journal *journal, JournalWindows *windows, s32 show) {
++    s32 i;
++
++    if (show) {
++        windows->title->setString(windows->title, journalTexts(), TEXT_DIGILOG);
++        windows->tab->setString(windows->tab, journalTexts(), TEXT_TAB(journal->tab));
++        centerJournalText(windows->tab, DETAIL_X + DETAIL_W - 45, HEAD_Y + 2);
++        setJournalLabel(windows->listLabel, TEXT_LIST_LABEL(journal->tab));
++        windows->count->setNumber(windows->count, 0, journal->count);
++        windows->count->setPalette(windows->count, PALETTE_PURPLE);
++        windows->count->setRightAlign(windows->count, 1);
++        setJournalLabel(windows->placeLabel, TEXT_PLACE_LABEL);
++        setJournalLabel(windows->recordLabel, TEXT_RECORD_LABEL(journal->tab));
++        setJournalLabel(windows->helpLabel, TEXT_HELP_LABEL);
++        for (i = 0; i < 3; i++) {
++            setJournalLabel(windows->keys[i], TEXT_KEY(i));
++        }
++        windows->keys[2]->setRightAlign(windows->keys[2], 1);
++        /* the tabs' after "select", whatever its width */
++        windows->keys[0]->setRightAlign(windows->keys[0], 1);
++        windows->keys[1]->setPos(windows->keys[1], windows->keys[0]->x + windows->keys[0]->alignWidth + 8, FOOT_Y + 1);
++        windows->keys[0]->setRightAlign(windows->keys[0], 0);
++        showJournalPage(journal, windows);
++        showJournalEntry(journal, windows);
++        return;
++    }
++    for (i = 0; i < JOURNAL_WINDOW_COUNT; i++) {
++        ((TextWindow **)windows)[i]->setVisible(((TextWindow **)windows)[i], 0);
++    }
++    windows->cursor->setVisible(windows->cursor, 0);
++    journal->hasPrev = 0;
++    journal->hasNext = 0;
++}
++
++static u_long *journalOt(Journal *journal, s32 over) {
++    Layer *layer = GFX.funcs.getLayer(journal->layer);
++
++    return layer->getOtEntry(layer, journal->depth - over);
++}
++
++/* A flat box of a colour */
++static void journalBox(Journal *journal, s32 over, s32 x, s32 y, s32 w, s32 h, s32 color) {
++    POLY_F4 *poly = GFX.funcs.getPrim();
++
++    setPolyF4(poly);
++    setRGB0(poly, color & 0xFF, color >> 8 & 0xFF, color >> 16 & 0xFF);
++    poly->x0 = poly->x2 = x;
++    poly->x1 = poly->x3 = x + w;
++    poly->y0 = poly->y1 = y;
++    poly->y2 = poly->y3 = y + h;
++    addPrim(journalOt(journal, over), poly);
++    GFX.funcs.setPrim(poly + 1);
++}
++
++static void journalLine(Journal *journal, s32 over, s32 x0, s32 y0, s32 x1, s32 y1, s32 color) {
++    LINE_F2 *line = GFX.funcs.getPrim();
++
++    setLineF2(line);
++    setRGB0(line, color & 0xFF, color >> 8 & 0xFF, color >> 16 & 0xFF);
++    line->x0 = x0;
++    line->y0 = y0;
++    line->x1 = x1;
++    line->y1 = y1;
++    addPrim(journalOt(journal, over), line);
++    GFX.funcs.setPrim(line + 1);
++}
++
++/* A box's outline, its bottom left corner cut by `cut` as the game's panels' */
++static void journalFrame(Journal *journal, s32 over, s32 x, s32 y, s32 w, s32 h, s32 cut, s32 color) {
++    s32 right = x + w - 1;
++    s32 bottom = y + h - 1;
++
++    journalLine(journal, over, x, y, right, y, color);
++    journalLine(journal, over, right, y, right, bottom, color);
++    journalLine(journal, over, right, bottom, x + cut, bottom, color);
++    journalLine(journal, over, x + cut, bottom, x, bottom - cut, color);
++    journalLine(journal, over, x, bottom - cut, x, y, color);
++}
++
++/* A panel in the game's colours, opening downwards with the list's fade */
++static void journalPanel(Journal *journal, s32 x, s32 y, s32 w, s32 h) {
++    h = h * journal->fades[0].level / ONE;
++    if (h > 3) {
++        journalBox(journal, OVER_FILL, x, y, w, h, COLOR_FILL);
++        journalFrame(journal, OVER_LINES, x, y, w, h, 3, COLOR_BORDER);
++    }
++}
++
++/* A box inside a panel, with a mark down its left side */
++static void journalInset(Journal *journal, s32 x, s32 y, s32 w, s32 h, s32 fill, s32 border, s32 mark) {
++    journalBox(journal, OVER_BOXES, x, y, w, h, fill);
++    journalFrame(journal, OVER_TEXT, x, y, w, h, 0, border);
++    journalBox(journal, OVER_TEXT, x, y, 2, h, mark);
++}
++
++/* A field's picture (native_postcard), inside the frame */
++static void drawJournalPicture(Journal *journal, s32 mode) {
++    u_long *prim = GFX.funcs.getPrim();
++
++    setlen(prim, 3);
++    prim[1] = 0x1B000000 | mode;
++    prim[2] = (CANVAS_Y + 1) << 16 | (INNER_X + 1);
++    prim[3] = (CANVAS_H - 2) << 16 | (INNER_W - 2);
++    addPrim(journalOt(journal, OVER_MAP), prim);
++    GFX.funcs.setPrim(prim + 4);
++}
++
++/* The chosen entry's parts: its row's bar, its picture (its field's, or a
++   cross for one without), its place's tag, its kind's badge,
++   a done one's tick and a side quest's reward box */
++static void drawJournalEntry(Journal *journal) {
++    s32 entry = journal->entries[journal->cursor];
++    s32 done = journal->tab == TAB_DONE;
++    s32 y = LIST_ROW(journal->cursor % JOURNAL_ROWS) - 1;
++    s32 right = INNER_X + INNER_W - 1;
++    s32 bottom = CANVAS_Y + CANVAS_H - 1;
++
++    journalBox(journal, OVER_BOXES, LIST_X + 2, y, LIST_W - 4, 14, COLOR_CHOSEN);
++    journalBox(journal, OVER_TEXT, LIST_X + 2, y, 2, 14, COLOR_MARK);
++    journalFrame(journal, OVER_LINES, INNER_X, CANVAS_Y, INNER_W, CANVAS_H, 0, COLOR_BORDER);
++    if (native_postcard(journalMode(entry))) {
++        drawJournalPicture(journal, journalMode(entry));
++    } else {
++        journalLine(journal, OVER_LINES, INNER_X, CANVAS_Y, right, bottom, COLOR_RULE);
++        journalLine(journal, OVER_LINES, INNER_X, bottom, right, CANVAS_Y, COLOR_RULE);
++    }
++    if (journalPlace(journalMode(entry)) != 0) {
++        /* as wide as the name */
++        journalBox(journal, OVER_BOXES, INNER_X + 1, bottom - 14, journal->placeWidth + 8 < INNER_W - 2 ? journal->placeWidth + 8 : INNER_W - 2, 14, COLOR_FILL);
++        journalBox(journal, OVER_TEXT, INNER_X + 1, bottom - 14, 2, 14, COLOR_MARK);
++    }
++    journalBox(journal, OVER_BOXES, right + 1 - BADGE_W, TITLE_Y - 1, BADGE_W, 14, done ? COLOR_DONE_FILL : COLOR_BOX_FILL);
++    journalFrame(journal, OVER_TEXT, right + 1 - BADGE_W, TITLE_Y - 1, BADGE_W, 14, 0, done ? COLOR_DONE_BORDER : COLOR_BOX_BORDER);
++    if (done) {
++        journalLine(journal, OVER_TEXT, INNER_X, RECORD_Y + 18, INNER_X + 3, RECORD_Y + 21, COLOR_DONE);
++        journalLine(journal, OVER_TEXT, INNER_X + 3, RECORD_Y + 21, INNER_X + 8, RECORD_Y + 15, COLOR_DONE);
++    }
++    if (journalReward(entry) != 0) {
++        journalInset(journal, INNER_X, REWARD_Y, INNER_W, 26, COLOR_BOX_FILL, COLOR_BOX_BORDER, COLOR_DONE);
++    }
++}
++
++/* The panels, their rules and the page arrows; the chosen entry's parts once
++   the panels are open */
++static void drawJournal(Journal *journal) {
++    SpriteDrawer sprite;
++
++    if (journal->fades[0].level == 0) {
++        return;
++    }
++    journalPanel(journal, LIST_X, HEAD_Y, 90, 16);
++    journalPanel(journal, DETAIL_X + DETAIL_W - 90, HEAD_Y, 90, 16);
++    journalLine(journal, OVER_LINES, 0, HEAD_Y + 19, 319, HEAD_Y + 19, COLOR_BORDER);
++    journalLine(journal, OVER_LINES, 0, HEAD_Y + 20, 319, HEAD_Y + 20, COLOR_RULE);
++    journalPanel(journal, LIST_X, PANELS_Y, LIST_W, PANELS_H);
++    journalPanel(journal, DETAIL_X, PANELS_Y, DETAIL_W, PANELS_H);
++    journalPanel(journal, LIST_X, HELP_Y, DETAIL_X + DETAIL_W - LIST_X, HELP_H);
++    journalBox(journal, OVER_FILL, 0, FOOT_Y, 320, 240 - FOOT_Y, COLOR_FILL);
++    journalLine(journal, OVER_LINES, 0, FOOT_Y, 319, FOOT_Y, COLOR_BORDER);
++    if (journal->substate != 2) {
++        return;
++    }
++    journalLine(journal, OVER_LINES, LIST_X + 6, PANELS_Y + 16, LIST_X + LIST_W - 7, PANELS_Y + 16, COLOR_RULE);
++    journalLine(journal, OVER_LINES, LIST_X + 6, LIST_FOOT_Y - 3, LIST_X + LIST_W - 7, LIST_FOOT_Y - 3, COLOR_RULE);
++    journalLine(journal, OVER_LINES, INNER_X, RECORD_Y - 3, INNER_X + INNER_W - 1, RECORD_Y - 3, COLOR_RULE);
++    if (journal->count != 0) {
++        drawJournalEntry(journal);
++    }
++    if (journal->pageCount < 2) {
++        return;
++    }
++    initSpriteDrawer(&sprite);
++    sprite.setTexture(0x280, 0x100);
++    sprite.setLayerId(journal->layer, journal->depth - OVER_TEXT);
++    if (GFX.funcs.getTime() - journal->time >= 11) {
++        journal->time = GFX.funcs.getTime();
++        journal->arrowFrame = (journal->arrowFrame + 1) % 4;
++    }
++    sprite.setClutRow(journal->arrowFrame);
++    if (journal->hasPrev) {
++        sprite.draw(FILE_CACHE.getEntry(FILE_STATUS_SPRITES << 16), 0x34, LIST_X + 6, LIST_FOOT_Y + 1);
++    }
++    if (journal->hasNext) {
++        sprite.draw(FILE_CACHE.getEntry(FILE_STATUS_SPRITES << 16), 0x35, LIST_X + LIST_W - 20, LIST_FOOT_Y + 1);
++    }
++}
++
++/* Left and right turn the tabs, up and down move the cursor through the
++   pages, L1 and R1 turn them; whether anything moved */
++static s32 moveJournalCursor(Journal *journal, JournalWindows *windows) {
++    s32 cursor = journal->cursor;
++    s32 page = journal->page;
++
++    if (PAD_PRESSED(PAD_LEFT) || PAD_PRESSED(PAD_RIGHT)) {
++        SOUND.playSound(SOUND_MENU_MOVE);
++        journal->tab ^= 1;
++        journal->cursor = 0;
++        journal->page = 0;
++        fillJournal(journal);
++        showJournal(journal, windows, 1);
++        return 1;
++    }
++    if ((!PAD_HELD(PAD_R1) && PAD_PRESSED(PAD_L1)) || (!PAD_HELD(PAD_R1) && PAD_REPEATED(PAD_L1))) {
++        journal->cursor = journal->page > 0 ? (journal->page - 1) * JOURNAL_ROWS : 0;
++    } else if ((!PAD_HELD(PAD_L1) && PAD_PRESSED(PAD_R1)) || (!PAD_HELD(PAD_L1) && PAD_REPEATED(PAD_R1))) {
++        if (journal->page < journal->pageCount - 1) {
++            journal->cursor = (journal->page + 1) * JOURNAL_ROWS;
++        }
++    } else if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
++        journal->cursor = journal->cursor > 0 ? journal->cursor - 1 : 0;
++    } else if (PAD_PRESSED(PAD_DOWN) || PAD_REPEATED(PAD_DOWN)) {
++        journal->cursor = journal->cursor < journal->count - 1 ? journal->cursor + 1 : cursor;
++    }
++    if (cursor == journal->cursor) {
++        return 0;
++    }
++    SOUND.playSound(SOUND_CURSOR);
++    journal->page = journal->cursor / JOURNAL_ROWS;
++    if (page != journal->page) {
++        showJournalPage(journal, windows);
++    }
++    windows->cursor->setPos(windows->cursor, LIST_X + 8, LIST_ROW(journal->cursor % JOURNAL_ROWS));
++    showJournalEntry(journal, windows);
++    return 1;
++}
++
++/* Opens the panels; cross on an entry with an area shows it on the map,
++   triangle closes */
++static void runJournal(Journal *journal, JournalWindows *windows) {
++    s32 mode;
++    s32 i;
++
++    switch (journal->substate) {
++    case 0:
++    default:
++        for (i = 0; i < 3; i++) {
++            journal->fades[i].duration = 10;
++            STSTATUS_data.funcs.startFade(&journal->fades[i], 1);
++        }
++        journal->substate++;
++        break;
++    case 1:
++        STSTATUS_data.funcs.updateFade(&journal->fades[1]);
++        STSTATUS_data.funcs.updateFade(&journal->fades[2]);
++        if (STSTATUS_data.funcs.updateFade(&journal->fades[0])) {
++            showJournal(journal, windows, 1);
++            journal->substate++;
++        }
++        break;
++    case 2:
++        if (moveJournalCursor(journal, windows)) {
++            break;
++        }
++        mode = journal->count != 0 ? journalMode(journal->entries[journal->cursor]) : 0;
++        if (PAD_PRESSED(PAD_CROSS) && journalOnMap(mode)) {
++            SOUND.playSound(SOUND_SELECT);
++            STSTATUS_journalMap = 1;
++            STSTATUS_journalGoal = mode;
++            journalTab = journal->tab;
++            journalCursor = journal->cursor;
++        } else if (PAD_PRESSED(PAD_TRIANGLE)) {
++            SOUND.playSound(SOUND_MENU_CANCEL);
++        } else {
++            break;
++        }
++        showJournal(journal, windows, 0);
++        for (i = 0; i < 3; i++) {
++            STSTATUS_data.funcs.startFade(&journal->fades[i], 0);
++        }
++        journal->substate++;
++        break;
++    case 3:
++        STSTATUS_data.funcs.updateFade(&journal->fades[1]);
++        STSTATUS_data.funcs.updateFade(&journal->fades[2]);
++        if (STSTATUS_data.funcs.updateFade(&journal->fades[0])) {
++            journal->state = TASK_KILL;
++        }
++        break;
++    }
++}
++
++static void updateJournal(Journal *journal, JournalWindows *windows) {
++    s32 i;
++
++    switch (journal->state) {
++    case TASK_INIT:
++    default:
++        if (FILE_CACHE.isLoading(TEXT_FILE(TEXT_STAGE_NAMES)) || FILE_CACHE.isLoading(TEXT_FILE(TEXT_ITEM_NAMES))) {
++            break;
++        }
++        windows->title = createTextWindow(journal->layer, 1, LIST_X + 6, HEAD_Y + 2);
++        windows->tab = createTextWindow(journal->layer, 1, DETAIL_X + DETAIL_W - 82, HEAD_Y + 2);
++        windows->listLabel = createTextWindow(journal->layer, 1, LIST_X + 6, PANELS_Y + 3);
++        windows->count = createTextWindow(journal->layer, 1, LIST_X + LIST_W - 6, PANELS_Y + 3);
++        for (i = 0; i < JOURNAL_ROWS; i++) {
++            windows->entries[i] = createTextWindow(journal->layer, 1, LIST_X + 20, LIST_ROW(i));
++        }
++        windows->page = createTextWindow(journal->layer, 1, LIST_X + LIST_W / 2 - 4, LIST_FOOT_Y);
++        windows->pageSeparator = createTextWindow(journal->layer, 1, LIST_X + LIST_W / 2 - 1, LIST_FOOT_Y);
++        windows->pageCount = createTextWindow(journal->layer, 1, LIST_X + LIST_W / 2 + 19, LIST_FOOT_Y);
++        windows->placeLabel = createTextWindow(journal->layer, 1, INNER_X, PANELS_Y + 3);
++        windows->area = createTextWindow(journal->layer, 1, INNER_X + 5, CANVAS_Y + CANVAS_H - 15);
++        windows->questTitle = createTextWindow(journal->layer, 1, INNER_X, TITLE_Y);
++        for (i = 0; i < JOURNAL_ROWS; i++) {
++            windows->entries[i]->clipL = ROW_LEFT;
++            windows->entries[i]->clipR = ROW_RIGHT;
++        }
++        windows->questTitle->clipL = INNER_X;
++        windows->questTitle->clipR = TITLE_RIGHT;
++        windows->state = createTextWindow(journal->layer, 1, INNER_X + INNER_W - 5, TITLE_Y);
++        windows->recordLabel = createTextWindow(journal->layer, 1, INNER_X, RECORD_Y);
++        windows->record = createTextWindow(journal->layer, 1, INNER_X, RECORD_Y + 13);
++        windows->need = createTextWindow(journal->layer, 1, INNER_X + 58, RECORD_Y + 13);
++        windows->rewardLabel = createTextWindow(journal->layer, 1, INNER_X + 6, REWARD_Y + 1);
++        windows->reward = createTextWindow(journal->layer, 1, INNER_X + 6, REWARD_Y + 13);
++        windows->helpLabel = createTextWindow(journal->layer, 1, LIST_X + 6, HELP_Y + 1);
++        windows->help = createTextWindow(journal->layer, 1, LIST_X + 6, HELP_Y + 12);
++        windows->help->setLines(windows->help, 2);
++        windows->keys[0] = createTextWindow(journal->layer, 1, LIST_X + 2, FOOT_Y + 1);
++        windows->keys[1] = createTextWindow(journal->layer, 1, 78, FOOT_Y + 1);
++        windows->keys[2] = createTextWindow(journal->layer, 1, DETAIL_X + DETAIL_W - 2, FOOT_Y + 1);
++        windows->keys[3] = createTextWindow(journal->layer, 1, DETAIL_X + DETAIL_W - 62, FOOT_Y + 1);
++        for (i = 0; i < JOURNAL_WINDOW_COUNT; i++) {
++            ((TextWindow **)windows)[i]->setDepth(((TextWindow **)windows)[i], journal->depth - OVER_TEXT);
++        }
++        windows->cursor = createCursor(journal->layer, journal->depth - OVER_TEXT, LIST_X + 8, LIST_ROW(0));
++        windows->cursor->setVisible(windows->cursor, 0);
++        journal->nextState(journal);
++        break;
++    case TASK_RUN:
++        runJournal(journal, windows);
++        scrollJournal(journal, windows);
++        drawJournal(journal);
++        break;
++    case TASK_DONE:
++    case TASK_KILL:
++        break;
++    }
++}
++
++/* Creates the journal (task), on the tab and entry it was on when it comes
++   back from the map; requests the place and item names */
++Task *STSTATUS_createJournal(FieldMenuScreen *menu, s32 extra) {
++    Journal *journal = createTask(updateJournal, sizeof(Journal), sizeof(JournalWindows));
++
++    journal->layer = SCREEN_LAYER;
++    journal->depth = 6; /* under it, the menu's background at 7 */
++    journal->menu = menu;
++    journal->current = GAME.progress < 0 ? 0 : GAME.progress > JOURNAL_LAST_STEP ? JOURNAL_LAST_STEP : GAME.progress;
++    if (STSTATUS_journalMap == 3) {
++        journal->tab = journalTab;
++    }
++    fillJournal(journal);
++    if (STSTATUS_journalMap == 3 && journalCursor < journal->count) {
++        journal->cursor = journalCursor;
++        journal->page = journalCursor / JOURNAL_ROWS;
++    }
++    STSTATUS_journalMap = 0;
++    FILE_CACHE.request(TEXT_FILE(TEXT_STAGE_NAMES));
++    FILE_CACHE.request(TEXT_FILE(TEXT_ITEM_NAMES));
++    return (Task *)journal;
++}
++#endif

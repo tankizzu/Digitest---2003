@@ -1,0 +1,856 @@
+/* The GTE (the PSX's geometry coprocessor) in C, and the libgte/libgs
+   functions built on it. Fixed point as the hardware does it (psx-spx,
+   "Geometry Transformation Engine"), so results match closely. */
+#include <math.h>
+#include <stdlib.h>
+#include <string.h>
+#include "platform.h"
+
+#define ANGLE (6.283185307179586 / 4096) /* radians per PSX angle unit */
+
+typedef struct {
+    int16_t m[3][3];
+    int16_t pad;
+    int32_t t[3];
+} MATRIX;
+
+typedef struct {
+    int16_t vx, vy, vz, pad;
+} SVECTOR;
+
+typedef struct {
+    int32_t vx, vy, vz, pad;
+} VECTOR;
+
+/* --- registers --- */
+SAVED static int16_t V0[3];
+SAVED static int32_t IR[4];  /* IR0-IR3 */
+SAVED static int32_t MAC[4]; /* MAC0-MAC3 */
+SAVED static int32_t SX[3], SY[3]; /* SXY0-SXY2 */
+SAVED static int32_t SZ[4];  /* SZ0-SZ3 */
+SAVED static uint32_t RGB2, RGBC;
+SAVED static uint32_t OTZ, FLAG;
+
+SAVED static int16_t RT[3][3], LM[3][3], LCM[3][3];
+SAVED static int32_t TR[3], BK[3];
+SAVED static int32_t OFX, OFY, H = 1000, DQA, DQB, ZSF3 = 0x155, ZSF4 = 0x100;
+
+/* MAC1-3 before their shift, for the render scale's fractions */
+static double s_exact[3];
+
+static int32_t clamp(int64_t v, int32_t lo, int32_t hi) {
+    return v < lo ? lo : v > hi ? hi : (int32_t)v;
+}
+
+/* MAC1-3 = (T * 0x1000 + M * v) >> 12; IR1-3 saturated (lm: 0 or -0x8000) */
+static void mvmva(int16_t m[3][3], const int32_t v[3], const int32_t *t, int lm) {
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        int64_t s = t ? (int64_t)t[i] << 12 : 0;
+
+        s += (int64_t)m[i][0] * v[0] + (int64_t)m[i][1] * v[1] + (int64_t)m[i][2] * v[2];
+        MAC[i + 1] = (int32_t)(s >> 12);
+        s_exact[i] = s / 4096.0;
+        IR[i + 1] = clamp(MAC[i + 1], lm ? 0 : -0x8000, 0x7FFF);
+    }
+}
+
+static void v0_as_int(int32_t out[3]) {
+    out[0] = V0[0];
+    out[1] = V0[1];
+    out[2] = V0[2];
+}
+
+/* --- the macros of the game's gte.h --- */
+void psx_gte_lddp(int32_t r) { IR[0] = (int16_t)r; }
+
+void psx_gte_ldsv(const int16_t *p) {
+    IR[1] = p[0];
+    IR[2] = p[1];
+    IR[3] = p[2];
+}
+
+void psx_gte_stsv(int16_t *p) {
+    p[0] = (int16_t)IR[1];
+    p[1] = (int16_t)IR[2];
+    p[2] = (int16_t)IR[3];
+}
+
+void psx_gte_gpf12(void) {
+    int i;
+
+    for (i = 1; i <= 3; i++) {
+        MAC[i] = (int32_t)(((int64_t)IR[0] * IR[i]) >> 12);
+        IR[i] = clamp(MAC[i], -0x8000, 0x7FFF);
+    }
+}
+
+void psx_gte_SetRotMatrix(const MATRIX *m) { memcpy(RT, m->m, sizeof RT); }
+void psx_gte_SetTransMatrix(const MATRIX *m) { memcpy(TR, m->t, sizeof TR); }
+void psx_gte_SetLightMatrix(const MATRIX *m) { memcpy(LM, m->m, sizeof LM); }
+
+void psx_gte_ldv0(const int16_t *p) {
+    V0[0] = p[0];
+    V0[1] = p[1];
+    V0[2] = p[2];
+}
+
+void psx_gte_ldv0_unaligned(const void *p) {
+    int16_t v[3];
+
+    memcpy(v, p, sizeof v);
+    psx_gte_ldv0(v);
+}
+
+void psx_gte_ldlv0(const int32_t *p) {
+    V0[0] = (int16_t)p[0];
+    V0[1] = (int16_t)p[1];
+    V0[2] = (int16_t)p[2];
+}
+
+/* The render scale's sub-pixel vertices (in the spirit of PGXP): where each
+   projected SXY fell before its fraction went. Kept by the address the game
+   stores it to (stsxy) and the addresses it is copied on to (gte_precise_copy,
+   FIGHTSTG's meshes), the value checked; and by the packed value alone, for
+   the rest. The GPU looks its vertex words up (gpu_draw.c). By value, two
+   vertices in one pixel share a fraction: off by less than the pixel they
+   already were */
+typedef struct {
+    uintptr_t key; /* an address, or the value */
+    uint32_t value;
+    int frame;
+    float x, y, z; /* z: the view depth, for the card's depth buffer */
+    float oy;      /* the GTE's screen offset when it was made (a battle draws in alternating halves of VRAM) */
+    float mx, my;  /* motion: last frame's place minus this one's, 0 for unknown (motion_track) */
+} Precise;
+
+/* 1M entries a table (24 MB): a battle's six models put tens of thousands a frame */
+#define PRECISE_BITS 20
+static Precise *s_by_addr, *s_by_value; /* malloc'd: the image stays under 16 MB */
+int g_subpixel = 1;
+static int s_frame = 1;
+static int s_sxy2_ok;      /* SXY2 has its fraction in s_sxy2 */
+static float s_sxy2[3];
+
+/* DW3_LOG=gpu: each second, how FIGHTSTG's polygons were decided
+   (gte_precise_faces) and why points had no fraction */
+static int s_stat[8]; /* faced, culled, no entry, other value, stale; projections near, clamped */
+enum { ST_FACED, ST_CULLED, ST_NONE, ST_VALUE, ST_STALE, ST_NEAR, ST_CLAMP };
+
+/* Widescreen (widescreen = 1): in battles, the 3D's x narrowed to 3/4 around
+   the screen's middle, the picture then shown 16:9 (gl.c), so that the 3D
+   keeps its shape and sees a third wider; the 2D is stretched */
+int g_widescreen;
+static int s_wide;
+int getMode(void); /* main/game/state.c */
+
+int gte_proj_h(void) {
+    return H;
+}
+
+int gte_widescreen(void) {
+    return s_wide;
+}
+
+static int s_battle;
+static int s_mv_on = -1, s_mv_logs, s_mv_log; /* s_mv_log: DW3_UPSCALE_DATA with "mlog": its numbers to the log (it costs the frame it is in) */
+static struct { int n, age[4], old, nd, q, found, moving; double sum, big, dz, d[4096]; } s_mv; /* motion spike, see motion_track */
+
+static int cmp_d(const void *a, const void *b) {
+    double x = *(const double *)a, y = *(const double *)b;
+
+    return (x > y) - (x < y);
+}
+
+int gte_in_battle(void) {
+    return s_battle;
+}
+
+void gte_motion_enable(void) {
+    s_mv_on = 1;
+}
+
+void gte_precise_frame(void) {
+    s_battle = getMode() >> 8 == 6; /* FIGHTSTG */
+    s_wide = g_widescreen && s_battle;
+    if (s_mv_log && s_mv.n > 0 && s_mv_logs < 240 && (s_mv_logs < 12 || s_frame % 60 < 6)) {
+        int hit = s_mv.age[1] + s_mv.age[2] + s_mv.age[3];
+
+        qsort(s_mv.d, s_mv.nd, sizeof(double), cmp_d);
+        fprintf(stderr, "motion gte f%d: %d stored, matched %d (1 ago), unmatched: %d over 8 stores, %d older, %d new; "
+                "move median %.2f, p90 %.2f, mean %.2f, max %.2f px; the drawing asked %d, found %d, moving %d\n",
+                s_frame, s_mv.n, hit, s_mv.age[0], s_mv.old, s_mv.n - hit - s_mv.age[0] - s_mv.old,
+                s_mv.nd ? s_mv.d[s_mv.nd / 2] : 0.0, s_mv.nd ? s_mv.d[s_mv.nd * 9 / 10] : 0.0, hit ? s_mv.sum / hit : 0.0, s_mv.big, s_mv.q, s_mv.found, s_mv.moving);
+        s_mv_logs++;
+    }
+    memset(&s_mv, 0, sizeof s_mv);
+    s_frame++;
+    if (s_frame % 60 == 0 && (g_log & LOG_GPU) && (s_stat[ST_FACED] || s_stat[ST_CULLED] || s_stat[ST_NONE])) {
+        LOG("faces: %d drawn, %d culled; by the game's rule: %d no entry, %d other value, %d stale; "
+            "projections without a fraction: %d near, %d clamped",
+            s_stat[ST_FACED], s_stat[ST_CULLED], s_stat[ST_NONE], s_stat[ST_VALUE], s_stat[ST_STALE], s_stat[ST_NEAR],
+            s_stat[ST_CLAMP]);
+        memset(s_stat, 0, sizeof s_stat);
+    }
+}
+
+/* A key's set of WAYS entries: a key that hashes where a live one is takes
+   the set's oldest, so a battle's thousands of vertices don't push each
+   other out (one that lost its fraction would snap to its pixel, a flicker
+   at the render scale) */
+#define WAYS 4
+
+static Precise *set(Precise **table, uintptr_t key) {
+    if (*table == NULL && (*table = calloc(1u << PRECISE_BITS, sizeof(Precise))) == NULL) {
+        return NULL;
+    }
+    return &(*table)[((uint32_t)(key * 2654435761u) >> (32 - PRECISE_BITS)) & ~(WAYS - 1u)];
+}
+
+static void put(Precise **table, uintptr_t key, uint32_t value, float x, float y, float z, float mx, float my) {
+    Precise *s = set(table, key), *p;
+    int i;
+
+    if (s == NULL) {
+        return;
+    }
+    p = s;
+    for (i = 0; i < WAYS; i++) {
+        if (s[i].key == key) {
+            p = &s[i];
+            break;
+        }
+        if (s[i].frame < p->frame) {
+            p = &s[i];
+        }
+    }
+    p->key = key, p->value = value, p->frame = s_frame, p->x = x, p->y = y, p->z = z, p->oy = OFY / 65536.0f, p->mx = mx, p->my = my;
+}
+
+/* Motion spike (DW3_UPSCALE_DATA "motion"): a vertex the game stores to the same address as in an earlier frame is the same
+   vertex of the same model; its motion is the change of place without the screen offset. Counted per frame, logged by
+   gte_precise_frame */
+static Precise *s_mvt; /* the same, by (address, the nth store to it in the frame): the game stores some addresses twice */
+
+int gte_motion_on(void) {
+    if (s_mv_on < 0) {
+        const char *e = getenv("DW3_UPSCALE_DATA");
+
+        s_mv_on = e != NULL && (strstr(e, "motion") != NULL || strstr(e, "mshow") != NULL);
+        s_mv_log = e != NULL && strstr(e, "mlog") != NULL;
+    }
+    return s_mv_on;
+}
+
+/* 1 when this store's vertex was stored last frame (or up to 3 before): mv is its motion per frame, previous place minus this one */
+static int motion_track(uintptr_t addr, float x, float y, float z, float mv[2]) {
+    int occ, i, found = 0;
+
+    if (!gte_motion_on() || !s_battle) {
+        return 0;
+    }
+    s_mv.n++;
+    for (occ = 0; occ < 8; occ++) {
+        uintptr_t key = addr << 3 | (uintptr_t)occ;
+        Precise *s = set(&s_mvt, key), *e = NULL;
+
+        if (s == NULL) {
+            return 0;
+        }
+        for (i = 0; i < WAYS; i++) {
+            if (s[i].key == key) {
+                e = &s[i];
+            }
+        }
+        if (e != NULL && e->frame == s_frame) {
+            continue; /* that store of this frame is taken: the next */
+        }
+        if (e != NULL && s_frame - e->frame <= 3) {
+            double dx = x - e->x, dy = (y - OFY / 65536.0) - (e->y - e->oy), d = fabs(dx) + fabs(dy);
+
+            if (s_mv.nd < 4096) {
+                s_mv.d[s_mv.nd++] = d;
+            }
+            s_mv.age[s_frame - e->frame]++;
+            s_mv.sum += d;
+            s_mv.big = fmax(s_mv.big, d);
+            s_mv.dz += fabs(z - e->z);
+            mv[0] = (float)(-dx / (s_frame - e->frame)), mv[1] = (float)(-dy / (s_frame - e->frame));
+            found = 1;
+        } else if (e != NULL) {
+            s_mv.old++;
+        }
+        put(&s_mvt, key, 0, x, y, z, 0, 0);
+        return found;
+    }
+    s_mv.age[0]++; /* more than 8 stores to one address */
+    return 0;
+}
+
+static int get(Precise **table, uintptr_t key, uint32_t value, float *x, float *y, float *z, float *mv) {
+    Precise *s = set(table, key);
+    int i;
+
+    for (i = 0; s != NULL && i < WAYS; i++) {
+        if (s[i].key == key && s[i].value == value && s_frame - s[i].frame <= 2) {
+            *x = s[i].x;
+            *z = s[i].z;
+            *y = s[i].y;
+            if (mv != NULL) {
+                mv[0] = s[i].mx, mv[1] = s[i].my;
+            }
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* A vertex word in a packet: by where it is, else by what it holds */
+int gte_precise(const uint32_t *word, float *x, float *y, float *z) {
+    return g_subpixel && (get(&s_by_addr, (uintptr_t)word, *word, x, y, z, NULL) || get(&s_by_value, *word, *word, x, y, z, NULL));
+}
+
+/* A vertex word's motion since last frame (VRAM pixels), where the GTE stored it and tracked it; 0 when it can't say */
+int gte_precise_motion(const uint32_t *word, float *mx, float *my) {
+    float x, y, z, mv[2] = {0, 0};
+    int ok = gte_motion_on() && g_subpixel && get(&s_by_addr, (uintptr_t)word, *word, &x, &y, &z, mv);
+
+    *mx = ok ? mv[0] : 0, *my = ok ? mv[1] : 0;
+    s_mv.q++, s_mv.found += ok != 0, s_mv.moving += ok && (mv[0] > 0.25f || mv[0] < -0.25f || mv[1] > 0.25f || mv[1] < -0.25f);
+    return ok;
+}
+
+/* FIGHTSTG's mesh polygon from the points at from[0..2] (and [3]): 1 if it
+   faces the camera by their sub-pixel places (NCLIP's sign, on a
+   triangle), 0 if not, -1 if a point has none (the game's own checks then) */
+int gte_precise_faces(int32_t *const from[4], int32_t quad) {
+    float x[4], y[4], z;
+    int i;
+
+    if (!g_subpixel) {
+        return -1;
+    }
+    for (i = 0; i < 3 + (quad != 0); i++) {
+        if (!get(&s_by_addr, (uintptr_t)from[i], (uint32_t)*from[i], &x[i], &y[i], &z, NULL)) {
+            /* why, for the log */
+            Precise *e = set(&s_by_addr, (uintptr_t)from[i]);
+            int why = ST_NONE, k;
+            for (k = 0; e != NULL && k < WAYS; k++) {
+                if (e[k].key == (uintptr_t)from[i]) {
+                    why = e[k].value != (uint32_t)*from[i] ? ST_VALUE : ST_STALE;
+                }
+            }
+            s_stat[why]++;
+            return -1;
+        }
+    }
+    /* a quad that isn't flat (a joint as it bends) can face by its other
+       half (1-3-2) alone: it shows while either does */
+    i = (x[1] - x[0]) * (y[2] - y[0]) - (x[2] - x[0]) * (y[1] - y[0]) > 1e-4f ||
+        (quad && (x[3] - x[1]) * (y[2] - y[1]) - (x[2] - x[1]) * (y[3] - y[1]) > 1e-4f);
+    s_stat[i ? ST_FACED : ST_CULLED]++;
+    return i;
+}
+
+/* The game copied a vertex word from src to dst: its fraction goes along */
+void gte_precise_copy(void *dst, const void *src) {
+    float x, y, z, mv[2] = {0, 0};
+    uint32_t v;
+
+    memcpy(&v, dst, 4);
+    if (get(&s_by_addr, (uintptr_t)src, v, &x, &y, &z, mv)) {
+        put(&s_by_addr, (uintptr_t)dst, v, x, y, z, mv[0], mv[1]);
+    }
+}
+
+/* A point of a stage's painted horizon (FIGHTSTG's patch), as stsxy put it
+   at addr: its depth negative from here on, copies too, for the GPU to keep
+   it out of the fog (gpu_draw.c) */
+void gte_precise_far(const void *addr) {
+    Precise *s = set(&s_by_addr, (uintptr_t)addr);
+    int i;
+
+    for (i = 0; s != NULL && i < WAYS; i++) {
+        if (s[i].key == (uintptr_t)addr && s[i].frame == s_frame && s[i].z > 0) {
+            s[i].z = -s[i].z;
+        }
+    }
+}
+
+static void remember(void) {
+    uint32_t key = (uint16_t)SX[2] | (uint32_t)(uint16_t)SY[2] << 16;
+    double x, y;
+
+    s_sxy2_ok = 0;
+    if (s_exact[2] <= H / 2.0) {
+        s_stat[ST_NEAR]++;
+        return;
+    }
+    x = H * s_exact[0] / s_exact[2] * (s_wide ? 0.75 : 1.0) + OFX / 65536.0;
+    y = H * s_exact[1] / s_exact[2] + OFY / 65536.0;
+    /* the GTE's own clamps and rounding: only a fraction away */
+    if (fabs(x - SX[2] - 0.5) > 1.5 || fabs(y - SY[2] - 0.5) > 1.5) {
+        s_stat[ST_CLAMP]++;
+        return;
+    }
+    s_sxy2_ok = 1;
+    s_sxy2[0] = (float)x;
+    s_sxy2[1] = (float)y;
+    s_sxy2[2] = (float)s_exact[2];
+    put(&s_by_value, key, key, (float)x, (float)y, s_sxy2[2], 0, 0);
+}
+
+/* V0 through RT and TR, then the perspective into SXY2/SZ3 and the depth cue into IR0 */
+void psx_gte_rtps(void) {
+    int32_t v[3];
+    int64_t h_sz, mac0;
+    int i;
+
+    FLAG = 0; /* each command starts it over */
+    v0_as_int(v);
+    mvmva(RT, v, TR, 0);
+    for (i = 0; i < 3; i++) {
+        SZ[i] = SZ[i + 1];
+    }
+    SZ[3] = clamp(MAC[3], 0, 0xFFFF);
+    if (SZ[3] > H / 2) {
+        h_sz = (((int64_t)H * 0x20000 / SZ[3]) + 1) / 2;
+        if (h_sz > 0x1FFFF) h_sz = 0x1FFFF;
+    } else {
+        h_sz = 0x1FFFF;
+        FLAG |= 1u << 17;
+    }
+    SX[0] = SX[1]; SY[0] = SY[1];
+    SX[1] = SX[2]; SY[1] = SY[2];
+    mac0 = (s_wide ? h_sz * IR[1] * 3 / 4 : h_sz * IR[1]) + OFX;
+    SX[2] = clamp(mac0 >> 16, -0x400, 0x3FF);
+    mac0 = h_sz * IR[2] + OFY;
+    SY[2] = clamp(mac0 >> 16, -0x400, 0x3FF);
+    remember();
+    mac0 = h_sz * DQA + DQB;
+    MAC[0] = (int32_t)mac0;
+    IR[0] = clamp(mac0 >> 12, 0, 0x1000);
+}
+
+void psx_gte_rtv0(void) {
+    int32_t v[3];
+
+    v0_as_int(v);
+    mvmva(RT, v, NULL, 0);
+}
+
+void psx_gte_rt(void) {
+    int32_t v[3];
+
+    v0_as_int(v);
+    mvmva(RT, v, TR, 0);
+}
+
+void psx_gte_rtir(void) {
+    int32_t v[3] = {IR[1], IR[2], IR[3]};
+
+    mvmva(RT, v, NULL, 0);
+}
+
+void psx_gte_ldclmv(const int16_t *p) {
+    IR[1] = p[0];
+    IR[2] = p[3];
+    IR[3] = p[6];
+}
+
+void psx_gte_stclmv(int16_t *p) {
+    p[0] = (int16_t)IR[1];
+    p[3] = (int16_t)IR[2];
+    p[6] = (int16_t)IR[3];
+}
+
+void psx_gte_stsxy(uint32_t *p) {
+    *p = (uint16_t)SX[2] | (uint32_t)(uint16_t)SY[2] << 16;
+    if (s_sxy2_ok) {
+        float mv[2] = {0, 0};
+
+        motion_track((uintptr_t)p, s_sxy2[0], s_sxy2[1], s_sxy2[2], mv);
+        put(&s_by_addr, (uintptr_t)p, *p, s_sxy2[0], s_sxy2[1], s_sxy2[2], mv[0], mv[1]);
+    }
+}
+void psx_gte_stflg(uint32_t *p) { *p = FLAG; }
+
+void psx_gte_stlvnl(int32_t *p) {
+    p[0] = MAC[1];
+    p[1] = MAC[2];
+    p[2] = MAC[3];
+}
+
+void psx_gte_stszotz(int32_t *p) { *p = SZ[3] >> 2; }
+
+/* Normal color single: lights on V0 (L), then the color matrix and back color */
+void psx_gte_ncs(void) {
+    int32_t v[3];
+    int32_t ir[3];
+    int i;
+
+    v0_as_int(v);
+    mvmva(LM, v, NULL, 1);
+    ir[0] = IR[1];
+    ir[1] = IR[2];
+    ir[2] = IR[3];
+    mvmva(LCM, ir, BK, 1);
+    RGB2 = RGBC & 0xFF000000u;
+    for (i = 0; i < 3; i++) {
+        RGB2 |= (uint32_t)clamp(MAC[i + 1] >> 4, 0, 255) << (i * 8);
+    }
+}
+
+void psx_gte_strgb(uint32_t *p) { *p = RGB2; }
+
+void psx_gte_ldsxy3(uint32_t a, uint32_t b, uint32_t c) {
+    s_sxy2_ok = 0;
+    SX[0] = (int16_t)a; SY[0] = (int16_t)(a >> 16);
+    SX[1] = (int16_t)b; SY[1] = (int16_t)(b >> 16);
+    SX[2] = (int16_t)c; SY[2] = (int16_t)(c >> 16);
+}
+
+void psx_gte_nclip(void) {
+    MAC[0] = SX[0] * SY[1] + SX[1] * SY[2] + SX[2] * SY[0] - SX[0] * SY[2] - SX[1] * SY[0] - SX[2] * SY[1];
+}
+
+void psx_gte_stopz(int32_t *p) { *p = MAC[0]; }
+
+void psx_gte_ldsz3(uint32_t a, uint32_t b, uint32_t c) {
+    SZ[1] = (uint16_t)a;
+    SZ[2] = (uint16_t)b;
+    SZ[3] = (uint16_t)c;
+}
+
+void psx_gte_ldsz4(uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    SZ[0] = (uint16_t)a;
+    psx_gte_ldsz3(b, c, d);
+}
+
+void psx_gte_avsz3(void) {
+    MAC[0] = ZSF3 * (SZ[1] + SZ[2] + SZ[3]);
+    OTZ = (uint32_t)clamp(MAC[0] >> 12, 0, 0xFFFF);
+}
+
+void psx_gte_avsz4(void) {
+    MAC[0] = ZSF4 * (SZ[0] + SZ[1] + SZ[2] + SZ[3]);
+    OTZ = (uint32_t)clamp(MAC[0] >> 12, 0, 0xFFFF);
+}
+
+void psx_gte_stotz(uint32_t *p) { *p = OTZ; }
+
+/* --- libgte --- */
+
+void InitGeom(void) {
+    OFX = OFY = 0;
+    H = 1000;
+    DQA = -0x155;
+    DQB = 0x1400000;
+    ZSF3 = 0x155;
+    ZSF4 = 0x100;
+}
+
+void SetGeomOffset(int ofx, int ofy) {
+    OFX = ofx << 16;
+    OFY = ofy << 16;
+}
+
+void SetBackColor(int r, int g, int b) {
+    BK[0] = r << 4;
+    BK[1] = g << 4;
+    BK[2] = b << 4;
+}
+
+/* sin and cos of a 4096-per-turn angle, times 4096 */
+int rsin(int a) {
+    return (int)lround(sin(a * ANGLE) * 4096);
+}
+
+int rcos(int a) {
+    return (int)lround(cos(a * ANGLE) * 4096);
+}
+
+/* a = a * b, 4.12 */
+static void mul33(int16_t a[3][3], int16_t b[3][3]) {
+    int16_t r[3][3];
+    int i, j;
+
+    for (i = 0; i < 3; i++)
+        for (j = 0; j < 3; j++)
+            r[i][j] = (int16_t)(((int64_t)a[i][0] * b[0][j] + (int64_t)a[i][1] * b[1][j] + (int64_t)a[i][2] * b[2][j]) >> 12);
+    memcpy(a, r, sizeof r);
+}
+
+/* m * v >> 12 for a long vector (ApplyMatrixLV) */
+static void apply_lv(int16_t m[3][3], const int32_t v[3], int32_t out[3]) {
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        out[i] = (int32_t)(((int64_t)m[i][0] * v[0] + (int64_t)m[i][1] * v[1] + (int64_t)m[i][2] * v[2]) >> 12);
+    }
+}
+
+/* b = a * b, rotation and translation (GsMulCoord2) */
+static void mul_coord(MATRIX *a, MATRIX *b) {
+    int32_t t[3];
+    int i;
+
+    apply_lv(a->m, b->t, t);
+    for (i = 0; i < 3; i++) {
+        b->t[i] = t[i] + a->t[i];
+    }
+    {
+        int16_t r[3][3];
+
+        memcpy(r, a->m, sizeof r);
+        mul33(r, b->m);
+        memcpy(b->m, r, sizeof r);
+    }
+}
+
+static void rot_x(int16_t m[3][3], int a) {
+    int s = rsin(a), c = rcos(a);
+    int16_t r[3][3] = {{4096, 0, 0}, {0, (int16_t)c, (int16_t)-s}, {0, (int16_t)s, (int16_t)c}};
+    memcpy(m, r, sizeof r);
+}
+
+static void rot_y(int16_t m[3][3], int a) {
+    int s = rsin(a), c = rcos(a);
+    int16_t r[3][3] = {{(int16_t)c, 0, (int16_t)s}, {0, 4096, 0}, {(int16_t)-s, 0, (int16_t)c}};
+    memcpy(m, r, sizeof r);
+}
+
+static void rot_z(int16_t m[3][3], int a) {
+    int s = rsin(a), c = rcos(a);
+    int16_t r[3][3] = {{(int16_t)c, (int16_t)-s, 0}, {(int16_t)s, (int16_t)c, 0}, {0, 0, 4096}};
+    memcpy(m, r, sizeof r);
+}
+
+/* m = Ry * Rx * Rz */
+MATRIX *RotMatrixYXZ_gte(SVECTOR *r, MATRIX *m) {
+    int16_t x[3][3], z[3][3];
+
+    rot_y(m->m, r->vy);
+    rot_x(x, r->vx);
+    rot_z(z, r->vz);
+    mul33(m->m, x);
+    mul33(m->m, z);
+    return m;
+}
+
+/* m = Rz * Ry * Rx */
+MATRIX *RotMatrixZYX_gte(SVECTOR *r, MATRIX *m) {
+    int16_t y[3][3], x[3][3];
+
+    rot_z(m->m, r->vz);
+    rot_y(y, r->vy);
+    rot_x(x, r->vx);
+    mul33(m->m, y);
+    mul33(m->m, x);
+    return m;
+}
+
+/* Each column j times v[j] */
+MATRIX *ScaleMatrix(MATRIX *m, VECTOR *v) {
+    int i;
+
+    for (i = 0; i < 3; i++) {
+        m->m[i][0] = (int16_t)(((int64_t)m->m[i][0] * v->vx) >> 12);
+        m->m[i][1] = (int16_t)(((int64_t)m->m[i][1] * v->vy) >> 12);
+        m->m[i][2] = (int16_t)(((int64_t)m->m[i][2] * v->vz) >> 12);
+    }
+    return m;
+}
+
+SVECTOR *ApplyMatrixSV(MATRIX *m, SVECTOR *v0, SVECTOR *v1) {
+    int i;
+    int16_t in[3] = {v0->vx, v0->vy, v0->vz}, out[3];
+
+    for (i = 0; i < 3; i++) {
+        out[i] = (int16_t)((m->m[i][0] * in[0] + m->m[i][1] * in[1] + m->m[i][2] * in[2]) >> 12);
+    }
+    v1->vx = out[0];
+    v1->vy = out[1];
+    v1->vz = out[2];
+    return v1;
+}
+
+/* --- libgs --- */
+
+typedef struct GsCOORDINATE2 {
+    uint32_t flg;
+    MATRIX coord;
+    MATRIX workm;
+    void *param;
+    struct GsCOORDINATE2 *super;
+    struct GsCOORDINATE2 *sub;
+} GsCOORDINATE2;
+
+typedef struct {
+    int32_t vpx, vpy, vpz, vrx, vry, vrz;
+    int32_t rz; /* degrees * 4096 */
+    GsCOORDINATE2 *super;
+} GsRVIEW2;
+
+/* A coordinate system's local-to-world matrix, through its supers (GsGetLw) */
+static void get_lw(GsCOORDINATE2 *c, MATRIX *out) {
+    if (c->super != NULL) {
+        get_lw(c->super, out);
+        {
+            MATRIX local = c->coord;
+
+            mul_coord(out, &local);
+            *out = local;
+        }
+    } else {
+        *out = c->coord;
+    }
+}
+
+typedef struct {
+    int vx, vy, vz;
+    uint8_t r, g, b;
+} GsF_LIGHT;
+
+SAVED MATRIX GsWSMATRIX;      /* world to screen, from GsSetRefView2 */
+
+/* The battle camera as the stage was drawn with it (FIGHTSTG's patch), for
+   what the card adds in its world (stagefx.c's particles) */
+static MATRIX s_cam;
+static double s_cam_h, s_cam_ofx, s_cam_ofy;
+static int s_cam_wide, s_cam_frame = -10;
+
+void gte_camera_save(void) {
+    s_cam = GsWSMATRIX;
+    s_cam_h = H, s_cam_ofx = OFX / 65536.0, s_cam_ofy = OFY / 65536.0;
+    s_cam_wide = s_wide;
+    s_cam_frame = s_frame;
+}
+
+/* A world point on screen by that camera: x, y (before the drawing offset)
+   and the view depth; 0 when behind it or when no stage was drawn lately */
+int gte_camera_project(const float p[3], float out[3]) {
+    double v[3];
+    int i;
+
+    if (s_frame - s_cam_frame > 2) {
+        return 0;
+    }
+    for (i = 0; i < 3; i++) {
+        v[i] = (s_cam.m[i][0] * (double)p[0] + s_cam.m[i][1] * (double)p[1] + s_cam.m[i][2] * (double)p[2]) / 4096.0 + s_cam.t[i];
+    }
+    if (v[2] <= s_cam_h / 2) {
+        return 0;
+    }
+    out[0] = (float)(s_cam_h * v[0] / v[2] * (s_cam_wide ? 0.75 : 1.0) + s_cam_ofx);
+    out[1] = (float)(s_cam_h * v[1] / v[2] + s_cam_ofy);
+    out[2] = (float)v[2];
+    return 1;
+}
+
+/* The same camera for the card to project with (gl.c's PINST_VS) */
+int gte_camera_get(PCam *c) {
+    int i, j;
+
+    if (s_frame - s_cam_frame > 2) {
+        return 0;
+    }
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            c->row[i][j] = (float)(s_cam.m[i][j] / 4096.0);
+        }
+        c->row[i][3] = (float)s_cam.t[i];
+    }
+    c->h = (float)s_cam_h, c->ofx = (float)s_cam_ofx, c->ofy = (float)s_cam_ofy, c->wide = s_cam_wide ? 0.75f : 1.0f;
+    return 1;
+}
+
+/* The screen size of a world length at view depth z, across and down */
+float gte_camera_scale(float z) {
+    return (float)(s_cam_h / z);
+}
+
+int gte_camera_wide(void) {
+    return s_cam_wide;
+}
+SAVED MATRIX GsLIGHTWSMATRIX; /* the flat lights' directions, one per row */
+
+void GsInit3D(void) {}
+void GsSetLightMode(int mode) {}
+
+void GsSetProjection(int h) {
+    H = h;
+}
+
+/* A light: its direction into a row of the light matrix, its color into a
+   column of the color matrix */
+void GsSetFlatLight(int id, GsF_LIGHT *lt) {
+    double len = sqrt((double)lt->vx * lt->vx + (double)lt->vy * lt->vy + (double)lt->vz * lt->vz);
+
+    /* as libgs: a zero direction changes nothing; the color is c * 4096 / 255 */
+    if (id < 0 || id > 2 || (int)len == 0) {
+        return;
+    }
+    GsLIGHTWSMATRIX.m[id][0] = (int16_t)((-lt->vx << 12) / (int)len);
+    GsLIGHTWSMATRIX.m[id][1] = (int16_t)((-lt->vy << 12) / (int)len);
+    GsLIGHTWSMATRIX.m[id][2] = (int16_t)((-lt->vz << 12) / (int)len);
+    LCM[0][id] = (int16_t)((lt->r << 12) / 255);
+    LCM[1][id] = (int16_t)((lt->g << 12) / 255);
+    LCM[2][id] = (int16_t)((lt->b << 12) / 255);
+}
+
+/* The camera at vp looking at vr, rolled by rz: rows x (right), y (down), z
+   (forward), and t = -M * vp. The world's y points down, as the screen's.
+   vp and vr are in super's coordinates: as libgs, the view is then composed
+   with super's world matrix inverted (transposed, t = -R^T t). */
+int GsSetRefView2(GsRVIEW2 *pv) {
+    double f[3] = {pv->vrx - pv->vpx, pv->vry - pv->vpy, pv->vrz - pv->vpz};
+    double x[3], y[3], len, c, s, rx[3], ry[3];
+    int i, roll = pv->rz / 360; /* degrees * 4096 to 4096 per turn, truncated as libgs */
+
+    len = sqrt(f[0] * f[0] + f[1] * f[1] + f[2] * f[2]);
+    if (len == 0) {
+        return 0;
+    }
+    for (i = 0; i < 3; i++) f[i] /= len;
+    /* x = down x f, y = f x x */
+    x[0] = f[2]; x[1] = 0; x[2] = -f[0];
+    len = sqrt(x[0] * x[0] + x[2] * x[2]);
+    if (len == 0) { x[0] = 1; x[2] = 0; len = 1; }
+    x[0] /= len; x[2] /= len;
+    y[0] = f[1] * x[2] - f[2] * x[1];
+    y[1] = f[2] * x[0] - f[0] * x[2];
+    y[2] = f[0] * x[1] - f[1] * x[0];
+    c = rcos(roll) / 4096.0;
+    s = rsin(roll) / 4096.0;
+    for (i = 0; i < 3; i++) {
+        rx[i] = c * x[i] + s * y[i];
+        ry[i] = -s * x[i] + c * y[i];
+    }
+    for (i = 0; i < 3; i++) {
+        GsWSMATRIX.m[0][i] = (int16_t)lround(rx[i] * 4096);
+        GsWSMATRIX.m[1][i] = (int16_t)lround(ry[i] * 4096);
+        GsWSMATRIX.m[2][i] = (int16_t)lround(f[i] * 4096);
+    }
+    for (i = 0; i < 3; i++) {
+        GsWSMATRIX.t[i] = -(int32_t)((GsWSMATRIX.m[i][0] * (int64_t)pv->vpx + GsWSMATRIX.m[i][1] * (int64_t)pv->vpy +
+                                       GsWSMATRIX.m[i][2] * (int64_t)pv->vpz) >> 12);
+    }
+    if (pv->super != NULL) {
+        MATRIX lw, inv;
+        int j;
+
+        get_lw(pv->super, &lw);
+        for (i = 0; i < 3; i++)
+            for (j = 0; j < 3; j++)
+                inv.m[i][j] = lw.m[j][i];
+        apply_lv(inv.m, lw.t, inv.t);
+        for (i = 0; i < 3; i++) {
+            inv.t[i] = -inv.t[i];
+        }
+        mul_coord(&GsWSMATRIX, &inv);
+        GsWSMATRIX = inv;
+    }
+    return 0;
+}

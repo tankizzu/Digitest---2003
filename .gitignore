@@ -1,0 +1,14 @@
+build/
+build-san/
+build-x64/
+dist/
+data/
+saves/
+third_party/
+__pycache__/
+*.tmp
+native.ini
+build-o2/
+# the maintainer's own notes
+TODO.md
+tools/todo_summary.py
