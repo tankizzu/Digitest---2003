@@ -153,9 +153,9 @@ def main():
     rsp = OUT / "objs.rsp"
     rsp.write_text("\n".join(f'"{o}"' for o in game_objs + platform + [OUT / "stubs.o"]))
     if ANDROID:
-        out = OUT / "libmain.so"
+        out = OUT / "libdw3.so"
         ld = ["-shared", "-fuse-ld=lld", f"-Wl,-T,{lds}", f"-L{SDL / 'lib'}", "-lSDL3", "-lGLESv3", "-lEGL", "-llog", "-landroid", "-lm",
-              "-Wl,--no-undefined", "-Wl,-z,max-page-size=16384"]
+              "-Wl,--no-undefined", "-Wl,-z,max-page-size=16384", "-Wl,-soname,libdw3.so"]
     else:
         out = OUT / "dw2003"
         ld = ["-no-pie", "-fuse-ld=lld", f"-Wl,-T,{lds}", f"-L{SDL / 'lib'}", f"-Wl,-rpath,{SDL / 'lib'}", "-lSDL3", *(["-lGLESv2"] if GLES else []), "-lm", "-lpthread", "-ldl"]
@@ -163,6 +163,12 @@ def main():
     if r.returncode != 0:
         sys.exit(f"link failed:\n{r.stderr[:6000]}")
     shutil.copy2(B.NATIVE / "config/technique_visuals.ini", OUT / "technique_visuals.ini")
+    if ANDROID:  # android/loader.c: libmain.so, which loads libdw3.so low
+        r = run([CC, "-std=gnu11", "-O2", "-g", "-fPIC", "-shared", f"-I{SDL / 'include'}", B.NATIVE / "android/loader.c",
+                 "-o", OUT / "libmain.so", f"-L{SDL / 'lib'}", "-lSDL3", "-ldl", "-llog", "-fuse-ld=lld",
+                 "-Wl,--no-undefined", "-Wl,-z,max-page-size=16384"])
+        if r.returncode != 0:
+            sys.exit(f"loader failed:\n{r.stderr[:4000]}")
     (OUT / "report.md").write_text("# Stubbed\n\n" + "".join(f"- {n}\n" for n in missing))
     print(f"OK {out} ({len(missing)} stubs)")
 

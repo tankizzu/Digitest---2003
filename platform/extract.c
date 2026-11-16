@@ -44,8 +44,27 @@ static int s_raw;     /* raw 2352-byte sectors (.bin), or plain 2048 (.iso) */
 static long s_sectors;
 
 /* fopen with the UTF-8 paths SDL's dialogs and drops give, whatever the system's code page */
+#ifdef __ANDROID__
+/* A content:// document (Android's file picker) through SDL, as a FILE * for the reads below */
+static int io_read(void *c, char *buf, int n) {
+    return (int)SDL_ReadIO((SDL_IOStream *)c, buf, (size_t)n);
+}
+static off64_t io_seek(void *c, off64_t off, int whence) {
+    return SDL_SeekIO((SDL_IOStream *)c, off, whence == SEEK_SET ? SDL_IO_SEEK_SET : whence == SEEK_CUR ? SDL_IO_SEEK_CUR : SDL_IO_SEEK_END);
+}
+static int io_close(void *c) {
+    return SDL_CloseIO((SDL_IOStream *)c) ? 0 : -1;
+}
+#endif
+
 static FILE *open_utf8(const char *path, const mode_char *mode) {
 #ifndef _WIN32
+#ifdef __ANDROID__
+    if (SDL_strncmp(path, "content://", 10) == 0) {
+        SDL_IOStream *io = mode[0] == 'r' ? SDL_IOFromFile(path, "rb") : NULL;
+        return io != NULL ? funopen64(io, io_read, NULL, io_seek, io_close) : NULL;
+    }
+#endif
     return fopen(path, mode);
 #else
     wchar_t wide[1200];

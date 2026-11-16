@@ -14,3 +14,8 @@ TODO.md
 tools/todo_summary.py
 build-linux/
 build-android/
+android/app/src/main/jniLibs/
+android/.gradle/
+android/app/build/
+android/build/
+android/local.properties

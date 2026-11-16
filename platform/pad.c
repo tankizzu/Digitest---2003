@@ -3,6 +3,7 @@
    PadInitDirect, as libpad did in its interrupt. */
 #include <SDL3/SDL.h>
 #include "platform.h"
+#include "touch.h"
 
 /* Raw button bits; the buffer has them clear while pressed */
 enum {
@@ -293,6 +294,15 @@ void pad_update(void) {
     if (s_gamepad != NULL) {
         stick(SDL_GAMEPAD_AXIS_RIGHTX, SDL_GAMEPAD_AXIS_RIGHTY, b + 4);
         stick(SDL_GAMEPAD_AXIS_LEFTX, SDL_GAMEPAD_AXIS_LEFTY, b + 6);
+    }
+    if (touch_enabled()) { /* the touch controls (touch.c), in the window's pixels as they are drawn */
+        int count = 0, w = 0, h = 0;
+        SDL_Window **wins = SDL_GetWindows(&count);
+        if (wins != NULL && count > 0) {
+            SDL_GetWindowSizeInPixels(wins[0], &w, &h);
+        }
+        SDL_free(wins);
+        touch_poll(w, h, &held, b + 6);
     }
     record_replay(&held, b + 4);
     {

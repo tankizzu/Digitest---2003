@@ -355,8 +355,8 @@ int main(int argc, char **argv) {
     if (getenv("DW3_LOG") != NULL) {
         g_log = log_bits(getenv("DW3_LOG"));
     }
-#ifdef _WIN64
-    /* x64 experiment: the 64-bit image is bigger and the overlay areas land past 16 MB; they hold files' data, which
+#if UINTPTR_MAX > 0xFFFFFFFFu
+    /* 64-bit builds (Windows x64, Linux, Android): the 64-bit image is bigger and the overlay areas land past 16 MB; they hold files' data, which
        no ordering table points at: only the heap (the primitives) has to be reachable by a 24-bit tag */
     if ((uintptr_t)HEAP_BASE + NATIVE_HEAP_SIZE > 0x01000000) {
 #else

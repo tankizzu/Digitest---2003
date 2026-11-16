@@ -1,5 +1,6 @@
 /* The OpenGL renderer's picture: the passes after the game's drawing (sharpen, SMAA, FSR 1, the upscalers' data) and the frame */
 #include "gl.h"
+#include "../touch.h"
 
 /* The 3D's depth as the game gave it (MAIN_VS: depth = 1 - 64 / z) back to its view depth z, 0 where nothing 3D was
    drawn. view 1: the picture with the depth in grey (near bright) where there is any, to look at */
@@ -535,6 +536,11 @@ void gl_present(const SDL_Surface *menu, SDL_Surface **shot) {
         SDL_FlipSurface(*shot, SDL_FLIP_VERTICAL);
     }
     gl_query_end();
+    {
+        int tw = 0, th = 0; /* the touch controls over the frame (touch.c) */
+        SDL_GetWindowSizeInPixels(GLS.window, &tw, &th);
+        gl_touch_draw(tw, th);
+    }
     SDL_GL_SwapWindow(GLS.window);
     gl_query_frame();
 }
