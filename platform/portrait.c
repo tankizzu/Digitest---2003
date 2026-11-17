@@ -1,7 +1,7 @@
 /* The field upright (TECHNICAL_NOTES, "Verticale, fase 1"): the field draws a 320x512 screen at VRAM (0, 512), one
    buffer, in the rows a 2 MB GPU adds (VRAM_H; rows 496-511 hold the game's CLUTs, so it can't start higher); the map keeps 27 of its tiles in VRAM instead of 12, the 15 more at
-   x 384-1023, y 512-895, and streams 4 columns by 7 rows of them. Off unless DW3_PORTRAIT=1 or prefs.txt's
-   portrait = 1, while it is tried out. */
+   x 384-1023, y 512-895, and streams 4 columns by 7 rows of them. On on Android, off on a computer unless
+   DW3_PORTRAIT=1; prefs.txt's portrait = 0/1 overrides. */
 #include <SDL3/SDL.h>
 #include "platform.h"
 
@@ -12,7 +12,12 @@ static int s_portrait = -1;
 int native_portrait(void) {
     if (s_portrait < 0) {
         const char *env = SDL_getenv("DW3_PORTRAIT");
-        s_portrait = env != NULL ? SDL_atoi(env) != 0 : pref_get("portrait", 0) != 0;
+#ifdef __ANDROID__
+        const int fallback = 1; /* the phone: upright (the app starts upright, AndroidManifest.xml) */
+#else
+        const int fallback = 0;
+#endif
+        s_portrait = env != NULL ? SDL_atoi(env) != 0 : pref_get("portrait", fallback) != 0;
     }
     return s_portrait;
 }

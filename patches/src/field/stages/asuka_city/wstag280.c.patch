@@ -1,0 +1,46 @@
+--- a/src/field/stages/asuka_city/wstag280.c
++++ b/src/field/stages/asuka_city/wstag280.c
+@@ -33,6 +33,9 @@
+         children->cursor = createCursor(FIELD_LAYER_MAP, 1, 0x12, 0xBE);
+         children->cursor->setVisible(children->cursor, 0);
+         children->title = createTextWindow(FIELD_LAYER_MAP, 1, 0x12, 0xB0);
++#ifdef NATIVE
++        nativeYesNoPlace(children->options, children->cursor, children->title); /* touch: two boxes */
++#endif
+         break;
+     case TASK_RUN:
+         switch (task->substate) {
+@@ -52,6 +55,17 @@
+             }
+             break;
+         case 2:
++#ifdef NATIVE
++            {
++                /* touch: a box tapped is the answer, given as X gives it (next frame) */
++                s32 tapped = nativeYesNoTap(children->cursor);
++
++                if (tapped >= 0) {
++                    task->cursor = tapped;
++                    native_touch_hold(PAD_CROSS, 3);
++                }
++            }
++#endif
+             prev = task->cursor;
+             if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+                 if (--task->cursor < 0) {
+@@ -107,11 +121,15 @@
+         drawer.setTexture(0x140, 0);
+         drawer.setFollowScroll(0);
+         if (task->tween.level != 0) {
++#ifdef NATIVE
++            nativeYesNoDraw(&drawer, FILE_CACHE.getEntry(MENU_SPRITES), task->tween.level, task->substate == 2);
++#else
+             if (task->tween.level != 0x1000) {
+                 drawer.setScale(task->tween.level, 0x1000, 0x1000);
+                 drawer.setPivot(0, 0xC3);
+             }
+             drawer.draw(FILE_CACHE.getEntry(MENU_SPRITES), 0x45, 0, 0xAC);
++#endif
+         }
+         break;
+     case TASK_DONE:

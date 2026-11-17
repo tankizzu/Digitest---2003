@@ -78,6 +78,8 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## App
 
+- L'immagine di copertina proposta dall'utente (17/11/2026) non si usa come icona: contiene personaggi e logo
+  protetti; si resta su un'icona originale, eventualmente ridisegnata nei colori della copertina.
 - Icona originale (uovo digitale su fondo blu notte, circuiti; nessun personaggio o logo del gioco),
   `tools/android/make_icon.py`. Sostituisce l'icona di SDL.
 - Android: render_scale massimo 3 (la VRAM 1024×1024 a 4× pesa il doppio).

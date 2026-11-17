@@ -1,0 +1,23 @@
+--- a/src/field/stages/common/list_menu.inc.c
++++ b/src/field/stages/common/list_menu.inc.c
+@@ -39,6 +39,20 @@
+ 
+ /* Moves the cursor up or down the list, held buttons repeating, without leaving it */
+ static inline void moveListMenuCursor(StageListMenu *task) {
++#ifdef NATIVE
++    s32 i;
++
++    /* touch: an option tapped is picked, as X picks it (next frame) */
++    for (i = 0; i < task->count; i++) {
++        native_touch_target(0x7A48 + i, 0xA8, 0x1E + i * 14, 0x90, 14);
++    }
++    for (i = 0; i < task->count; i++) {
++        if (native_touch_tap_id(0x7A48 + i)) {
++            task->cursor = i;
++            native_touch_hold(PAD_CROSS, 3);
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         if (--task->cursor < 0) {
+             task->cursor = 0;

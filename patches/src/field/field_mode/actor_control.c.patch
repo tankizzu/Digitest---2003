@@ -12,7 +12,7 @@
              if (actor->substate != ACTOR_WALK) {
                  actor->setSubstate(actor, ACTOR_WALK);
              }
-@@ -385,17 +389,115 @@
+@@ -385,17 +389,121 @@
   * case being an early exit, a do-while (0) with a break, after which the
   * event's check is the rest of the block.
   */
@@ -105,6 +105,12 @@
 +            const char *test = SDL_getenv("DW3_TEST_CHOICE");
 +            ActorChildren *own = (ActorChildren *)actor->children;
 +
++            const char *event = SDL_getenv("DW3_TEST_EVENT"); /* or starts the stage's event n */
++
++            if (event != NULL && !asked && own->action == NULL) {
++                asked = 1;
++                own->action = FIELDSTG_startEvent(SDL_atoi(event));
++            }
 +            if (test != NULL && !asked && own->action == NULL) {
 +                asked = 1;
 +                own->action = FIELDSTG_askChoice0 == NULL ? NULL : ((void *(*[])(void)){FIELDSTG_askChoice0, FIELDSTG_askChoice1, FIELDSTG_askChoice2, FIELDSTG_askChoice3})[SDL_atoi(test) & 3]();
@@ -128,7 +134,7 @@
          if (pressed || forced) {
              actor->getFacingTile(actor, &pos);
              do {
-@@ -823,9 +925,14 @@
+@@ -823,9 +931,14 @@
              prim.sprt->w = 0x20;
              prim.sprt->h = 0x10;
              prim.sprt->clut = getClut(shadow->shadow.clutX, shadow->shadow.clutY);
@@ -144,7 +150,7 @@
              addPrim(ot, prim.any);
              prim.tpage++;
          }
-@@ -1438,7 +1545,15 @@
+@@ -1438,7 +1551,15 @@
      case ACTOR_RUN:
          beginActorAnim(actor, ACTOR_ANIM_RUN);
          if (!(actor->key2 & 0xE)) {

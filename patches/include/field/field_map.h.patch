@@ -1,0 +1,62 @@
+--- a/include/field/field_map.h
++++ b/include/field/field_map.h
+@@ -504,4 +504,59 @@
+ } FieldBattleFuncs;
+ extern FieldBattleFuncs FIELDSTG_battleFuncs;
+ 
++#ifdef NATIVE
++/* Touch, for the stages' yes/no questions (asuka_city's WSTAG210 to 280 have their own copies of field/choice.c's):
++   the panel (menu sprite 0x45) a third taller, the two answers in boxes side by side (the same panel, small), a tap
++   on a box answers; at the bottom of the upright field's screen too (platform/portrait.c) */
++#define NATIVE_YN_W 0x8C
++#define NATIVE_YN_X(i) ((i) == 0 ? 0x10 : 0xA4)
++#define NATIVE_YN_Y 0xC4
++#define NATIVE_YN_DOWN (native_field_h() - SCREEN_HEIGHT)
++
++/* The question's windows where the boxes are, the cursor hidden */
++static inline void nativeYesNoPlace(TextWindow **options, Cursor *cursor, TextWindow *title) {
++    s32 i;
++
++    for (i = 0; i < 2; i++) {
++        options[i]->setPos(options[i], NATIVE_YN_X(i) + 0x0C, NATIVE_YN_Y + 6 + NATIVE_YN_DOWN);
++    }
++    cursor->setVisible(cursor, 0);
++    title->setPos(title, 0x12, 0xB0 + NATIVE_YN_DOWN);
++}
++
++/* The box tapped this frame (0 yes, 1 no), else -1; the cursor stays hidden */
++static inline s32 nativeYesNoTap(Cursor *cursor) {
++    s32 i;
++
++    cursor->setVisible(cursor, 0);
++    for (i = 0; i < 2; i++) {
++        native_touch_target(0x7A40 + i, NATIVE_YN_X(i) - 8, NATIVE_YN_Y - 8 + NATIVE_YN_DOWN, NATIVE_YN_W + 12, 0x2C);
++    }
++    for (i = 0; i < 2; i++) {
++        if (native_touch_tap_id(0x7A40 + i)) {
++            return i;
++        }
++    }
++    return -1;
++}
++
++/* The panel at `level` of its opening (0x1000 open), the boxes once the answers show */
++static inline void nativeYesNoDraw(SpriteDrawer *drawer, void *sheet, s32 level, s32 answers) {
++    s32 i;
++
++    drawer->setLayerId(FIELD_LAYER_MAP, 3); /* behind the boxes (2), behind the texts (1) */
++    drawer->setScale(level, 0x1000 * 4 / 3, 0x1000);
++    drawer->setPivot(0, 0xAC + NATIVE_YN_DOWN);
++    drawer->draw(sheet, 0x45, 0, 0xAC + NATIVE_YN_DOWN);
++    if (level == 0x1000 && answers) {
++        drawer->setLayerId(FIELD_LAYER_MAP, 2);
++        drawer->setScale(0x1000 * NATIVE_YN_W / 320, 0x1000 * 24 / 50, 0x1000);
++        for (i = 0; i < 2; i++) {
++            drawer->setPivot(NATIVE_YN_X(i), NATIVE_YN_Y + NATIVE_YN_DOWN);
++            drawer->draw(sheet, 0x45, NATIVE_YN_X(i), NATIVE_YN_Y + NATIVE_YN_DOWN);
++        }
++    }
++}
+ #endif
++
++#endif

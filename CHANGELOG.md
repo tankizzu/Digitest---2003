@@ -2,6 +2,16 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.2
+
+- **"Vuoi scaricare il Partner Digimon ora?" si risponde col tocco**: era una copia del menu sì/no dentro la
+  stanza (WSTAG210, evento 9), senza tocco. Ora usa i due riquadri grandi, come le altre copie in
+  WSTAG220/270/280 (funzioni comuni in field_map.h). Verificato su Linux (DW3_TEST_EVENT=9): "Sì, grazie!" porta
+  al Servizio domatori, anche in verticale.
+- Lista dei consigli del Servizio domatori toccabile.
+- **Anteprima del verticale sul telefono**: l'app parte in verticale e il campo usa la tela 320×512; menu,
+  battaglie e filmati restano nel riquadro 4:3. Non verificato sul telefono.
+
 ### 1.1
 
 - **Elenco MEMORY CARD**: scorreva in un senso solo (all'inizio e alla fine dell'elenco il trascinamento veniva
