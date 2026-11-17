@@ -8,6 +8,13 @@
   metallo appeso c'è la freccia arancione dei fumetti del gioco, girata a sinistra e lampeggiante: toccandola si
   torna indietro (anche un passo indietro nelle scelte). Altrove il pulsante Indietro è la stessa freccia (senza
   trattini) al posto del cerchio con "‹", appena il gioco l'ha letta. Verificato su Linux (aspetto).
+- **Impostazioni con la grafica del gioco**: l'ingranaggio bianco disegnato dal port è sostituito dall'ingranaggio
+  del gioco (l'icona "Macchina" del foglio dei menu, fotogramma 0x30) ingrandito, nel pannellino dei menu del gioco
+  (0x16), in alto a destra dentro l'area sicura del telefono. Tre proposte (screenshot reali): A solo l'icona, **B
+  icona nel pannello (scelta di partenza)**, C pannello sotto CONTINUA. Verificato su Linux: aspetto delle tre e
+  tocco (apre la schermata della lingua); orizzontale identico ai riferimenti tranne il pannello nuovo sul titolo.
+- Test: `DW3_SHEET_DUMP=cartella` salva ogni fotogramma dei fogli di sprite del titolo e dei menu (per scegliere la
+  grafica del gioco per i pulsanti); `DW3_SETTINGS_LOOK=1/2/3` mostra le tre proposte.
 
 ### 1.9
 

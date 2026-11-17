@@ -24,6 +24,17 @@
   gioco (`native_touch_auto_sprite`, FILE_MENU_SPRITES fotogramma 7, texture 0x140,0) disegnata in
   `draw_arrow()`.
 
+- **Grafica dei menu sempre in VRAM**: il foglio FILE_MENU_SPRITES (texture 0x140, 0) è già in memoria video sul
+  titolo e in tutto il gioco; `FILE_CACHE.getEntry` carica il foglio se serve. Fotogrammi utili: 7 freccia dei
+  fumetti, 0x16 pannellino 44×44, 0x30 / 0x37 ingranaggio ("Macchina", 12×12), 0x40 cornice gialla, 0x1A/0x41/0x42
+  barre, 0x0F–0x14 e 0x26–0x38 icone degli elementi, 0x48–0x63 icone degli oggetti. `DW3_SHEET_DUMP=cartella`
+  salva ogni fotogramma (titolo e menu) in PPM.
+- **Stessa profondità di un layer**: ciò che si aggiunge dopo viene disegnato sotto (l'OT inserisce in testa). Per
+  un'icona sopra un pannello: prima l'icona, poi il pannello, o profondità diverse (attenzione: sul titolo la
+  profondità 1 sta dietro lo sfondo).
+- `native_touch_safe_inset(lato)`: l'area sicura del telefono nei pixel del gioco, per i pulsanti disegnati dal
+  gioco (le impostazioni del titolo).
+
 ## Campo
 
 - `FIELDSTG_controlPlayer` (actor_control.c): con NATIVE cerca il personaggio parlabile più vicino entro 30

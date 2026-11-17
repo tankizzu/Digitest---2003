@@ -430,6 +430,80 @@ void native_touch_auto_sprite(const void *sheet_ptr, int tex_x, int tex_y, int c
     }
 }
 
+/* Tests (DW3_SHEET_DUMP=directory): every frame of a sprite sheet, as the game would draw it at texture (tex_x, tex_y),
+   one PPM each ("<tag>_<frame id>.ppm"), once per tag. To pick the game's graphics for the port's buttons */
+void native_sheet_dump(const void *sheet_ptr, int tex_x, int tex_y, const char *tag) {
+    enum { MAX = 256 };
+    static char done[512];
+    static uint32_t px[MAX * MAX];
+    const char *dir = SDL_getenv("DW3_SHEET_DUMP");
+    const int32_t *sheet = (const int32_t *)sheet_ptr;
+    const uint8_t *ids;
+    const int16_t *parts;
+    int frames, first;
+
+    if (dir == NULL || sheet == NULL || g_vram == NULL || SDL_strstr(done, tag) != NULL) {
+        return;
+    }
+    SDL_strlcat(done, tag, sizeof done), SDL_strlcat(done, ";", sizeof done);
+    first = SDL_min(sheet[0], SDL_min(sheet[1], sheet[2]));
+    frames = first / 4 - 2;
+    ids = (const uint8_t *)sheet + sheet[1];
+    parts = (const int16_t *)((const uint8_t *)sheet + sheet[0]);
+    for (int f = 0; f < frames && f < 256; f++) {
+        const int16_t *p = (const int16_t *)((const uint8_t *)sheet + sheet[f + 2]);
+        int count = p[0], row = p[1], minx = 1000, miny = 1000, maxx = -1000, maxy = -1000, w, h;
+        char path[512];
+        FILE *out;
+
+        p += 3;
+        if (count <= 0 || count > 256) {
+            continue;
+        }
+        for (int i = 0; i < count; i++) {
+            const int16_t *part = parts + p[i * 3] * 7;
+            minx = SDL_min(minx, p[i * 3 + 1]), miny = SDL_min(miny, p[i * 3 + 2]);
+            maxx = SDL_max(maxx, p[i * 3 + 1] + part[2]), maxy = SDL_max(maxy, p[i * 3 + 2] + part[3]);
+        }
+        w = maxx - minx, h = maxy - miny;
+        if (w <= 0 || h <= 0 || w > MAX || h > MAX) {
+            continue;
+        }
+        SDL_memset(px, 0, sizeof px);
+        for (int i = count - 1; i >= 0; i--) {
+            const int16_t *part = parts + p[i * 3] * 7;
+            int cx = tex_x + part[4], cy = tex_y + part[5] + row;
+            for (int y = 0; y < part[3]; y++) {
+                for (int x = 0; x < part[2]; x++) {
+                    int u = part[0] + x, v = tex_y + part[1] + y, index;
+                    uint16_t c;
+                    if (part[6] == 0) {
+                        index = g_vram[(v & 511) * 1024 + ((tex_x + u / 4) & 1023)] >> (u % 4 * 4) & 15;
+                    } else {
+                        index = g_vram[(v & 511) * 1024 + ((tex_x + u / 2) & 1023)] >> (u % 2 * 8) & 255;
+                    }
+                    c = g_vram[(cy & 511) * 1024 + ((cx + index) & 1023)];
+                    if (c != 0) {
+                        px[(p[i * 3 + 2] - miny + y) * MAX + (p[i * 3 + 1] - minx + x)] =
+                            (c & 31) << 3 | (c >> 5 & 31) << 11 | (c >> 10 & 31) << 19 | 0xFF000000u;
+                    }
+                }
+            }
+        }
+        SDL_snprintf(path, sizeof path, "%s/%s_%03d.ppm", dir, tag, ids[f]);
+        if ((out = fopen(path, "wb")) != NULL) {
+            fprintf(out, "P6 %d %d 255\n", w, h);
+            for (int y = 0; y < h; y++) {
+                for (int x = 0; x < w; x++) {
+                    uint32_t c = px[y * MAX + x];
+                    fputc(c & 255, out), fputc(c >> 8 & 255, out), fputc(c >> 16 & 255, out);
+                }
+            }
+            fclose(out);
+        }
+    }
+}
+
 /* For gl/touch.c: the arrow's pixels (ARROW_MAX wide rows), its size; 0 if not read yet */
 /* The arrow without its three dashes: the back button (gl/touch.c) */
 int touch_arrow_plain(const uint32_t **pixels, int *w, int *h) {
@@ -465,6 +539,25 @@ int touch_arrow(const uint32_t **pixels, int *w, int *h) {
 /* The window's safe area (cut-outs, round corners, the system's gesture bars), as insets in pixels: the buttons keep
    inside it, whatever the phone's shape */
 static float s_safe[4]; /* left, top, right, bottom */
+static float s_win[2]; /* the window's size in pixels */
+
+/* How far the safe area reaches into the game's picture on `side` (0 left, 1 top, 2 right, 3 bottom), in the
+   picture's own pixels (the game's coordinates): for buttons the game draws, as the title's settings */
+int native_touch_safe_inset(int side) {
+    float margin, in;
+
+    switch (side) {
+    case 0: margin = s_pic[0]; break;
+    case 1: margin = s_pic[1]; break;
+    case 2: margin = s_win[0] - (s_pic[0] + s_pic[2]); break;
+    default: margin = s_win[1] - (s_pic[1] + s_pic[3]); break;
+    }
+    in = s_safe[side] - margin;
+    if (in <= 0 || s_win[0] <= 0) {
+        return 0;
+    }
+    return (int)((side % 2 == 0 ? in / s_pic[2] * s_disp[0] : in / s_pic[3] * s_disp[1]) + 0.5f);
+}
 
 static void update_safe(void) {
     int count = 0;
@@ -480,6 +573,7 @@ static void update_safe(void) {
         k = ww > 0 ? (float)pw / (float)ww : 1.0f; /* the safe area is in points */
         s_safe[0] = r.x * k, s_safe[1] = r.y * k;
         s_safe[2] = (float)pw - (r.x + r.w) * k, s_safe[3] = (float)ph - (r.y + r.h) * k;
+        s_win[0] = (float)pw, s_win[1] = (float)ph;
     }
     SDL_free(wins);
 }
@@ -494,25 +588,6 @@ static void auto_button(float *x, float *y, float *r) {
 
 void native_touch_menu_available(void) {
     s_menu_until = SDL_GetTicks() + 150;
-}
-
-/* The title's settings button, top right (title/menu.c asks for it each frame; it reads the tap) */
-static Uint64 s_settings_until;
-static int s_settings_down, s_settings_tap;
-
-void native_touch_settings_available(void) {
-    s_settings_until = SDL_GetTicks() + 150;
-}
-
-static int settings_shown(void) {
-    return SDL_GetTicks() < s_settings_until;
-}
-
-int native_touch_settings_tapped(void) {
-    int t = s_settings_tap;
-
-    s_settings_tap = 0;
-    return t;
 }
 
 void native_touch_in_menu(void) {
@@ -704,7 +779,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     SDL_FingerID now_down[10];
     int now_n = 0;
 
-    s_menu_down = s_back_down = s_auto_down = s_settings_down = 0;
+    s_menu_down = s_back_down = s_auto_down = 0;
     {
         /* the system's back (gesture or key, SDL_ANDROID_TRAP_BACK_BUTTON) is Triangle, the game's cancel */
         static int back_was;
@@ -747,13 +822,6 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                         s_auto_down = 1;
                         continue;
                     }
-                }
-                if (settings_shown() && in_corner(1, x, y)) {
-                    if (!was) {
-                        s_settings_tap = 1;
-                    }
-                    s_settings_down = 1;
-                    continue;
                 }
                 if (menu_shown() && in_corner(1, x, y)) {
                     if (!was) {
@@ -944,11 +1012,6 @@ int touch_shapes(TouchShape *out, int max) {
         float x, y, r;
         corner(1, &x, &y, &r);
         out[n++] = (TouchShape){x, y, r, TOUCH_MENU, s_menu_down ? 0.95f : 0.75f, 0};
-    }
-    if (settings_shown() && n < max) {
-        float x, y, r;
-        corner(1, &x, &y, &r);
-        out[n++] = (TouchShape){x, y, r, TOUCH_GEAR, s_settings_down ? 0.95f : 0.75f, 0};
     }
     if (back_shown() && n < max) {
         float x, y, r;

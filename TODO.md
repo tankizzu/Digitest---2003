@@ -42,6 +42,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Titolo: pulsanti grandi, copyright in fondo, ingranaggio impostazioni (lingua).
 - [x] Memory card a tutto schermo: 5 slot, Carica/Elimina, Automatico/Salvataggi, Sì/No affiancati, slot pieni →
       scelta di quale sostituire.
+- [x] Impostazioni con l'ingranaggio del gioco (3 proposte, B di partenza): **far scegliere all'utente** e togliere
+      le altre (`DW3_SETTINGS_LOOK`).
 - [ ] Nome della memory card al primo salvataggio (tastiera del telefono, font del gioco).
 - [ ] Salvataggi e Autosalvataggio: liste con immagine (screenshot al salvataggio) e dati.
 - [ ] Sì/No del gioco nelle schermate memory card originali (sovrascrittura, formattazione) affiancati.

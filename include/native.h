@@ -337,6 +337,9 @@ int native_touch_tap_id(int id); /* a tap on the port's own target id (0x7A00 on
 int native_auto_text(void);      /* automatic dialogues: 0 off, else the speed 1-3 (platform/prefs.c) */
 void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialogues button shows (touch.c) */
 /* The balloons' arrow for that button: the menu sprites' sheet, its texture's place and the CLUT row to show */
+int native_touch_safe_inset(int side); /* the safe area in the picture's pixels: 0 left, 1 top, 2 right, 3 bottom */
+int native_settings_look(void); /* tests: DW3_SETTINGS_LOOK, the settings button's proposals (1-3) */
+void native_sheet_dump(const void *sheet, int tex_x, int tex_y, const char *tag); /* tests: DW3_SHEET_DUMP */
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */
 /* The field upright (platform/portrait.c): its screen 320 x native_field_h() at VRAM (0, NATIVE_FIELD_Y), one buffer;
@@ -344,8 +347,6 @@ void native_touch_no_stick(void);    /* no stick on this screen */
 int native_portrait(void);
 void native_language_screen_force(int on); /* prefs.c: the language screen shows even with one saved */
 int native_language_screen_forced(void);
-void native_touch_settings_available(void); /* the title's settings button this frame (top right) */
-int native_touch_settings_tapped(void);     /* 1 once when it was tapped */
 void native_touch_origin(int y); /* the 320x240 screen's top on a taller upright display, for the touch targets */
 int native_field_h(void);
 void native_map_image_pos(int slot, int *x, int *y);

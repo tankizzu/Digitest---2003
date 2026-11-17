@@ -81,6 +81,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - **Tutti i Sì/No affiancati** (17/11/2026).
 - **Indietro a tema** (17/11/2026): la freccia arancione dei fumetti del gioco girata a sinistra; nella memory card
   dentro il riquadro di metallo appeso (al posto di "CARICA").
+- **Impostazioni a tema** (17/11/2026, proposta in attesa della scelta dell'utente): l'ingranaggio del gioco
+  (icona "Macchina" dei menu) nel pannellino dei menu, in alto a destra (B). Alternative: A icona sola, C pannello
+  sotto CONTINUA. Scartato: l'ingranaggio bianco disegnato dal port (non c'entra con lo stile del gioco).
 - **Nome della memory card** (da fare): "MEMORY CARD N" è il nome generico; al primo salvataggio si sceglie un
   nome, mostrato col font del gioco.
 - **Salvataggi / Autosalvataggio** (da fare): ognuno apre una lista con immagine e dati (i salvataggi manuali; i

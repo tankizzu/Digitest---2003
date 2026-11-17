@@ -65,3 +65,12 @@ void native_map_clut_pos(int slot, int *x, int *y) {
     *x = 640;
     *y = 896 + slot;
 }
+
+/* The title's settings button, while the user chooses among the proposals (17/11/2026): 1 the game's cog icon alone,
+   2 the cog in the game's small panel (top right), 3 the panel under the menu. DW3_SETTINGS_LOOK picks one */
+int native_settings_look(void) {
+    const char *env = SDL_getenv("DW3_SETTINGS_LOOK");
+    int look = env != NULL ? SDL_atoi(env) : 2;
+
+    return look >= 1 && look <= 3 ? look : 2;
+}

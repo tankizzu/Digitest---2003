@@ -671,7 +671,7 @@
              STGMCARD_hideChoices(win);
              SOUND.playSound(SOUND_SELECT);
              /* match depends on the 400 going through status */
-@@ -1000,6 +1560,11 @@
+@@ -1000,6 +1560,12 @@
     waits for it, the list's frame and the box of the cursor's two choices */
  void STGMCARD_drawSaves(MemCardSaves *saves) {
      SpriteDrawer sprite;
@@ -679,11 +679,12 @@
 +#ifdef NATIVE
 +    /* the balloons' arrow (menu sprite 7) for the touch back button, as a dialogue reads it (platform/touch.c) */
 +    native_touch_auto_sprite(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x140, 0, 0);
++    native_sheet_dump(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x140, 0, "menu"); /* tests: DW3_SHEET_DUMP */
 +#endif
  
      initSpriteDrawer(&sprite);
      sprite.setLayerId(saves->layer, 2);
-@@ -1017,6 +1582,60 @@
+@@ -1017,6 +1583,60 @@
      }
      sprite.setTexture(0x280, 0);
      sprite.setClutRow(0);

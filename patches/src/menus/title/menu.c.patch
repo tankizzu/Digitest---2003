@@ -1,6 +1,6 @@
 --- a/src/menus/title/menu.c
 +++ b/src/menus/title/menu.c
-@@ -9,6 +9,21 @@
+@@ -9,37 +9,111 @@
  #define MENU_SPRITE(i) (STDWTITL_menuSprites[LANGUAGE][i])
  #endif
  
@@ -17,12 +17,57 @@
 +    }
 +    sprite->draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), frame, x, y);
 +}
++
++/* The settings button, drawn with the game's own graphics (the menu sprites, resident in VRAM at 0x140, 0 from the
++   start): the cog of the "machine" icons (frame 0x30), in the menus' small panel (0x16) unless the look says alone;
++   top right inside the phone's safe area, or under the menu (look 3, upright). Returns 1 when tapped */
++#define NATIVE_SETTINGS_ID 0x7A7C
++#define NATIVE_SETTINGS_COG 0x30
++#define NATIVE_SETTINGS_PANEL 0x16
++#define NATIVE_SETTINGS_PANEL_W 44
++static s32 nativeSettingsTapped(TitleMenuTask *task) {
++    SpriteDrawer sprite;
++    s32 look = native_settings_look();
++    s32 top = native_portrait() ? -(native_field_h() - SCREEN_HEIGHT) / 2 : 0;
++    s32 size = look == 1 ? 36 : NATIVE_SETTINGS_PANEL_W;
++    s32 x;
++    s32 y;
++    s32 cog;
++
++    if (look == 3 && native_portrait()) {
++        x = (SCREEN_WIDTH - size) / 2;
++        y = NATIVE_MENU_Y(174) + 40;
++    } else {
++        x = SCREEN_WIDTH - 10 - size - native_touch_safe_inset(2);
++        y = top + 10 + native_touch_safe_inset(1);
++    }
++    initSpriteDrawer(&sprite);
++    sprite.setLayerId(task->layerId, 0);
++    sprite.setTexture(0x140, 0);
++    /* the cog first: at one depth what is added later is drawn under */
++    cog = look == 1 ? 36 : 30; /* the 12-pixel cog, three or two and a half times as big */
++    sprite.setScale(ONE * cog / 12, ONE * cog / 12, ONE);
++    sprite.setPivot(x + (size - cog) / 2, y + (size - cog) / 2);
++    sprite.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), NATIVE_SETTINGS_COG, x + (size - cog) / 2, y + (size - cog) / 2);
++    sprite.setScale(ONE, ONE, ONE);
++    if (look != 1) {
++        sprite.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), NATIVE_SETTINGS_PANEL, x, y);
++    }
++    native_touch_target(NATIVE_SETTINGS_ID, x - 6, y - 6, size + 12, size + 12);
++    return native_touch_tap_id(NATIVE_SETTINGS_ID);
++}
 +#endif
 +
  /* Draws the menu: the cursor while it is shown, then "PRESS START" or the two
     options, the one not picked dimmed */
  void STDWTITL_drawMenu(TitleMenuTask *task) {
-@@ -19,27 +34,44 @@
+     SpriteDrawer sprite;
++#ifdef NATIVE
++    native_sheet_dump(FILE_CACHE.getEntry(STDWTITL_spriteBank), 0x280, STDWTITL_TEXTURE_Y, "title"); /* tests */
++#endif
+ 
+     if (task->showCursor) {
+         initSpriteDrawer(&sprite);
          sprite.setLayerId(task->layerId, 0);
          sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
          sprite.setClutRow(task->blink);
@@ -67,13 +112,12 @@
      }
  }
  
-@@ -57,7 +89,18 @@
+@@ -57,7 +131,17 @@
          }
          break;
      case 2:
 +#ifdef NATIVE
-+        native_touch_settings_available(); /* the settings, top right: the game's language screen */
-+        if (native_touch_settings_tapped()) {
++        if (nativeSettingsTapped(task)) { /* the settings (the game's language screen) */
 +            SOUND.playSound(SOUND_SELECT);
 +            native_language_screen_force(1);
 +            GAME.funcs.requestMode(MODE_COUNTRY_SELECT, 0);
@@ -86,7 +130,7 @@
              task->nextSubstate(task);
              task->timer = 0;
              SOUND.playSound(SOUND_SELECT);
-@@ -127,11 +170,42 @@
+@@ -127,11 +211,41 @@
              }
              task->selection = 1;
          }
@@ -95,8 +139,7 @@
 +            /* touch: new game and continue, tapped, are picked at once */
 +            s32 tapped;
 +
-+            native_touch_settings_available(); /* as at "PRESS START" */
-+            if (native_touch_settings_tapped()) {
++            if (nativeSettingsTapped(task)) { /* as at "PRESS START" */
 +                SOUND.playSound(SOUND_SELECT);
 +                native_language_screen_force(1);
 +                GAME.funcs.requestMode(MODE_COUNTRY_SELECT, 0);
@@ -129,7 +172,7 @@
          break;
      case 2:
          if ((++task->timer & 3) == 0) {
-@@ -170,6 +244,15 @@
+@@ -170,6 +284,15 @@
          if (task->substate == 0) {
              return;
          }
