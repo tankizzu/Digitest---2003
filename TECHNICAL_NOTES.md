@@ -117,6 +117,9 @@
 - Fumetto dei personaggi invisibile (0.8): creato senza genitore, non girava mai. Ora è figlio del giocatore.
 - Righe della memory card troppo lunghe ("Slot MEMORY CARD N" tagliato): accorciate in "MEMORY CARD N".
 
+- **Strada di Asuka** (MODE_NEW_GAME 0x2D7, `--field 727`): mappa di 5×3 riquadri (640×384). In verticale la
+  telecamera la centra (scroll y ≈ -223 con H 710): le bande nere sono la fine della mappa, non un 4:3.
+
 ## Verticale, fase 1: il campo a tutto schermo (progetto, 17/11/2026)
 
 Cosa fa oggi il gioco (verificato nel codice):

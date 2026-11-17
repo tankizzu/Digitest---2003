@@ -28,6 +28,8 @@
   scritto nel testo della formattazione (IT ed EN).
 - Verificati su Linux in verticale: Creare nuovo file → Sì, Vuoi salvare qui → Sì, salvataggio riuscito, di nuovo
   Sì → Sovrascrittura → NO → ritorno. In orizzontale: nome e "Creare nuovo file?" (aspetto).
+- Strada di Asuka (inizio del prologo): verificato che non è in 4:3; la sua mappa è alta solo 384 pixel (3 riquadri)
+  e in verticale si vede tutta, col nero dove finisce. Tre possibilità da scegliere (nessuna modifica fatta).
 - Salvando in verticale, "Nessun salvataggio in questo slot" e gli altri testi del gioco tornano dentro la cornice
   (prima finivano sotto, al posto della colonna degli slot).
 - Test: `DW3_SHEET_DUMP=cartella` salva ogni fotogramma dei fogli di sprite del titolo e dei menu (per scegliere la

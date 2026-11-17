@@ -50,7 +50,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Sì/No del gioco nelle schermate memory card originali (sovrascrittura, formattazione, nuovo file, "salvare
       qui") affiancati. Da provare sul telefono.
 - [ ] Eventuale orologio in sovraimpressione (l'utente: "nel caso").
-- [ ] Strada di Asuka all'inizio del prologo: ancora 4:3 (imposta lo schermo per conto suo? da trovare).
+- [x] Strada di Asuka all'inizio del prologo: **non è 4:3**, è la mappa che finisce (MODE_NEW_GAME 0x2D7, mappa 5×3
+      riquadri = 640×384 px; in verticale se ne vede tutta l'altezza, sopra e sotto nero come deciso per le stanze
+      piccole). **Chiedere all'utente**: lasciare il nero (A), ingrandire x1,4 (B) o fino a riempire (C) solo nelle
+      mappe basse (anteprima da screenshot reale; contraddice la decisione "dove la mappa finisce resta il nero").
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
 - [ ] Lingua, nome, kit, conferma a tutto schermo.
 
