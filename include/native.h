@@ -342,6 +342,7 @@ int native_settings_look(void); /* tests: DW3_SETTINGS_LOOK, the settings button
 int native_thumb_show(int kind, int slot, int x, int y); /* a save's picture (kind 0 card slot, 1 autosave) into VRAM */
 void native_thumb_save_slot(int slot);                  /* the card's slot was saved: the field's last picture */
 int native_autosave_read_slot(int game, int which, void *buf); /* 0 the newest autosave, 1 the other: its slot, -1 */
+int native_test_layer_hidden(int id); /* tests: DW3_HIDE_LAYERS */
 int native_test_save(void); /* tests: DW3_PRESS "save", once */
 void native_sheet_dump(const void *sheet, int tex_x, int tex_y, const char *tag); /* tests: DW3_SHEET_DUMP */
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);

@@ -1,6 +1,22 @@
 --- a/src/engine/gfx/layer.c
 +++ b/src/engine/gfx/layer.c
-@@ -139,7 +139,13 @@
+@@ -132,6 +132,15 @@
+     DR_ENV *dr;
+     u_long *ot;
+     u_long *tag;
++#ifdef NATIVE
++    s32 i;
++
++    for (i = 0; i < LAYER_COUNT; i++) { /* tests (DW3_HIDE_LAYERS): a layer not drawn, for a picture of the rest */
++        if (GFX.layers[i] == layer && native_test_layer_hidden(GFX.layerIds[i])) {
++            return;
++        }
++    }
++#endif
+ 
+     env.ofs[0] = layer->offsetX;
+     env.ofs[1] = layer->offsetY;
+@@ -139,7 +148,13 @@
      dr = GFX.prim;
      ot = layer->ot[GFX.buffer] + layer->otLen;
      tag = ot - 1;
@@ -14,7 +30,7 @@
          env.clip.y += 256;
          env.ofs[1] += 256;
      }
-@@ -228,6 +234,11 @@
+@@ -228,6 +243,11 @@
  s16 y;
  {
      layer->x = x;
@@ -26,7 +42,7 @@
      layer->y = y;
  }
  
-@@ -245,6 +256,11 @@
+@@ -245,6 +265,11 @@
  void layerGetViewRect(LayerView *layer, Rect16 *rect) {
      rect->x = layer->x - layer->offsetX + (layer->scrollX >> 8);
      rect->y = layer->y - layer->offsetY + (layer->scrollY >> 8);

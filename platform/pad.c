@@ -205,6 +205,23 @@ static void open_gamepad(void) {
    tests in the prologue, before the field menu */
 static int s_test_save;
 
+/* DW3_HIDE_LAYERS="1005,1007": layers (hexadecimal ids) not drawn, for a test picture without them (layer.c) */
+int native_test_layer_hidden(int id) {
+    static const char *env;
+    static int read;
+    char hex[8];
+
+    if (!read) {
+        env = SDL_getenv("DW3_HIDE_LAYERS");
+        read = 1;
+    }
+    if (env == NULL) {
+        return 0;
+    }
+    SDL_snprintf(hex, sizeof hex, "%X", id);
+    return SDL_strcasestr(env, hex) != NULL;
+}
+
 int native_test_save(void) {
     int t = s_test_save;
 
