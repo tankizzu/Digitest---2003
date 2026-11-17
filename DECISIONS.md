@@ -122,6 +122,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   bordi della mappa.
 - **Dove la mappa finisce resta il nero** (17/11/2026): niente ingrandimento delle stanze piccole, dà l'idea del
   gioco d'epoca. (Sostituisce la vecchia idea "nelle stanze piccole si ingrandisce".)
+- **Fascia in alto, scelte di partenza** (17/11/2026, l'utente: "continua il lavoro", da confermare): sovrapposta
+  alla mappa (la telecamera non cambia), visibile solo col giocatore in controllo, prima di Genji solo i partner
+  (il gioco non ha ancora il menu del campo). OPZIONI rimandato alla schermata impostazioni.
 - **Fascia in alto** (demo approvata dall'utente, 17/11/2026: tre partner coi pannelli HP del gioco, MENU e
   OPZIONI): pulsante Impostazioni, pulsante Menu e stato dei
   partner (nome, livello, HP, esperienza), con la grafica del gioco; la fascia in basso per dialoghi e comandi.

@@ -23,8 +23,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       Linux con DW3_PORTRAIT=1: stanza della Sala della Matrice intera, oggetti animati, dialogo, camminata.
 - [x] 3. Mappa: 27 immagini (CLUT in alto, y 896+), fino a 5 righe disegnate, stream sulle righe in vista.
 - [x] 4. Telecamera centrata su 512 righe; le stanze più basse restano al centro col nero (deciso).
-- [ ] 5. Fascia in alto: Impostazioni, Menu, stato dei partner (grafica del gioco). Fascia in basso: dialoghi
-      e comandi. Banner, transizioni tra stanze e inizio battaglia con le misure nuove.
+- [x] 5. Fascia in alto: partner (nome, HP) e MENU con la grafica del gioco (2.1). Manca OPZIONI (serve la
+      schermata impostazioni con volume, da progettare con l'utente).
+- [ ] Testi del menu del campo (STSTATUS, file STATUS) con i tasti PlayStation ("Tasto △: torna al menu", "Tasto ●:
+      chiudi lo stato"…): riscriverli come per la memory card (savetexts.c).
 - [x] 6. Android in verticale (1.2 anteprima, 1.3 a tutto schermo).
 - [x] 7. Freccia dei dialoghi: i trattini indicano la velocità (A).
 - [ ] 8. Demo da discutere: battaglia verticale (comandi grandi in basso), fascia alta (partner, MENU, OPZIONI),

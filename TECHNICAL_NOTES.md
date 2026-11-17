@@ -181,6 +181,16 @@ Stato reale (17/11/2026, prototipo su Linux, `DW3_PORTRAIT=1`):
 - Su Android il port sceglie render_scale fino a 4: con la VRAM 1024×1024 la copia GL è 4096² → da limitare (2
   o 3) prima di accendere il verticale sul telefono.
 
+## Fascia alta del campo (fatta, 2.1)
+
+- `FieldChildren.nativeBand` (field_mode.h, slot in più in fondo: runChildTasks lo fa girare col campo e muore con
+  lui), creato in field.c accanto al banner. Il compito `nativeBandUpdate` ha 4 finestre di testo figlie (3 nomi,
+  "MENU"). Si mostra se `openFieldMenu` ha visto il giocatore libero in questo fotogramma o nel precedente
+  (`nativeBandAt`). Layer FIELD_LAYER_TEXT: barre (menu 0x41) a profondità 1, testi e HP a profondità 0.
+- Nome: TEXT_DIGIMON_NAMES, stringa `partners[m].unlocked - 2` (id + 1). HP: `info.stats[STAT_HP / STAT_MAX_HP]`.
+- MENU: `native_touch_hold(PAD_START, 6)`; in verticale il vecchio pulsante menu del touch non si mostra più.
+- Prova: `--field 515 --progress 5` (Sala della Matrice dopo Genji, squadra di partenza).
+
 ## Piano: fascia alta del campo in verticale (da approvare nei dettagli, 17/11/2026)
 
 Demo approvata: tre pannelli dei partner (nome, barra HP) a sinistra, MENU e OPZIONI a destra, in alto sul campo.

@@ -2,7 +2,17 @@
 
 ## Android (Digimon World 2003 per Android)
 
-### 2.0 (in preparazione)
+### 2.1 (in preparazione)
+
+- **Fascia in alto nel campo (verticale)**: mentre il giocatore ha il controllo, in alto a sinistra i tre partner,
+  ognuno nella barra dei menu del gioco con il nome (font del gioco) e la barra degli HP; in alto a destra **MENU**
+  nella stessa barra (dalla vittoria su Genji, quando il gioco ha il menu del campo): un tocco apre il menu del
+  gioco. Sparisce durante dialoghi, eventi e menu. Al posto del vecchio pulsante menu disegnato dal port.
+  OPZIONI non c'è ancora: il gioco non ha una schermata opzioni nel campo e quella della lingua esce dalla partita.
+  Verificato su Linux: pannelli (game5, prologo) e MENU → menu del campo (`--field 515 --progress 5`); orizzontale
+  identico ai riferimenti.
+
+### 2.0
 
 - **Indietro a tema col gioco**: nella schermata memory card (verticale) "CARICA" è tolto e nel riquadro di
   metallo appeso c'è la freccia arancione dei fumetti del gioco, girata a sinistra e lampeggiante: toccandola si
