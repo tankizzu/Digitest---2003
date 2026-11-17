@@ -1,0 +1,416 @@
+<title>Disposizione battaglia</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a phone-shaped stage (the game's 320 x 710 canvas) beside a control column; stacked on phones */
+:root {
+  --bg: #0b1020;
+  --panel: #151b36;
+  --panel-2: #1d2547;
+  --line: #2f3a6b;
+  --fg: #e9edff;
+  --muted: #9aa5d6;
+  --accent: #f2a43a;   /* the game's orange arrow */
+  --select: #5fd3ff;   /* the game's cyan HUD icons */
+  --danger: #ff7a7a;
+  --font-ui: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-num: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.45 var(--font-ui);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 24px;
+}
+h1 { font-size: 18px; margin: 0; letter-spacing: 0.01em; }
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; margin-bottom: 12px; }
+.sub { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+.tab {
+  background: var(--panel); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 999px; padding: 6px 12px; font: inherit; cursor: pointer;
+}
+.tab[aria-selected="true"] { background: var(--accent); color: #1a1205; border-color: var(--accent); font-weight: 600; }
+.tab:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--select); outline-offset: 2px; }
+.work { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 760px) { .work { grid-template-columns: minmax(0, 1fr); } }
+.phone {
+  position: relative;
+  height: min(80vh, 1000px);
+  aspect-ratio: 320 / 710;
+  max-width: 100%;
+  border-radius: 22px;
+  border: 6px solid #05070f;
+  box-shadow: 0 0 0 1px var(--line);
+  overflow: hidden;
+  background: #000;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+@media (max-width: 760px) { .phone { height: auto; width: 100%; } }
+.stage { position: absolute; inset: 0; }
+.bg { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; object-fit: fill; opacity: 0.85; }
+.piece { position: absolute; cursor: grab; }
+.piece img { display: block; width: 100%; height: 100%; image-rendering: pixelated; pointer-events: none; }
+.piece.sel { outline: 2px solid var(--select); outline-offset: 1px; z-index: 50; }
+.piece.ghost { opacity: 0.25; outline: 1px dashed var(--muted); }
+.piece.ref { opacity: 0.55; pointer-events: none; }
+.handle {
+  position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px;
+  background: var(--select); border: 2px solid #05070f; border-radius: 4px; cursor: nwse-resize; display: none;
+}
+.piece.sel .handle { display: block; }
+.guide { position: absolute; left: 0; right: 0; border-top: 1px dashed rgba(242, 164, 58, 0.55); pointer-events: none; }
+.guide span { position: absolute; right: 4px; top: 2px; font: 10px var(--font-num); color: var(--accent); }
+.side { display: grid; gap: 12px; min-width: 0; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 10px; }
+.card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0; }
+.selname { font-weight: 600; font-size: 15px; }
+.nums { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.nums label { display: grid; gap: 2px; font-size: 11px; color: var(--muted); }
+input[type="number"] {
+  width: 100%; box-sizing: border-box; background: var(--panel-2); color: var(--fg); border: 1px solid var(--line);
+  border-radius: 6px; padding: 5px 6px; font: 13px var(--font-num); font-variant-numeric: tabular-nums;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+input[type="range"] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+.pct { font: 13px var(--font-num); min-width: 4ch; text-align: right; }
+button.btn {
+  background: var(--panel-2); color: var(--fg); border: 1px solid var(--line); border-radius: 8px;
+  padding: 6px 10px; font: inherit; cursor: pointer;
+}
+button.btn.primary { background: var(--accent); color: #1a1205; border-color: var(--accent); font-weight: 600; }
+button.btn:disabled { opacity: 0.45; cursor: default; }
+.list { display: grid; gap: 4px; max-height: 260px; overflow: auto; }
+.item {
+  display: flex; justify-content: space-between; gap: 8px; align-items: center; text-align: left;
+  background: transparent; color: var(--fg); border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; font: inherit; cursor: pointer;
+}
+.item:hover { border-color: var(--line); }
+.item[aria-current="true"] { border-color: var(--select); }
+.item .dim { color: var(--muted); font: 11px var(--font-num); }
+.item.off { color: var(--muted); text-decoration: line-through; }
+textarea {
+  width: 100%; box-sizing: border-box; min-height: 90px; resize: vertical; background: var(--panel-2); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 8px; font: inherit;
+}
+.status { font-size: 12px; color: var(--muted); }
+.status.err { color: var(--danger); }
+.help { color: var(--muted); font-size: 12px; margin: 0; }
+@media (prefers-reduced-motion: no-preference) { .piece { transition: outline-color 0.1s; } }
+</style>
+
+<div class="top">
+  <h1>Disposizione battaglia</h1>
+  <span class="sub">Trascina i pezzi, ridimensionali dall'angolo azzurro. Misure in pixel del gioco (schermo 320 × <span id="hval">710</span>).</span>
+</div>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div class="work" style="margin-top:12px">
+  <div class="phone" id="phone"><div class="stage" id="stage"></div></div>
+  <div class="side">
+    <div class="card" id="selcard">
+      <h2>Pezzo scelto</h2>
+      <div class="selname" id="selname">Tocca un pezzo</div>
+      <div class="nums">
+        <label>X <input type="number" id="nx" step="1"></label>
+        <label>Y <input type="number" id="ny" step="1"></label>
+        <label>Larghezza <input type="number" id="nw" step="1" min="4"></label>
+        <label>Altezza <input type="number" id="nh" step="1" min="4"></label>
+      </div>
+      <div class="row">
+        <span class="sub">Grandezza</span>
+        <input type="range" id="scale" min="40" max="300" step="5" value="100" aria-label="Grandezza rispetto all'originale">
+        <span class="pct" id="pct">100%</span>
+      </div>
+      <div class="row">
+        <label class="row" style="gap:6px"><input type="checkbox" id="lock" checked> Proporzioni bloccate</label>
+      </div>
+      <div class="row">
+        <button class="btn" id="hide" type="button">Nascondi</button>
+        <button class="btn" id="resetpiece" type="button">Rimetti com'era</button>
+        <button class="btn" id="front" type="button">Porta davanti</button>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Pezzi di questa schermata</h2>
+      <div class="list" id="list"></div>
+      <div class="row"><button class="btn" id="resetscreen" type="button">Rimetti tutta la schermata com'era</button></div>
+    </div>
+    <div class="card">
+      <h2>Note per Claude</h2>
+      <textarea id="note" placeholder="Scrivi qui cosa vuoi diverso: colori, testi, comportamento..."></textarea>
+      <div class="row">
+        <button class="btn primary" id="save" type="button">Salva</button>
+        <button class="btn" id="copy" type="button">Copia la disposizione</button>
+        <span class="status" id="status">Le modifiche si salvano da sole.</span>
+      </div>
+      <p class="help">Le linee arancioni tratteggiate segnano dove inizia la parte bassa usata oggi dai menu (le ultime 240 righe). Statistiche e volto del partner si spostano nella scheda Comandi; nelle altre schede compaiono più chiari, come riferimento.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATA = __DATA__;
+const H = DATA.height;
+document.getElementById("hval").textContent = H;
+const screens = DATA.screens;
+const state = {};            // screenId -> {pieces: {id: {x,y,w,h,hidden,z}}, note}
+let current = screens[0].id;
+let selected = null;
+let db = null;
+const dirty = new Set();
+const saving = {};
+let saveTimer = null;
+
+function defaults(sc) {
+  const pieces = {};
+  sc.pieces.forEach((p, i) => { if (!p.shared) pieces[p.id] = { x: p.x, y: p.y, w: p.w, h: p.h, hidden: false, z: i }; });
+  return { pieces, note: "" };
+}
+screens.forEach(sc => { state[sc.id] = defaults(sc); });
+
+function screen() { return screens.find(s => s.id === current); }
+function pieceDef(id) { return screen().pieces.find(p => p.id === id && !p.shared); }
+/* where a piece is: its own place, or for a shared one (the HUD in the other screens) its place in its own screen */
+function placeOf(p) { return p.shared ? state[p.shared].pieces[p.id] : state[current].pieces[p.id]; }
+
+const stage = document.getElementById("stage");
+const phone = document.getElementById("phone");
+function scale() { return stage.clientWidth / 320; }
+
+function renderTabs() {
+  const tabs = document.getElementById("tabs");
+  tabs.textContent = "";
+  screens.forEach(sc => {
+    const b = document.createElement("button");
+    b.className = "tab"; b.type = "button"; b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(sc.id === current));
+    b.textContent = sc.name;
+    b.onclick = () => { current = sc.id; selected = null; render(); };
+    tabs.appendChild(b);
+  });
+}
+
+function render() {
+  renderTabs();
+  const sc = screen(), st = state[current], k = scale();
+  stage.textContent = "";
+  const bg = document.createElement("img");
+  bg.className = "bg"; bg.src = sc.bg || DATA.bg; bg.alt = "";
+  stage.appendChild(bg);
+  (sc.guides || []).forEach(g => {
+    const d = document.createElement("div");
+    d.className = "guide"; d.style.top = (g.y * k) + "px";
+    const s = document.createElement("span"); s.textContent = g.label; d.appendChild(s);
+    stage.appendChild(d);
+  });
+  sc.pieces.slice().sort((a, b) => (a.shared ? -1 : placeOf(a).z) - (b.shared ? -1 : placeOf(b).z)).forEach(p => {
+    const v = placeOf(p);
+    if (p.shared && v.hidden) return;
+    const el = document.createElement("div");
+    el.className = "piece" + (p.shared ? " ref" : "") + (selected === p.id && !p.shared ? " sel" : "") + (v.hidden ? " ghost" : "");
+    el.style.left = (v.x * k) + "px"; el.style.top = (v.y * k) + "px";
+    el.style.width = (v.w * k) + "px"; el.style.height = (v.h * k) + "px";
+    el.style.zIndex = selected === p.id ? 50 : 10 + v.z;
+    el.dataset.id = p.id;
+    el.title = p.label;
+    const img = document.createElement("img"); img.src = p.src; img.alt = p.label; el.appendChild(img);
+    const hd = document.createElement("div"); hd.className = "handle"; hd.dataset.handle = "1"; el.appendChild(hd);
+    stage.appendChild(el);
+  });
+  renderList();
+  renderSel();
+  document.getElementById("note").value = st.note || "";
+}
+
+function renderList() {
+  const list = document.getElementById("list"), st = state[current];
+  list.textContent = "";
+  screen().pieces.forEach(p => {
+    if (p.shared) return;
+    const v = st.pieces[p.id];
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "item" + (v.hidden ? " off" : "");
+    b.setAttribute("aria-current", String(selected === p.id));
+    const n = document.createElement("span"); n.textContent = p.label;
+    const d = document.createElement("span"); d.className = "dim";
+    d.textContent = `${Math.round(v.x)},${Math.round(v.y)} · ${Math.round(v.w)}×${Math.round(v.h)}`;
+    b.append(n, d);
+    b.onclick = () => { selected = p.id; render(); };
+    list.appendChild(b);
+  });
+}
+
+function renderSel() {
+  const ids = ["nx", "ny", "nw", "nh", "scale", "hide", "resetpiece", "front"];
+  const on = !!selected;
+  ids.forEach(i => { document.getElementById(i).disabled = !on; });
+  if (!on) {
+    document.getElementById("selname").textContent = "Tocca un pezzo";
+    ["nx", "ny", "nw", "nh"].forEach(i => { document.getElementById(i).value = ""; });
+    document.getElementById("pct").textContent = "";
+    return;
+  }
+  const p = pieceDef(selected), v = state[current].pieces[selected];
+  document.getElementById("selname").textContent = p.label;
+  document.getElementById("nx").value = Math.round(v.x);
+  document.getElementById("ny").value = Math.round(v.y);
+  document.getElementById("nw").value = Math.round(v.w);
+  document.getElementById("nh").value = Math.round(v.h);
+  const pct = Math.round(100 * v.w / p.ow);
+  document.getElementById("scale").value = Math.max(40, Math.min(300, pct));
+  document.getElementById("pct").textContent = pct + "%";
+  document.getElementById("hide").textContent = v.hidden ? "Mostra" : "Nascondi";
+}
+
+function changed() { dirty.add(current); scheduleSave(); }
+
+/* drag and resize */
+let drag = null;
+stage.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".piece:not(.ref)");
+  if (!el) { selected = null; render(); return; }
+  const id = el.dataset.id, v = state[current].pieces[id];
+  selected = id;
+  drag = { id, mode: e.target.dataset.handle ? "size" : "move", sx: e.clientX, sy: e.clientY, x: v.x, y: v.y, w: v.w, h: v.h, moved: false };
+  stage.setPointerCapture(e.pointerId);
+  render();
+  e.preventDefault();
+});
+stage.addEventListener("pointermove", e => {
+  if (!drag) return;
+  const k = scale(), dx = (e.clientX - drag.sx) / k, dy = (e.clientY - drag.sy) / k;
+  const v = state[current].pieces[drag.id], p = pieceDef(drag.id);
+  if (drag.mode === "move") {
+    v.x = Math.round(drag.x + dx); v.y = Math.round(drag.y + dy);
+  } else {
+    let w = Math.max(6, Math.round(drag.w + dx)), h = Math.max(6, Math.round(drag.h + dy));
+    if (document.getElementById("lock").checked) { h = Math.max(6, Math.round(w * drag.h / drag.w)); }
+    v.w = w; v.h = h;
+  }
+  drag.moved = true;
+  const el = stage.querySelector(`.piece[data-id="${drag.id}"]`);
+  if (el) {
+    el.style.left = (v.x * k) + "px"; el.style.top = (v.y * k) + "px";
+    el.style.width = (v.w * k) + "px"; el.style.height = (v.h * k) + "px";
+  }
+  renderSel();
+});
+function endDrag() { if (drag && drag.moved) { changed(); renderList(); } drag = null; }
+stage.addEventListener("pointerup", endDrag);
+stage.addEventListener("pointercancel", endDrag);
+
+function setNum(field, val) {
+  if (!selected || !isFinite(val)) return;
+  const v = state[current].pieces[selected];
+  const lock = document.getElementById("lock").checked;
+  if (field === "w") { if (lock) v.h = Math.round(Math.max(4, val) * v.h / v.w); v.w = Math.max(4, val); }
+  else if (field === "h") { if (lock) v.w = Math.round(Math.max(4, val) * v.w / v.h); v.h = Math.max(4, val); }
+  else v[field] = val;
+  changed(); render();
+}
+document.getElementById("nx").onchange = e => setNum("x", +e.target.value);
+document.getElementById("ny").onchange = e => setNum("y", +e.target.value);
+document.getElementById("nw").onchange = e => setNum("w", +e.target.value);
+document.getElementById("nh").onchange = e => setNum("h", +e.target.value);
+document.getElementById("scale").oninput = e => {
+  if (!selected) return;
+  const p = pieceDef(selected), v = state[current].pieces[selected], f = +e.target.value / 100;
+  const cx = v.x + v.w / 2, cy = v.y + v.h / 2, ratio = v.h / v.w;
+  v.w = Math.round(p.ow * f); v.h = Math.round(v.w * ratio);
+  v.x = Math.round(cx - v.w / 2); v.y = Math.round(cy - v.h / 2);
+  render();
+};
+document.getElementById("scale").onchange = () => changed();
+document.getElementById("hide").onclick = () => { if (!selected) return; const v = state[current].pieces[selected]; v.hidden = !v.hidden; changed(); render(); };
+document.getElementById("resetpiece").onclick = () => {
+  if (!selected) return; const p = pieceDef(selected), v = state[current].pieces[selected];
+  Object.assign(v, { x: p.x, y: p.y, w: p.w, h: p.h, hidden: false }); changed(); render();
+};
+document.getElementById("front").onclick = () => {
+  if (!selected) return; const st = state[current];
+  st.pieces[selected].z = Math.max(...Object.values(st.pieces).map(v => v.z)) + 1; changed(); render();
+};
+document.getElementById("resetscreen").onclick = () => { const n = state[current].note; state[current] = defaults(screen()); state[current].note = n; selected = null; changed(); render(); };
+document.getElementById("note").oninput = e => { state[current].note = e.target.value; changed(); };
+document.addEventListener("keydown", e => {
+  if (!selected || /INPUT|TEXTAREA/.test(document.activeElement.tagName)) return;
+  const v = state[current].pieces[selected], d = e.shiftKey ? 10 : 1;
+  const m = { ArrowLeft: [-d, 0], ArrowRight: [d, 0], ArrowUp: [0, -d], ArrowDown: [0, d] }[e.key];
+  if (!m) return;
+  v.x += m[0]; v.y += m[1]; e.preventDefault(); changed(); render();
+});
+
+/* what Claude reads: per screen, each piece's place in the game's pixels */
+function exportOf(id) {
+  const sc = screens.find(s => s.id === id), st = state[id];
+  const pieces = {};
+  sc.pieces.forEach(p => { if (p.shared) return; const v = st.pieces[p.id]; pieces[p.id] = { x: v.x, y: v.y, w: v.w, h: v.h, hidden: !!v.hidden, z: v.z }; });
+  return { screen: id, height: H, pieces, note: st.note || "" };
+}
+
+const statusEl = document.getElementById("status");
+function setStatus(t, err) { statusEl.textContent = t; statusEl.classList.toggle("err", !!err); }
+
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  setStatus(db ? "Modifiche da salvare…" : "Salvataggio non disponibile qui: usa Copia la disposizione.", !db);
+  saveTimer = setTimeout(saveAll, 1200);
+}
+async function saveAll() {
+  if (!db) return;
+  for (const id of Array.from(dirty)) {
+    if (saving[id]) { scheduleSave(); continue; }
+    saving[id] = true; dirty.delete(id);
+    setStatus("Salvataggio…");
+    try {
+      await db.doc("layouts/" + id).set({ ...exportOf(id), savedAt: new Date().toISOString() });
+      setStatus("Salvato. Claude lo legge da qui.");
+    } catch (err) {
+      dirty.add(id);
+      setStatus(err && err.code === "invalid_argument" ? "Non puoi salvare con questo accesso: usa Copia la disposizione." : "Non salvato, riprovo tra poco.", true);
+      if (!(err && err.code === "invalid_argument")) setTimeout(scheduleSave, 3000);
+    } finally { saving[id] = false; }
+  }
+}
+document.getElementById("save").onclick = () => { dirty.add(current); clearTimeout(saveTimer); saveAll(); };
+document.getElementById("copy").onclick = async () => {
+  const text = JSON.stringify(screens.map(s => exportOf(s.id)));
+  try { await navigator.clipboard.writeText(text); setStatus("Copiata: incollala nella chat."); }
+  catch (e) { const t = document.getElementById("note"); t.value = text; t.select(); setStatus("Testo selezionato nelle note: copialo e incollalo nella chat."); }
+};
+
+window.addEventListener("resize", render);
+render();
+
+(async () => {
+  try {
+    db = window.claude && window.claude.use ? await window.claude.use("db") : null;
+  } catch (e) { db = null; }
+  if (!db) { setStatus("Salvataggio non disponibile qui: usa Copia la disposizione."); return; }
+  setStatus("Carico le tue disposizioni…");
+  let done = false;
+  const timer = setTimeout(() => { if (!done) setStatus("Il caricamento ci mette troppo: puoi lavorare lo stesso."); }, 10000);
+  try {
+    for (const sc of screens) {
+      const snap = await db.doc("layouts/" + sc.id).get();
+      if (snap.exists) {
+        const d = snap.data() || {}, st = state[sc.id];
+        Object.entries(d.pieces || {}).forEach(([pid, v]) => { if (st.pieces[pid]) Object.assign(st.pieces[pid], v); });
+        st.note = typeof d.note === "string" ? d.note : "";
+      }
+    }
+    done = true; clearTimeout(timer);
+    setStatus("Le modifiche si salvano da sole.");
+    render();
+  } catch (e) {
+    done = true; clearTimeout(timer);
+    setStatus("Non riesco a leggere le disposizioni salvate: lavoro da quelle di partenza.", true);
+  }
+})();
+</script>

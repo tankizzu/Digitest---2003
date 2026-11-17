@@ -1,0 +1,11 @@
+[
+  {"id": "tag", "name": "Tag", "pieces": [
+    {"id": "tag_1", "label": "Secondo partner (nome, HP, MP)", "file": "window_01500.png", "rect": [16, 73, 181, 30]},
+    {"id": "tag_2", "label": "Terzo partner (nome, HP, MP)", "file": "window_01500.png", "rect": [16, 106, 181, 30]}
+  ]},
+  {"id": "oggetti", "name": "Oggetti", "pieces": [
+    {"id": "lista_oggetti", "label": "Lista degli oggetti", "file": "window_01850.png", "rect": [8, 62, 151, 120]},
+    {"id": "quantita", "label": "Quantità (X --)", "file": "window_01850.png", "rect": [166, 160, 40, 22]},
+    {"id": "descrizione_oggetto", "label": "Descrizione dell'oggetto", "file": "window_01850.png", "rect": [11, 188, 297, 39]}
+  ]}
+]

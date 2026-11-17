@@ -224,3 +224,13 @@ dopo il riscontro sulla 2.0.
 - partner_view.c: il layer del volto (0x1009) a y 512 + 0x4C, la cornice sul layer dell'HUD.
 - Prova: `--field 578 --party 0` e camminare a destra e sinistra (incontro verso il fotogramma 1250); griglia a
   y 470 + 108/150/192 (+18 il centro) con H 710.
+
+## Demo da disporre (artefatto "Disposizione battaglia")
+
+- https://claude.ai/artifact/3DVyDQZggmhr1isbDtUXnL — l'utente trascina e ridimensiona i pezzi veri della grafica
+  della battaglia su uno schermo 320×710 (schede Comandi, Tecniche, DV, Messaggi, Tag, Oggetti) e scrive note.
+- Le posizioni sono nel db dell'artefatto: `ArtifactData list` della collezione `layouts`, un documento per scheda
+  (`pieces.<id> = {x, y, w, h, hidden, z}` in pixel del gioco, `note`).
+- Si ricostruisce con `tools/demo/build_disposizione.py OUT.html` (pezzi ritagliati da schermate a 3× in
+  orizzontale, sfondo pulito in verticale con `DW3_HIDE_LAYERS=1005,1007,1009`); l'HTML prodotto contiene grafica
+  del gioco: mai nel repository.
