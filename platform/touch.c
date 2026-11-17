@@ -313,6 +313,17 @@ void native_touch_field_free(void) {
     s_free_until = SDL_GetTicks() + 150;
 }
 
+/* How far the stick is pushed, for the field (actor_control.c, trigger.c): 0 not at all, 1 a little (the player walks),
+   2 most of the way (the player runs) */
+int native_touch_stick_level(void) {
+    float len = sqrtf(s_vx * s_vx + s_vy * s_vy);
+
+    if (!s_stick_on || len <= 0.35f) {
+        return 0;
+    }
+    return len < 0.65f ? 1 : 2;
+}
+
 /* An autosave was written (state.c): a sign shows for a moment */
 void touch_saved(void) {
     s_saved_at = SDL_GetTicks();
@@ -436,12 +447,26 @@ static int back_shown(void) {
     return SDL_GetTicks() < s_back_until || menu_mode();
 }
 
-/* The corner buttons, in pixels: the menu at the top right, back at the top left */
+static int dialog_shown(void);
+
+/* The corner buttons, in pixels: the menu at the top right; back at the bottom left, where a thumb reaches it with
+   the phone in one hand (over the automatic dialogues button when that one is there too) */
 static void corner(int right, float *x, float *y, float *r) {
     float u = (float)SDL_min(s_w, s_h);
-    *r = u * 0.065f;
-    *x = right ? s_w - *r * 1.6f : *r * 1.6f;
-    *y = *r * 1.6f;
+    if (right) {
+        *r = u * 0.065f;
+        *x = s_w - *r * 1.6f;
+        *y = *r * 1.6f;
+        return;
+    }
+    *r = u * 0.08f;
+    *x = *r * 1.5f;
+    *y = s_h - *r * 1.5f;
+    if (dialog_shown()) {
+        float ax, ay, ar;
+        auto_button(&ax, &ay, &ar);
+        *y = ay - ar * 1.4f - *r * 1.2f;
+    }
 }
 
 static int in_corner(int right, float px, float py) {
@@ -518,6 +543,31 @@ static Key *key_at(float x, float y) {
         }
     }
     return NULL;
+}
+
+/* Testing on a computer: DW3_STICK="from:to:x:y,..." pushes the stick (x, y from -1 to 1) from one poll to
+   another, as a finger would */
+static void test_stick(void) {
+    static int polls;
+    const char *env = SDL_getenv("DW3_STICK");
+
+    polls++;
+    while (env != NULL && *env != 0) {
+        int from = 0, to = 0;
+        float x = 0, y = 0;
+
+        if (SDL_sscanf(env, "%d:%d:%f:%f", &from, &to, &x, &y) == 4 && polls >= from && polls < to) {
+            if (s_rad <= 0) {
+                s_rad = 100;
+            }
+            s_stick_on = 1, s_stick_moved = 1;
+            s_bx = s_by = 0;
+            s_fx = x * s_rad, s_fy = y * s_rad;
+            return;
+        }
+        env = SDL_strchr(env, ',');
+        env = env != NULL ? env + 1 : NULL;
+    }
 }
 
 void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
@@ -667,6 +717,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
         s_press_triangle--;
         *held |= 1 << B_TRIANGLE;
     }
+    test_stick();
     s_vx = s_vy = 0;
     if (s_stick_on) {
         float dx = s_fx - s_bx, dy = s_fy - s_by, len = sqrtf(dx * dx + dy * dy);

@@ -1,7 +1,91 @@
 --- a/src/field/field_mode/actor_control.c
 +++ b/src/field/field_mode/actor_control.c
-@@ -393,6 +393,9 @@
+@@ -117,7 +117,11 @@
+ void FIELDSTG_moveByPad(Actor *actor, s32 pad) {
+     if (pad != 0 && FIELDSTG_state.menuOpen == 0) {
+         actor->dir = FIELDSTG_padDirs[pad];
++#ifdef NATIVE
++        if (actor->walks != 0 || native_touch_stick_level() == 1) { /* the stick pushed a little: a walk */
++#else
+         if (actor->walks != 0) {
++#endif
+             if (actor->substate != ACTOR_WALK) {
+                 actor->setSubstate(actor, ACTOR_WALK);
+             }
+@@ -385,17 +389,100 @@
+  * case being an early exit, a do-while (0) with a break, after which the
+  * event's check is the rest of the block.
+  */
++#ifdef NATIVE
++/* Touch: near a character the player can talk to, the balloon over the
++   player's head (as on an exit's cell); a tap then talks to it, turned to it */
++#define NATIVE_TALK_BALLOON 0x7A /* the balloon's task id */
++#define NATIVE_TALK_ANIM 3       /* its FIELDSTG_triggerAnims row: the dots */
++#define NATIVE_TALK_REACH 30     /* how near, in the map's tile units */
++
++/* The character nearest the player within reach that a talk can go to: not a
++   partner (they follow a trail), not one of 0x180 to 0x182 */
++static Actor *nativeTalkable(Actor *player) {
++    Actor *actor = TASK_REGISTRY.funcs.find(FIELD_TASK_ACTOR, -1, 1);
++    Actor *best = NULL;
++    s32 bestDist = NATIVE_TALK_REACH * NATIVE_TALK_REACH + 1;
++
++    for (; actor != NULL; actor = TASK_REGISTRY.funcs.findNext()) {
++        s32 dx = actor->tile.x - player->tile.x, dy = actor->tile.y - player->tile.y;
++
++        if (actor == player || actor->trail != NULL || actor->state != TASK_RUN || actor->key1 == 0x180
++            || actor->key1 == 0x181 || actor->key1 == 0x182) {
++            continue;
++        }
++        if (dx * dx + dy * dy < bestDist) {
++            bestDist = dx * dx + dy * dy;
++            best = actor;
++        }
++    }
++    return best;
++}
++
++/* The balloon shown while there is someone to talk to (and no other balloon is up), shut when there isn't */
++static void nativeTalkBalloon(Actor *target) {
++    Balloon *balloon = TASK_REGISTRY.funcs.find(NATIVE_TALK_BALLOON, -1, -1);
++
++    if (target != NULL && TASK_REGISTRY.funcs.find(6, -1, -1) == NULL) {
++        if (balloon == NULL) {
++            FIELDSTG_createBalloon(0, NATIVE_TALK_ANIM, NATIVE_TALK_BALLOON);
++        } else if (balloon->state == TASK_DONE) {
++            balloon->setState(balloon, TASK_RUN);
++            balloon->frame = 0, balloon->time = 0;
++        }
++    } else if (balloon != NULL && balloon->state == TASK_RUN) {
++        balloon->setState(balloon, TASK_DONE);
++    }
++}
++
++/* The direction (FIELDSTG_dirSteps) nearest the way from one tile to another */
++static s32 nativeDirTo(Vec2 *from, Vec2 *to) {
++    s32 dx = to->x - from->x, dy = to->y - from->y;
++    s32 i, best = 0, bestDot = -0x7FFFFFFF;
++
++    for (i = 0; i < 8; i++) {
++        s32 dot = dx * FIELDSTG_dirSteps[i].x + dy * FIELDSTG_dirSteps[i].y;
++        if (dot > bestDot) {
++            bestDot = dot;
++            best = i;
++        }
++    }
++    return best;
++}
++#endif
++
+ void FIELDSTG_controlPlayer(Actor *actor) {
+     Vec2 pos;
+     HiddenSpots *obj;
+     s32 pad;
+     s32 pressed;
      s32 forced;
++#ifdef NATIVE
++    Actor *talkTo = NULL;
++#endif
  
      if (FIELDSTG_state.menuOpen == 0 && FIELDSTG_state.busy == 0 && FIELDSTG_state.battleStarting == 0) {
 +#ifdef NATIVE
@@ -10,7 +94,26 @@
          pad = (PAD.getHeld(0) >> PAD_UP) & 0xF;
          pressed = (PAD.getPressed(0) & (1 << PAD_CROSS)) != 0;
          forced = FLAGS_00.checkCondition(FIELD_FLAG_TALK_AHEAD, 1);
-@@ -823,9 +826,14 @@
++#ifdef NATIVE
++        talkTo = nativeTalkable(actor);
++        nativeTalkBalloon(talkTo);
++        if (pressed && talkTo != NULL && !forced) {
++            /* the tap: the player turns to the character and talks to it */
++            actor->getFacingTile(actor, &pos);
++            if (FIELDSTG_findActorAt(&pos) != talkTo) {
++                actor->dir = nativeDirTo(&actor->tile, &talkTo->tile);
++                pos = talkTo->tile;
++            }
++            if (FIELDSTG_talkToActorAt(actor, &pos)) {
++                nativeTalkBalloon(NULL);
++            }
++            return;
++        }
++#endif
+         if (pressed || forced) {
+             actor->getFacingTile(actor, &pos);
+             do {
+@@ -823,9 +910,14 @@
              prim.sprt->w = 0x20;
              prim.sprt->h = 0x10;
              prim.sprt->clut = getClut(shadow->shadow.clutX, shadow->shadow.clutY);
@@ -25,4 +128,20 @@
 +            SetDrawTPage(prim.tpage, 0, 1, GetTPage(0, g_soft_shadows ? 2 : 0, shadow->shadow.x, shadow->shadow.y));
              addPrim(ot, prim.any);
              prim.tpage++;
+         }
+@@ -1438,7 +1530,15 @@
+     case ACTOR_RUN:
+         beginActorAnim(actor, ACTOR_ANIM_RUN);
+         if (!(actor->key2 & 0xE)) {
++#ifdef NATIVE
++            /* the player's run, on the stick: a bit more than half the game's, to steer it on a phone */
++            FIELDSTG_map.getWalkStep(&actor->tile,
++                                     actor->control == FIELDSTG_controlPlayer && native_touch_stick_level() != 0
++                                         ? actor->speed * NATIVE_RUN_PERCENT / 100 : actor->speed,
++                                     actor->dir, &move3);
++#else
+             FIELDSTG_map.getWalkStep(&actor->tile, actor->speed, actor->dir, &move3);
++#endif
+             actor->pos.x += move3.x;
+             actor->pos.y += move3.y;
          }

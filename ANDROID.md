@@ -11,31 +11,14 @@ Il README originale del port è in [README.md](README.md).
 (En,Fr,De,Es,It)*, `.bin` da 692.146.560 byte. In questo repository va solo il codice:
 mai il `.bin`, i dati estratti o il binario compilato, che contiene parti del gioco.
 
-## Stato
+## Documentazione del progetto
 
-| Passo | Stato |
-|---|---|
-| Compilazione per Linux a 64 bit e OpenGL ES (`build_unix.py`, `--gles`) | Fatto |
-| APK Android arm64 (`tools/android/build_apk.sh`), lettura del disco dal telefono | Fatto (0.3) |
-| Comandi touch: levetta mobile, filmati saltati tenendo premuto | Fatto |
-| Tocco nei menu: lingua (ricordata), titolo, dialoghi, Sì/No, nome, kit, menu del campo | Fatto |
-| Battaglia: comandi, tecniche, oggetti, cambio, messaggi, risultati | Fatto |
-| Pulsanti ☰ (menu) e ‹ (indietro), gesto Indietro di Android | Fatto |
-| Salvataggio automatico (uscita dall'app, ogni 3 minuti) con ripresa al titolo | Fatto |
-| Schermate del menu (squadra, oggetti, tecniche, mappa), negozi, memory card, laboratorio | Da fare |
-| Verticale a tutto schermo con la mappa 2D estesa | Da fare |
-| Togliere i tasti provvisori ✕ ○ △ □ | Quando tutte le schermate saranno toccabili |
-
-## Scelte di interfaccia decise
-
-- Esplorazione a tutto schermo anche in verticale: dove la mappa lo permette si mostra più mappa
-  sopra e sotto, nelle stanze piccole si ingrandisce quanto basta a riempire lo schermo.
-- Levetta analogica che compare dove si tocca e sparisce quando si alza il dito; la corsa
-  dipende da quanto si spinge. Nessuna rotazione della telecamera (il gioco non ce l'ha).
-- Nessun tasto a schermo: vicino a un personaggio compare un fumetto da toccare per parlare.
-- Dialoghi: un tocco va avanti, tenere premuto fa scorrere il testo veloce.
-- In alto a sinistra la squadra con nome, livello, HP ed esperienza; in alto a destra il menu.
-- Menu e battaglia mantengono la grafica originale, ridisposta per il verticale.
+- [PROJECT_STATE.md](PROJECT_STATE.md): stato attuale, cosa è verificato, da dove ripartire.
+- [DECISIONS.md](DECISIONS.md): decisioni approvate (comandi, interfaccia, salvataggi).
+- [TODO.md](TODO.md): attività aperte e priorità.
+- [TECHNICAL_NOTES.md](TECHNICAL_NOTES.md): architettura, formati, test su Linux, problemi risolti.
+- [CHANGELOG.md](CHANGELOG.md): modifiche (sezione Android in cima).
+- [CLAUDE.md](CLAUDE.md): regole di lavoro.
 
 ## Compilare su Linux
 

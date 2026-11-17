@@ -339,6 +339,8 @@ void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialog
 /* The balloons' arrow for that button: the menu sprites' sheet, its texture's place and the CLUT row to show */
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */
+#define NATIVE_RUN_PERCENT 58 /* the player's run on the stick, against the game's (actor_control.c) */
+int native_touch_stick_level(void); /* 0 the stick isn't pushed, 1 a little (walk), 2 most of the way (run) */
 void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */
 void native_autosave_point(int mode, int x, int y, int dir); /* there, where a load would bring them back (state.c) */
 int native_autosave_read(int game, void *buf); /* the game's newest autosave, a GAME_SAVE_SIZE save: 1 if any */

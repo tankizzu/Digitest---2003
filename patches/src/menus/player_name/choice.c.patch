@@ -1,6 +1,6 @@
 --- a/src/menus/player_name/choice.c
 +++ b/src/menus/player_name/choice.c
-@@ -1,6 +1,15 @@
+@@ -1,6 +1,17 @@
  /* The partners page: the choice between the sets of starting partners */
  
  #include "menus/player_name.h"
@@ -9,6 +9,8 @@
 +/* The extra starter packs (native.h): pack c's partners, the texts of a page
 +   of three (the second's from the port's own file) */
 +#define CHOICE_PARTNERS(c) ((c) < 3 ? STPLNMET_funcs.choices[c] : (s32 *)NATIVE_EXTRA_PACKS[(c) - 3])
++#define NATIVE_KIT_OK_X 0x0C /* the kit's OK button, under the tabs */
++#define NATIVE_KIT_OK_Y 0x9C
 +#define OWN_TEXTS() ((void *)native_packs_text(LANGUAGE))
 +#else
 +#define CHOICE_PARTNERS(c) STPLNMET_funcs.choices[c]
@@ -16,7 +18,7 @@
  
  /* Creates the choice's windows: the title, the three labels, the partners'
     name and text, and each partner's name and text */
-@@ -33,15 +42,33 @@
+@@ -33,15 +44,33 @@
      s32 *partners;
  
      if (show != 0) {
@@ -51,7 +53,7 @@
              windows->partners[i].text->setString(windows->partners[i].text, FILE_CACHE.load(TEXT_FILE(TEXT_ONLINE)), partners[i] + 13);
          }
          return;
-@@ -62,7 +89,7 @@
+@@ -62,7 +91,7 @@
     the blinking arrow on the choice */
  void STPLNMET_drawChoice(PartnerChoice *task) {
      SpriteDrawer sprite;
@@ -60,12 +62,18 @@
      PartnerAnim *anim;
      s32 i;
  
-@@ -95,14 +122,34 @@
+@@ -95,14 +124,40 @@
          }
      }
      sprite.setClutRow(STPLNMET_choiceArrowCluts[task->arrowFrame]);
 +#ifdef NATIVE
 +    sprite.draw(FILE_CACHE.getEntry(PLNMET_MENU), 0x32, 0x10, 0x30 + task->choice % 3 * 0x18); /* its page's row */
++    /* the button that confirms the kit: the name screen's OK key, from the same bank */
++    sprite.setLayerId(task->layer, task->depth);
++    sprite.setTexture(0x140, 0x100);
++    sprite.setClutRow(4);
++    sprite.draw(FILE_CACHE.getEntry(NAME_ENTRY_SPRITES), NAME_ENTRY_TEXT_SPRITE(0x4C), NATIVE_KIT_OK_X, NATIVE_KIT_OK_Y);
++    sprite.setClutRow(0);
 +#else
      sprite.draw(FILE_CACHE.getEntry(PLNMET_MENU), 0x32, 0x10, 0x30 + task->choice * 0x18);
 +#endif
@@ -76,16 +84,17 @@
  void STPLNMET_runChoice(PartnerChoice *task, PartnerChoiceWindows *windows) {
 -    s32 old = task->choice;
 -    s32 i;
-+    s32 old;
++    s32 old = task->choice; /* before a tap changes it: a new kit starts its partners' animations over */
 +    s32 i;
 +#ifdef NATIVE
-+    /* touch: a kit's tab picks it; its partners, tapped, confirm it */
++    /* touch: a kit's tab picks it, the OK button under the tabs confirms it */
 +    s32 tapped, touchConfirm = 0;
 +
++    native_touch_no_stick();
 +    for (i = 0; i < 3; i++) {
 +        native_touch_target(i, 0x08, 0x2E + i * 0x18, 0x30, 0x18);
 +    }
-+    native_touch_target(10, 0x3A, 0x3A, 0x100, 0x80);
++    native_touch_target(10, 0, NATIVE_KIT_OK_Y - 0x14, 0x3A, 0x3C);
 +    tapped = native_touch_tap();
 +    if (tapped >= 0 && tapped < 3) {
 +        task->choice = task->choice / 3 * 3 + tapped;
@@ -93,11 +102,10 @@
 +        touchConfirm = 1;
 +    }
 +#endif
-+    old = task->choice;
  
      if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
          task->choice--;
-@@ -111,9 +158,15 @@
+@@ -111,9 +166,15 @@
          }
      } else if (PAD_PRESSED(PAD_DOWN) || PAD_REPEATED(PAD_DOWN)) {
          task->choice++;
@@ -113,7 +121,7 @@
      }
      if (old != task->choice) {
          SOUND.playSound(SOUND_MENU_MOVE);
-@@ -122,7 +175,11 @@
+@@ -122,7 +183,11 @@
              task->frames[i] = 0;
          }
      }

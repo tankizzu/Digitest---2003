@@ -1,5 +1,31 @@
 # Changelog
 
+## Android (Digimon World 2003 per Android)
+
+### 0.8 (in preparazione)
+
+- **Crash alla scelta del kit risolto** (choice.c): toccando le linguette B/C il nuovo kit leggeva un
+  fotogramma d'animazione inesistente. Verificato su Linux.
+- **Pulsante OK per confermare il kit** sotto le linguette A/B/C (sprite OK del gioco); toccare i Digimon non
+  conferma più. Verificato su Linux.
+- **Indietro in basso a sinistra**, più grande (touch.c). Non verificato sul telefono.
+- **"MEMORY CARD N"** al posto di "Partita N"; "Scegli lo slot MEMORY CARD" (savetexts.c). Verificato su Linux.
+- **Porte automatiche** con la levetta (trigger.c). Verificato su Linux (Tempio della giungla → Giungla
+  eterea).
+- **Corsa al 58%** con la levetta, camminata con la spinta leggera (actor_control.c).
+- **Fumetto vicino ai personaggi**, tocco per parlare girandosi verso di loro (actor_control.c).
+- Test: `DW3_STICK` simula la levetta su Linux.
+- Documenti di progetto: CLAUDE.md, PROJECT_STATE.md, DECISIONS.md, TODO.md, TECHNICAL_NOTES.md.
+- `build-linux-gles/` tolto dal repository e ignorato.
+
+### 0.7
+
+- Freccia arancione vera dei fumetti per i dialoghi automatici, con x1/x2/x3; velocità di scrittura diverse.
+- Slot della memory card toccabili.
+- Salvataggio automatico come vero salvataggio di gioco, su due posizioni alternate; nessun tasto PlayStation.
+
+## Upstream (dw3-native-port)
+
 ## Unreleased
 
 - **Japanese** on the language screen, as a sixth row (NIHONGO, with Japan's flag). The European disc has every text in Japanese too, and the game the option for it, which its screen never shows; the rows close up to make room, and the label is made of the other labels' letters. Saves stay the European ones and the buttons are the same as in the other languages (✕ confirms). The port's own texts (DIGILOG, the starter packs, the Quit menu) have a Japanese version in kana, like the game's.

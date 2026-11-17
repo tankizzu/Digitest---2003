@@ -1,5 +1,5 @@
 /* The memory card screen's texts (STGMCARD's MEMCRD files) as the games
-   (games.c) want them: no "MEMORY CARD" or ports, "Game N" instead, and three
+   (games.c) want them: one MEMORY CARD slot for each game, "MEMORY CARD slot N", and three
    texts added for Continue's choice between the autosave and the saves
    (SAVE_TEXT_ASK, _AUTO, _SAVES). Italian and English are rewritten; the
    other languages get the three texts in English.
@@ -27,22 +27,22 @@ typedef struct {
 
 /* Italian */
 static const Text IT[] = {
-    {0x03, "Partita #"},
-    {0x04, "Controllo partita\nAttendi"},
+    {0x03, "MEMORY CARD #"},
+    {0x04, "Controllo MEMORY CARD\nAttendi"},
     {0x05, "Controllo del file\nAttendi"},
     {0x08, "Salvataggio\nAttendi"},
-    {0x0A, "Nessuna partita salvata"},
-    {0x0B, "Partita vuota"},
-    {0x0C, "Nessun salvataggio\nin questa partita"},
+    {0x0A, "Nessuna MEMORY CARD salvata"},
+    {0x0B, "Slot MEMORY CARD vuoto"},
+    {0x0C, "Nessun salvataggio\nin questo slot"},
     {0x0D, "Spazio insufficiente"},
     {0x11, "Caricamento\nAttendi"},
     {0x19, "Preparare la partita.\n|20|01|6F|01|01|01|0F|01|01|1B|1C"}, /* the yes / no line, as it was */
-    {0x1B, "Partita non disponibile"},
-    {0x1D, "Scegli la partita"},
+    {0x1B, "Slot MEMORY CARD non disponibile"},
+    {0x1D, "Scegli lo slot MEMORY CARD"},
     {0x1E, "Preparazione\nAttendi"},
     {0x1F, "Salvataggio\nAttendi"},
     {0x26, "Errore di salvataggio"},
-    {0x28, "Partita #"},
+    {0x28, "MEMORY CARD #"},
     {0x29, "Da dove vuoi riprendere."},
     {0x2A, "Automatico"},
     {0x2B, "Salvataggi"},
@@ -51,22 +51,22 @@ static const Text IT[] = {
 
 /* English */
 static const Text EN[] = {
-    {0x03, "Game #"},
-    {0x04, "Checking game\nPlease wait"},
+    {0x03, "MEMORY CARD #"},
+    {0x04, "Checking MEMORY CARD\nPlease wait"},
     {0x05, "Checking file\nPlease wait"},
     {0x08, "Saving\nPlease wait"},
-    {0x0A, "No saved game"},
-    {0x0B, "Empty game"},
-    {0x0C, "No saves\nin this game"},
+    {0x0A, "No saved MEMORY CARD"},
+    {0x0B, "Empty MEMORY CARD slot"},
+    {0x0C, "No saves\nin this slot"},
     {0x0D, "Not enough space"},
     {0x11, "Loading\nPlease wait"},
     {0x19, "Prepare the game.\n|26|12|20|01|01|01|0F|01|01|1B|1C"},
-    {0x1B, "Game not available"},
-    {0x1D, "Choose a game"},
+    {0x1B, "MEMORY CARD slot not available"},
+    {0x1D, "Choose MEMORY CARD slot"},
     {0x1E, "Preparing\nPlease wait"},
     {0x1F, "Saving\nPlease wait"},
     {0x26, "Save error"},
-    {0x28, "Game #"},
+    {0x28, "MEMORY CARD #"},
     {0x29, "Continue from where."},
     {0x2A, "Autosave"},
     {0x2B, "Saves"},

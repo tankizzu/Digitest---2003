@@ -1,0 +1,17 @@
+--- a/src/field/field_mode/trigger.c
++++ b/src/field/field_mode/trigger.c
+@@ -216,7 +216,14 @@
+                     if (FIELDSTG_findTrigger(task) == 0) {
+                         task->setSubstate(task, 0);
+                         children->balloon->setState(children->balloon, TASK_DONE);
++#ifdef NATIVE
++                    /* touch: a door (an exit) opens by itself when the stick walks the player into it */
++                    } else if (((PAD.getPressed(0) & (1 << PAD_CROSS))
++                                || (task->entry->type == SLOT_EXIT && native_touch_stick_level() != 0))
++                               && FIELDSTG_state.frozen == 0) {
++#else
+                     } else if ((PAD.getPressed(0) & (1 << PAD_CROSS)) && FIELDSTG_state.frozen == 0) {
++#endif
+                         children->balloon->setState(children->balloon, TASK_KILL);
+                         FIELDSTG_setOffTrigger(task);
+                         task->nextSubstate(task);
