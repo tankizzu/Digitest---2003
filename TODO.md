@@ -59,6 +59,9 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       riquadri = 640×384 px; in verticale se ne vede tutta l'altezza, sopra e sotto nero come deciso per le stanze
       piccole). **Chiedere all'utente**: lasciare il nero (A), ingrandire x1,4 (B) o fino a riempire (C) solo nelle
       mappe basse (anteprima da screenshot reale; contraddice la decisione "dove la mappa finisce resta il nero").
+- [ ] Strada di Asuka a tutto schermo (richiesta dell'utente): prototipo spento (`DW3_ZOOM_MAP=1`), verificato su
+      Linux. Da approvare; poi accenderlo, provare scelte Sì/No e fumetto nella strada, la miniatura del salvataggio
+      (GPU software senza ingrandimento).
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
 - [x] Lingua a tutto schermo (sfondo su tutta l'altezza; righe alte 31 px: ingrandirle se l'utente le trova piccole).
 - [x] Nome, kit, conferma a tutto schermo (sfondo a esagoni ripetuto in altezza). Verificato su Linux.

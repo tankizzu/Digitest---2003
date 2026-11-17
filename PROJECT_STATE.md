@@ -42,8 +42,9 @@ titolo).
 
 - **Impostazioni**: tre proposte (A icona sola, B icona nel pannellino — quella attiva —, C pannello sotto
   CONTINUA). `DW3_SETTINGS_LOOK=1/2/3` per vederle.
-- **Strada di Asuka**: l'utente la vuole a tutto schermo come le altre (la mappa è alta solo 384 pixel): manca il
-  piano (ingrandire solo la scena) da approvare.
+- **Strada di Asuka**: l'utente la vuole a tutto schermo come le altre (la mappa è alta solo 384 pixel). Piano in
+  TECHNICAL_NOTES e prototipo funzionante su Linux, **spento** (`DW3_ZOOM_MAP=1`): ingrandisce di 1,85 solo la scena
+  (mappa e personaggi), i dialoghi seguono i personaggi. Serve l'approvazione per accenderlo (anche nell'APK).
 - Rinominare una memory card dopo il primo salvataggio (oggi non si può).
 - Fascia alta: scelte di partenza (sopra la mappa, solo col giocatore in controllo, prima di Genji solo i
   partner); OPZIONI quando ci sarà la schermata impostazioni.
@@ -59,8 +60,8 @@ titolo).
 
 1. Riscontro dell'utente sulla 2.3 (APK in `build-android/dw2003.apk`, da mandare solo a lui), soprattutto la
    battaglia in verticale e il trascinamento nelle liste.
-2. Strada di Asuka a tutto schermo come le altre (richiesta dell'utente): ingrandire solo la scena, non i menu;
-   cambio architetturale, serve un piano da approvare.
+2. Strada di Asuka a tutto schermo: prototipo pronto e spento, da far vedere all'utente (immagine prima/dopo) e
+   accendere se approva.
 3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.
 4. Le scelte qui sopra.
 5. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); OPZIONI
