@@ -1,0 +1,16 @@
+--- a/src/battle/battle_mode/command_menu.c
++++ b/src/battle/battle_mode/command_menu.c
+@@ -16,6 +16,13 @@
+         for (i = 0; i < BATTLE_COMMAND_COUNT; i++) {
+             w->lines[i] = createTextWindow(BATTLE_LAYER_MENUS, 1, 0x24, 0x6D + i * 0x13);
+             w->lines[i]->setString(w->lines[i], text, i + 1);
++#ifdef NATIVE
++            if (native_portrait()) { /* upright: in its big button (cursor.c), the words half as big again */
++                w->lines[i]->setPos(w->lines[i], NATIVE_CMD_X(i) + 34, NATIVE_CMD_Y(i) + 12);
++                w->lines[i]->setScale(w->lines[i], ONE * 3 / 2, ONE * 3 / 2);
++                w->lines[i]->setPivot(w->lines[i], NATIVE_CMD_X(i) + 34, NATIVE_CMD_Y(i) + 12);
++            }
++#endif
+         }
+         fighter = &FIGHTSTG_battle.state.fighters[0][FIGHTSTG_battle.state.active[0]];
+         if (fighter->flags & FIGHTER_ASLEEP) {

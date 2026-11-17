@@ -1,0 +1,26 @@
+--- a/src/battle/battle_mode/partner_view.c
++++ b/src/battle/battle_mode/partner_view.c
+@@ -7,7 +7,11 @@
+     SpriteDrawer drawer;
+ 
+     initSpriteDrawer(&drawer);
++#ifdef NATIVE
++    drawer.setLayerId(native_portrait() ? NATIVE_BATTLE_LAYER_HUD : BATTLE_LAYER_MENUS, 0); /* upright: under the HUD */
++#else
+     drawer.setLayerId(BATTLE_LAYER_MENUS, 0);
++#endif
+     drawer.setTexture(0x200, 0);
+     drawer.draw(FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16), 10, 246, 74);
+ }
+@@ -29,6 +33,11 @@
+         FIGHTSTG_fighterCameraRect.y = 0x4C;
+         FIGHTSTG_fighterCameraRect.w = 0x64;
+         FIGHTSTG_fighterCameraRect.h = 0x3C;
++#ifdef NATIVE
++        if (native_portrait()) { /* upright: in the tall screen, under the HUD as sideways */
++            FIGHTSTG_fighterCameraRect.y += NATIVE_FIELD_Y;
++        }
++#endif
+         task->layer = GFX.funcs.createLayer(&FIGHTSTG_fighterCameraRect, 0xC, 0x1009);
+         task->layer->setOffset(task->layer, 0x102, 0x6A);
+         task->layer->allocCallbacks(task->layer, 0x32);

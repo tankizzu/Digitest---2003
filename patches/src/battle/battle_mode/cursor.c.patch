@@ -1,12 +1,20 @@
 --- a/src/battle/battle_mode/cursor.c
 +++ b/src/battle/battle_mode/cursor.c
-@@ -32,6 +32,14 @@
+@@ -32,6 +32,22 @@
                  FIGHTSTG_cursorBarRect.x = 0x90;
                  y = task->params.y + task->prevSel * task->params.step;
              }
 +#ifdef NATIVE
 +            if (native_portrait()) { /* upright: the one tall screen, the menus at its bottom (types.h) */
-+                SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, task->params.x,
++                s32 x = task->params.x;
++
++                if (NATIVE_CMD_GRID(task->params)) { /* the commands' grid: in the button's square */
++                    s32 k = i < 2 ? task->sel : task->prevSel;
++
++                    x = NATIVE_CMD_X(k) + 6;
++                    y = NATIVE_CMD_Y(k) + (NATIVE_CMD_H - 12) / 2;
++                }
++                SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, x,
 +                            NATIVE_FIELD_Y + native_field_h() - SCREEN_HEIGHT + y);
 +                addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
 +                continue;
@@ -15,7 +23,7 @@
              SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, task->params.x, y);
              addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
              SetDrawMove(&FIGHTSTG_cursorBarMoves[i + 1], &FIGHTSTG_cursorBarRect, task->params.x, y + 0x100);
-@@ -39,6 +47,10 @@
+@@ -39,6 +55,10 @@
          }
          while (IsIdleGPU(0)) {
          }
@@ -26,7 +34,23 @@
          ContinueDraw(FIGHTSTG_cursorBarOt, saved);
      }
      task->prevSel = task->sel;
-@@ -107,6 +119,29 @@
+@@ -76,6 +96,15 @@
+         } else {
+             drawer.setClutRow(0);
+         }
++#ifdef NATIVE
++        if (NATIVE_CMD_GRID(task->params)) { /* the command's row of the game, as a big button */
++            drawer.setScale(ONE * NATIVE_CMD_W / 97, ONE * NATIVE_CMD_H / 18, ONE);
++            drawer.setPivot(NATIVE_CMD_X(i), NATIVE_CMD_Y(i));
++            drawer.draw(sheet, task->params.sprite, NATIVE_CMD_X(i), NATIVE_CMD_Y(i));
++            drawer.setScale(ONE, ONE, ONE);
++            continue;
++        }
++#endif
+         drawer.draw(sheet, task->params.sprite, task->params.spriteX, y);
+         y += task->params.spriteStep;
+     }
+@@ -107,6 +136,33 @@
              if (task->params.sprite != -1) {
                  FIGHTSTG_drawCursorSprites(task);
              }
@@ -37,6 +61,10 @@
 +                s32 line, tapped;
 +
 +                for (line = 0; line < task->params.count; line++) {
++                    if (NATIVE_CMD_GRID(task->params)) {
++                        native_touch_target(line, NATIVE_CMD_X(line), NATIVE_CMD_Y(line) - 2, NATIVE_CMD_W, NATIVE_CMD_H + 4);
++                        continue;
++                    }
 +                    native_touch_target(line, task->params.x - 6, task->params.y + line * task->params.step - 2, 150,
 +                                        task->params.step);
 +                }

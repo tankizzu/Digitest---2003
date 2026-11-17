@@ -1,11 +1,18 @@
 --- a/include/battle/battle_mode/types.h
 +++ b/include/battle/battle_mode/types.h
-@@ -30,11 +30,56 @@
+@@ -30,11 +30,63 @@
  #define BATTLE_LAYER_MODELS 0x1004
  #define BATTLE_LAYER_MENUS 0x1005 /* the HUD, the menus and the messages */
  #define BATTLE_LAYER_FRONT 0x1006 /* the fades, the flashes and the sprite effects over all */
 +#ifdef NATIVE
 +#define NATIVE_BATTLE_LAYER_HUD 0x1007 /* upright: the HUD at the top of the tall screen (hud.c) */
++/* Upright, the six commands as big buttons, two by three at the bottom (in BATTLE_LAYER_MENUS' 240 lines): command i
++   at column i % 2, row i / 2 (cursor.c, command_menu.c) */
++#define NATIVE_CMD_W 150
++#define NATIVE_CMD_H 36
++#define NATIVE_CMD_X(i) (6 + (i) % 2 * 158)
++#define NATIVE_CMD_Y(i) (240 - 6 - native_touch_safe_inset(3) - (3 - (i) / 2) * (NATIVE_CMD_H + 6))
++#define NATIVE_CMD_GRID(params) (native_portrait() && (params).count == 6 && (params).x == 17)
 +#endif
  
  /* The body of WFIGHTMN's and WFIGHTTS's layer setups: the display and the
@@ -57,7 +64,7 @@
  #define FIGHTSTG_CREATE_LAYERS(screen, frontCallbacks)                          \
      Layer *layer;                                                               \
                                                                                  \
-@@ -60,5 +105,6 @@
+@@ -60,5 +112,6 @@
      layer = GFX.funcs.createLayer(&(screen), 1, BATTLE_LAYER_FRONT);            \
      layer->setOffset(layer, 0, 0);                                              \
      layer->allocCallbacks(layer, frontCallbacks)
