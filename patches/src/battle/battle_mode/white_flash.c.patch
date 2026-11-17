@@ -1,0 +1,14 @@
+--- a/src/battle/battle_mode/white_flash.c
++++ b/src/battle/battle_mode/white_flash.c
+@@ -20,6 +20,11 @@
+     poly->x2 = poly->x0 = 0;
+     poly->y1 = poly->y0 = 0;
+     poly->y3 = poly->y2 = 240;
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the whole tall screen (the front layer's offset is 0, types.h) */
++        poly->y3 = poly->y2 = native_field_h();
++    }
++#endif
+     addPrim(ot, poly);
+     mode = (DR_TPAGE *)(poly + 1);
+     SetDrawTPage(mode, 0, 1, 0xA0);

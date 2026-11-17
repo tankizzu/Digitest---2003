@@ -2,6 +2,15 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 2.4 (in preparazione)
+
+- Battaglia in verticale: il **lampo bianco** (entrata di un partner, alcuni colpi) copriva solo le prime 240 righe
+  dello schermo; ora tutto. La **digievoluzione** (il vecchio Digimon che diventa reticolo e il nuovo che appare)
+  scorre su tutta l'altezza, e i suoi effetti a tutto schermo stanno a metà schermo invece che in alto. (Lampo:
+  prova su Linux in corso. Digievoluzione: non provata, la squadra di prova non può digievolvere.)
+- Proposta spenta (da approvare): strada di Asuka del prologo a tutto schermo, solo la scena ingrandita
+  (`DW3_ZOOM_MAP=1`).
+
 ### 2.3
 
 - **Battaglia in verticale con la disposizione dell'utente** (dalle demo "Disposizione battaglia"): statistiche

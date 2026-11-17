@@ -47,11 +47,15 @@
  /* A 2D effect's task: starts a sprite animation for each entry of its
     archive (up to 30), on BATTLE_LAYER_FRONT for effects 1000 to 1002 and
     1007, else on BATTLE_LAYER_MODELS, and ends once they all have */
-@@ -460,6 +500,16 @@
+@@ -460,6 +500,20 @@
          if (task->effect == 1007) {
              layerId = BATTLE_LAYER_FRONT;
          }
 +#ifdef NATIVE
++        if (native_portrait() && layerId == BATTLE_LAYER_FRONT) {
++            /* upright: the front layer's screen effects (a digivolution's, placed on the 240 lines) mid-screen */
++            task->pos.vy += (native_field_h() - SCREEN_HEIGHT) / 2;
++        }
 +        /* its own images instead */
 +        task->nativeImages = native_effect_images(task->effect, task->nativeCritical, task->nativeStage, &task->nativeTicks);
 +        if (task->nativeImages >= 0) {
@@ -64,7 +68,7 @@
          for (count = 0; count < 30; count++) {
              if (archive[count] == 0) {
                  break;
-@@ -473,6 +523,21 @@
+@@ -473,6 +527,21 @@
          task->nextState(task);
          break;
      case TASK_RUN:
@@ -86,7 +90,7 @@
          done = 1;
          for (j = 0; j < task->count; j++) {
              if (children[j] != NULL) {
-@@ -497,6 +562,12 @@
+@@ -497,6 +566,12 @@
      SpriteEffectEntry *entry;
  
      task->effect = -1;
