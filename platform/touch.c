@@ -8,6 +8,7 @@
 #include "touch.h"
 
 int movie_playing(void); /* movie.c */
+int getMode(void);       /* the game's mode (engine/game/state.c) */
 
 /* A finger held on a movie this long skips it (Start, as the game takes) */
 #define SKIP_HOLD_MS 2000
@@ -31,6 +32,12 @@ static int s_stick_on;
 static float s_bx, s_by, s_fx, s_fy, s_rad; /* the stick's base, the finger, its reach */
 static float s_vx, s_vy;                    /* -1..1 */
 static Uint64 s_last_touch;
+static Uint64 s_menu_until, s_back_until; /* the menu and back buttons show until then */
+static int s_press_start, s_press_triangle;  /* vsyncs a button is still held for a tap or the system's back */
+static int s_menu_down, s_back_down;
+static int s_text_tap, s_text_held;
+static int s_text_tap_frame = -1; /* the vsync the tap was first read at: it holds for that whole game frame */
+int VSync(int mode); /* native_touch_text_*: a finger landed (counts down, latched), one down */
 static SDL_FingerID s_skip_id;
 static int s_skip_on, s_skip_press;
 static Uint64 s_skip_from;
@@ -75,7 +82,17 @@ void native_touch_target(int id, int x, int y, int w, int h) {
 int native_touch_tap(void) {
     int t = s_tap;
     s_tap = -1;
-    return t;
+    return t == 0x7A11 ? -1 : t; /* a tap meant for native_touch_anywhere is no option's */
+}
+
+#define ANYWHERE_ID 0x7A11
+int native_touch_anywhere(void) {
+    native_touch_target(ANYWHERE_ID, -10000, -10000, 20000, 20000); /* the whole display and the bars around it */
+    if (s_tap == ANYWHERE_ID) {
+        s_tap = -1;
+        return 1;
+    }
+    return 0;
 }
 
 /* The target under a point of the PSX display, or -1 */
@@ -94,6 +111,8 @@ void touch_script_tap(int px, int py) {
     int id = target_at((float)px, (float)py);
     if (id >= 0) {
         s_tap = id;
+    } else {
+        s_text_tap = 5, s_text_tap_frame = -1; /* off the options: a tap on the text, as touch_poll counts one */
     }
 }
 
@@ -123,8 +142,45 @@ static void layout(int w, int h) {
     s_keys[s_nkeys++] = (Key){cx - gap, cy, r, B_SQUARE, TOUCH_SQUARE, 0};
     s_keys[s_nkeys++] = (Key){w * 0.5f + sr * 1.6f, h - sr * 1.6f, sr, B_START, TOUCH_START, 0};
     s_keys[s_nkeys++] = (Key){w * 0.5f - sr * 1.6f, h - sr * 1.6f, sr, B_SELECT, TOUCH_SELECT, 0};
-    s_keys[s_nkeys++] = (Key){sr * 1.8f, sr * 1.8f + h * 0.02f, sr, B_L1, TOUCH_L1, 0};
-    s_keys[s_nkeys++] = (Key){w - sr * 1.8f, sr * 1.8f + h * 0.02f, sr, B_R1, TOUCH_R1, 0};
+    s_keys[s_nkeys++] = (Key){sr * 1.8f, h * 0.36f, sr, B_L1, TOUCH_L1, 0};
+    s_keys[s_nkeys++] = (Key){w - sr * 1.8f, h * 0.36f, sr, B_R1, TOUCH_R1, 0};
+}
+
+void native_touch_menu_available(void) {
+    s_menu_until = SDL_GetTicks() + 150;
+}
+
+void native_touch_in_menu(void) {
+    s_back_until = SDL_GetTicks() + 150;
+}
+
+/* The screens that are menus by themselves: the field menu's screens, shops, the lab, the card album and shop, the
+   deck editor, the training and naming screens (engine/game_state.h's modes) */
+static int menu_mode(void) {
+    int m = getMode() >> 8;
+    return m == 0x10 || m == 0x0F || m == 0x0D || m == 0x12 || m == 0x13 || m == 0x04 || m == 0x0A || m == 0x0B;
+}
+
+static int menu_shown(void) {
+    return SDL_GetTicks() < s_menu_until;
+}
+
+static int back_shown(void) {
+    return SDL_GetTicks() < s_back_until || menu_mode();
+}
+
+/* The corner buttons, in pixels: the menu at the top right, back at the top left */
+static void corner(int right, float *x, float *y, float *r) {
+    float u = (float)SDL_min(s_w, s_h);
+    *r = u * 0.065f;
+    *x = right ? s_w - *r * 1.6f : *r * 1.6f;
+    *y = *r * 1.6f;
+}
+
+static int in_corner(int right, float px, float py) {
+    float x, y, r;
+    corner(right, &x, &y, &r);
+    return (px - x) * (px - x) + (py - y) * (py - y) <= r * r * 1.7f;
 }
 
 /* Fingers that tapped an option: they stay off the stick and the keys until they lift */
@@ -157,6 +213,36 @@ static void forget_targets(const SDL_FingerID *down, int n) {
     s_non_target = k;
 }
 
+static int was_down(SDL_FingerID id) {
+    for (int j = 0; j < s_ndown; j++) {
+        if (s_down[j] == id) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+
+int native_touch_text_tap(void) {
+    int now = VSync(-1);
+
+    if (s_text_tap > 0 && s_text_tap_frame < 0) {
+        s_text_tap_frame = now;
+    }
+    if (s_text_tap_frame >= 0) {
+        if (now == s_text_tap_frame) {
+            return 1;
+        }
+        s_text_tap = 0;
+        s_text_tap_frame = -1;
+    }
+    return 0;
+}
+
+int native_touch_text_held(void) {
+    return s_text_held;
+}
+
 static Key *key_at(float x, float y) {
     for (int i = 0; i < s_nkeys; i++) {
         float dx = x - s_keys[i].x, dy = y - s_keys[i].y, r = s_keys[i].r * 1.25f;
@@ -168,7 +254,7 @@ static Key *key_at(float x, float y) {
 }
 
 void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
-    int ndev = 0, seen_stick = 0, seen_skip = 0;
+    int ndev = 0, seen_stick = 0, seen_skip = 0, text_held = 0;
     SDL_TouchID *devs;
 
     if (!touch_enabled() || w <= 0 || h <= 0) {
@@ -182,6 +268,18 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     }
     SDL_FingerID now_down[10];
     int now_n = 0;
+
+    s_menu_down = s_back_down = 0;
+    {
+        /* the system's back (gesture or key, SDL_ANDROID_TRAP_BACK_BUTTON) is Triangle, the game's cancel */
+        static int back_was;
+        const bool *keys = SDL_GetKeyboardState(NULL);
+        int back = keys[SDL_SCANCODE_AC_BACK];
+        if (back && !back_was) {
+            s_press_triangle = 6;
+        }
+        back_was = back;
+    }
 
     devs = SDL_GetTouchDevices(&ndev);
     for (int d = 0; devs != NULL && d < ndev; d++) {
@@ -204,6 +302,20 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                 if (was && held_target(fingers[i]->id)) {
                     continue; /* still on the option it tapped */
                 }
+                if (menu_shown() && in_corner(1, x, y)) {
+                    if (!was) {
+                        s_press_start = 6;
+                    }
+                    s_menu_down = 1;
+                    continue;
+                }
+                if (back_shown() && in_corner(0, x, y)) {
+                    if (!was) {
+                        s_press_triangle = 6;
+                    }
+                    s_back_down = 1;
+                    continue;
+                }
                 if (!was && (id = target_at((x - s_pic[0]) / s_pic[2] * s_disp[0], (y - s_pic[1]) / s_pic[3] * s_disp[1])) >= 0) {
                     s_tap = id;
                     hold_target(fingers[i]->id);
@@ -212,11 +324,19 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
             }
             if (s_stick_on && fingers[i]->id == s_stick_id) {
                 seen_stick = 1;
+                text_held = 1;
                 s_fx = x, s_fy = y;
                 continue;
             }
             if ((k = key_at(x, y)) != NULL) {
                 k->down = 1;
+                continue;
+            }
+            text_held = 1;
+            if (!was_down(fingers[i]->id)) {
+                s_text_tap = 5, s_text_tap_frame = -1; /* a few vsyncs: the game reads the pad at 30 frames a second */
+            }
+            if (0) {
             } else if (movie_playing()) { /* held on a movie: skips it after SKIP_HOLD_MS */
                 if (!s_skip_on || s_skip_id != fingers[i]->id) {
                     s_skip_on = 1, s_skip_id = fingers[i]->id, s_skip_from = SDL_GetTicks();
@@ -232,6 +352,10 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
         SDL_free(fingers);
     }
     SDL_free(devs);
+    s_text_held = text_held;
+    if (s_text_tap > 0 && s_text_tap_frame < 0) { /* not read in time: dropped */
+        s_text_tap--;
+    }
     SDL_memcpy(s_down, now_down, sizeof(SDL_FingerID) * (size_t)now_n);
     s_ndown = now_n;
     forget_targets(now_down, now_n);
@@ -247,6 +371,14 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     if (s_skip_press > 0) {
         s_skip_press--;
         *held |= 1 << B_START;
+    }
+    if (s_press_start > 0) {
+        s_press_start--;
+        *held |= 1 << B_START;
+    }
+    if (s_press_triangle > 0) {
+        s_press_triangle--;
+        *held |= 1 << B_TRIANGLE;
     }
     s_vx = s_vy = 0;
     if (s_stick_on) {
@@ -298,6 +430,16 @@ int touch_shapes(TouchShape *out, int max) {
     if (s_stick_on && n + 2 <= max) {
         out[n++] = (TouchShape){s_bx, s_by, s_rad * 1.25f, TOUCH_RING, 0.45f, 0};
         out[n++] = (TouchShape){s_bx + s_vx * s_rad, s_by + s_vy * s_rad, s_rad * 0.5f, TOUCH_KNOB, 0.75f, 0};
+    }
+    if (menu_shown() && n < max) {
+        float x, y, r;
+        corner(1, &x, &y, &r);
+        out[n++] = (TouchShape){x, y, r, TOUCH_MENU, s_menu_down ? 0.95f : 0.75f, 0};
+    }
+    if (back_shown() && n < max) {
+        float x, y, r;
+        corner(0, &x, &y, &r);
+        out[n++] = (TouchShape){x, y, r, TOUCH_BACK, s_back_down ? 0.95f : 0.75f, 0};
     }
     if (s_skip_on == 1 && n < max) {
         float f = SDL_min(1.0f, (float)(SDL_GetTicks() - s_skip_from) / SKIP_HOLD_MS);

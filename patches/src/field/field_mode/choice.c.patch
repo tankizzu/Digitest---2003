@@ -1,0 +1,32 @@
+--- a/src/field/field_mode/choice.c
++++ b/src/field/field_mode/choice.c
+@@ -61,10 +61,29 @@
+                 children->cursor->setPos(children->cursor, 0x12, task->selection * 14 + 0xBE);
+                 break;
+             }
++#ifdef NATIVE
++            {
++                /* touch: yes and no, tapped, answer at once */
++                s32 tapped;
++
++                native_touch_target(0, 0x10, 0xBC, 200, 14);
++                native_touch_target(1, 0x10, 0xBC + 14, 200, 14);
++                tapped = native_touch_tap();
++                if (tapped >= 0) {
++                    task->selection = tapped;
++                    children->cursor->setPos(children->cursor, 0x12, task->selection * 14 + 0xBE);
++                }
++                if (PAD_PRESSED(PAD_CROSS) || tapped >= 0) {
++                    SOUND.playSound(SOUND_SELECT);
++                    task->substate = 10;
++                }
++            }
++#else
+             if (PAD_PRESSED(PAD_CROSS)) {
+                 SOUND.playSound(SOUND_SELECT);
+                 task->substate = 10;
+             }
++#endif
+             break;
+         case 3:
+             children->event = FIELDSTG_startEvent(task->selection == 0 ? FIELDSTG_choices[task->type].events[0] : FIELDSTG_choices[task->type].events[1]);

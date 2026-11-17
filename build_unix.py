@@ -49,6 +49,8 @@ PIC = ["-fPIC"] if ANDROID else ["-fno-pic", "-fno-pie"]
 B.CC, B.NM, B.OBJCOPY, B.OUT, B.PATCHED = CC, NM, OBJCOPY, OUT, OUT / "patched"
 B.GAME_CFLAGS = [f.replace(str(B.NATIVE / "build-x64"), str(OUT)) for f in B.GAME_CFLAGS] + PIC + ["-fno-stack-protector",
     "-Dlong=int"]  # the PSX's long is 32 bits, as on Windows (LLP64); Linux and Android are LP64 (patches/include/common.h)
+# patched shared .inc.c files (patches/src/shared) before the decomp's: they are found through -I, not beside their includer
+B.GAME_CFLAGS.insert(B.GAME_CFLAGS.index(f"-I{B.DECOMP / 'src'}"), f"-I{OUT / 'patched' / 'src'}")
 B.GAME_OPT = B.GAME_OPT + PIC
 B.SAN_FLAGS = []
 PLATFORM_CFLAGS = ["-std=gnu11", "-c", "-O2", "-g", "-Wall", "-Wno-unused-parameter", "-Wno-unused-function",

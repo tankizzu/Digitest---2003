@@ -18,7 +18,19 @@
              task->nextSubstate(task);
          }
          FIELDSTG_drawCover(FIELD_LAYER_COVER, 0x8000);
-@@ -494,7 +503,11 @@
+@@ -468,6 +477,11 @@
+  */
+ static inline void openFieldMenu(FieldTask *task, FieldChildren *children) {
+     if (FIELDSTG_state.menuOpen != 1 && FIELDSTG_state.busy == 0 && FIELDSTG_state.acting == 0) {
++#ifdef NATIVE
++        if (GAME.progress >= STORY_GENJI_BEATEN) {
++            native_touch_menu_available(); /* touch: the menu button shows; tapped, it is Start */
++        }
++#endif
+         do {
+             if (GAME.progress < STORY_GENJI_BEATEN || !(PAD.getPressed(0) & (1 << PAD_START))) {
+                 break;
+@@ -494,7 +508,11 @@
      s32 mode;
  
      if (FIELDSTG_keepsFileCache() == 0) {
@@ -30,7 +42,7 @@
      }
      setUpFieldScreen();
      if (FIELDSTG_keepsFileCache() == 0) {
-@@ -511,7 +524,14 @@
+@@ -511,7 +529,14 @@
      if (FIELDSTG_state.stageInit != NULL) {
          children->stage = FIELDSTG_state.stageInit(task);
      }
@@ -45,7 +57,7 @@
      FLAGS_00.applyAction(FIELD_VISITED_FLAG(GAME.funcs.getMode()), 1);
      mode = GAME.funcs.getPrevMode();
      /* from other than a field (0x2xx, 0x3xx), STDWTITL,
-@@ -635,6 +655,13 @@
+@@ -635,6 +660,13 @@
          switch (task->substate) {
          case 0:
          default:
@@ -59,7 +71,7 @@
              openFieldMenu(task, children);
              break;
          case 1:
-@@ -974,6 +1001,9 @@
+@@ -974,6 +1006,9 @@
      if (task != NULL) {
          FIELDSTG_state.busy = 1;
          FIELDSTG_state.battleStarting = 1;
@@ -69,7 +81,7 @@
          next = MODE_BATTLE_MOVIE;
          if (GAME.progress != STORY_MOVIE_BATTLES) {
              next = MODE_BATTLE;
-@@ -1020,7 +1050,12 @@
+@@ -1020,7 +1055,12 @@
      FieldTask *field = TASK_REGISTRY.funcs.find(FIELD_TASK_FIELD, -1, -1);
      FieldChildren *children = field->children;
  

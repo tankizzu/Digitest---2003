@@ -1,6 +1,49 @@
 --- a/src/menus/title/menu.c
 +++ b/src/menus/title/menu.c
-@@ -170,6 +170,15 @@
+@@ -57,7 +57,11 @@
+         }
+         break;
+     case 2:
++#ifdef NATIVE
++        if (PAD_PRESSED(PAD_START) || native_touch_anywhere()) { /* touch: a tap anywhere is Start */
++#else
+         if (PAD_PRESSED(PAD_START)) {
++#endif
+             task->nextSubstate(task);
+             task->timer = 0;
+             SOUND.playSound(SOUND_SELECT);
+@@ -127,11 +131,30 @@
+             }
+             task->selection = 1;
+         }
++#ifdef NATIVE
++        {
++            /* touch: new game and continue, tapped, are picked at once */
++            s32 tapped;
++
++            native_touch_target(0, 74, 146, 176, 21);
++            native_touch_target(1, 74, 167, 176, 23);
++            tapped = native_touch_tap();
++            if (tapped >= 0) {
++                task->selection = tapped;
++            }
++            if (PAD_PRESSED(PAD_CROSS) || tapped >= 0) {
++                task->timer = 0;
++                SOUND.playSound(SOUND_SELECT);
++                task->nextSubstate(task);
++            }
++        }
++#else
+         if (PAD_PRESSED(PAD_CROSS)) {
+             task->timer = 0;
+             SOUND.playSound(SOUND_SELECT);
+             task->nextSubstate(task);
+         }
++#endif
+         break;
+     case 2:
+         if ((++task->timer & 3) == 0) {
+@@ -170,6 +193,15 @@
          if (task->substate == 0) {
              return;
          }

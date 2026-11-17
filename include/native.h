@@ -88,10 +88,16 @@ int native_character(int id, int *file, int *width);
    Based on Dmw2003FastText by markisha64 (MIT) */
 extern int g_fast_text;
 int native_long_held(int held);
-#define NATIVE_TEXT_BUTTONS()                                                                  \
-    (PAD.getPressed(0) |                                                                       \
-     (g_fast_text && OVERLAY_LOADER.mode != 6 && OVERLAY_LOADER.mode != 7 ? native_long_held(PAD.getHeld(0)) : 0))
-#define NATIVE_TEXT_PRESSED(button) ((NATIVE_TEXT_BUTTONS() >> PAD.getButtonBit(0, button)) & 1)
+/* Touch (platform/touch.c): outside battles and card games a tap anywhere is the button a text waits for, and a
+   finger held is X held (fast text) */
+int native_touch_text_tap(void);  /* a finger landed, off the keys and options, this frame */
+int native_touch_text_held(void); /* a finger is down, off the keys and options */
+#define NATIVE_TEXT_TOUCH (OVERLAY_LOADER.mode != 6 && OVERLAY_LOADER.mode != 7)
+#define NATIVE_TEXT_BUTTONS()                                                                                     \
+    (PAD.getPressed(0) |                                                                                          \
+     ((g_fast_text || native_touch_text_held()) && NATIVE_TEXT_TOUCH                                              \
+          ? native_long_held(PAD.getHeld(0) | (native_touch_text_held() << PAD.getButtonBit(0, PAD_CROSS))) : 0))
+#define NATIVE_TEXT_PRESSED(button) (((NATIVE_TEXT_BUTTONS() >> PAD.getButtonBit(0, button)) & 1) || (NATIVE_TEXT_TOUCH && native_touch_text_tap()))
 
 /* Extra starter packs (platform/packs.c): DRAGON, TACTICAL and MYSTIC, 3-5
    after the game's three. The choice offers them while g_extra_packs is on;
@@ -326,5 +332,11 @@ int native_visual_archive_enabled(int archive); /* selected archive contains pre
    wants them; native_touch_tap() is the id of the one a finger landed on since it was last asked, or -1 */
 void native_touch_target(int id, int x, int y, int w, int h);
 int native_touch_tap(void);
+int native_touch_anywhere(void);
+void native_touch_menu_available(void); /* the menu button shows this frame; tapped, it is Start */
+void native_touch_in_menu(void);        /* the back button shows this frame; tapped, it is Triangle */ /* a tap anywhere on the picture (a "press Start" screen), 1 once */
+/* The language picked at the language select, remembered (platform/prefs.c): -1 if none yet */
+int native_saved_language(void);
+void native_save_language(int language);
 
 #endif /* NATIVE_H */

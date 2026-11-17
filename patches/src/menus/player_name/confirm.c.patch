@@ -24,3 +24,47 @@
      initSpriteDrawer(&sprite);
      sprite.setTexture(0x280, 0x100);
      if (GFX.funcs.getTime() - task->clutTime > 4) {
+@@ -162,6 +171,10 @@
+ /* The confirmation's states: yes or no (substate 200 for no or triangle); yes
+    counts the progress up to 100, then waits 120 frames before substate 100.
+    Once closing, closes the panels and ends */
++#ifdef NATIVE
++static s32 touchYesNo; /* touch: yes or no tapped this frame */
++#endif
++
+ void STPLNMET_runConfirm(NameConfirm *task, NameConfirmWindows *windows) {
+     s32 old;
+ 
+@@ -169,6 +182,20 @@
+     case 0:
+     default:
+         old = task->cursor;
++#ifdef NATIVE
++        {
++            /* touch: yes and no, tapped, answer at once */
++            s32 tapped;
++
++            native_touch_target(0, 0x50, 0xB7, 0x70, 14);
++            native_touch_target(1, 0x50, 0xB7 + 14, 0x70, 14);
++            tapped = native_touch_tap();
++            touchYesNo = tapped >= 0;
++            if (tapped >= 0) {
++                task->cursor = tapped;
++            }
++        }
++#endif
+         if (PAD_PRESSED(PAD_UP)) {
+             task->cursor = 0;
+         } else if (PAD_PRESSED(PAD_DOWN)) {
+@@ -178,7 +205,11 @@
+             SOUND.playSound(SOUND_CURSOR);
+             windows->cursor->setPos(windows->cursor, 0x5A, task->cursor * 14 + 0xB9);
+         }
++#ifdef NATIVE
++        if (PAD_PRESSED(PAD_CROSS) || touchYesNo) {
++#else
+         if (PAD_PRESSED(PAD_CROSS)) {
++#endif
+             SOUND.playSound(SOUND_SELECT);
+             if (task->cursor == 0) {
+                 task->substate = 1;

@@ -1,6 +1,6 @@
 --- a/src/engine/menu/field_menu.c
 +++ b/src/engine/menu/field_menu.c
-@@ -141,6 +141,106 @@
+@@ -141,6 +141,126 @@
  
  s32 FIELD_MENU_SPRITES[6] = { 29, 30, 31, 32, 33, 34 };
  
@@ -69,10 +69,30 @@
 +    win->cursor->setPos(win->cursor, 0xB0, task->cursor * 14 + 0x31);
 +}
 +
++/* touch: a row of the menu tapped picks it and confirms (X) */
++static s32 tapCross;
++static void tapRows(FieldMenu *task, FieldMenuWindows *win, s32 rows) {
++    s32 i, tapped;
++
++    native_touch_in_menu();
++    for (i = 0; i < rows; i++) {
++        native_touch_target(i, 0xAC, 0x30 + i * 14, 132, 14);
++    }
++    tapped = native_touch_tap();
++    tapCross = tapped >= 0;
++    if (tapped >= 0 && tapped != task->cursor) {
++        task->cursor = tapped;
++        win->cursor->setPos(win->cursor, 0xB0, task->cursor * 14 + 0x31);
++    }
++}
++
 +/* While it asks: up and down choose, X answers, triangle cancels. 1 to go to
 +   the title screen */
 +static s32 answerQuit(FieldMenu *task, FieldMenuWindows *win) {
-+    s32 prev = task->cursor;
++    s32 prev;
++
++    tapRows(task, win, 3);
++    prev = task->cursor;
 +
 +    if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
 +        if (--task->cursor < 0) {
@@ -86,7 +106,7 @@
 +    if (prev != task->cursor) {
 +        SOUND.playSound(SOUND_CURSOR);
 +        win->cursor->setPos(win->cursor, 0xB0, task->cursor * 14 + 0x31);
-+    } else if (PAD_PRESSED(PAD_CROSS)) {
++    } else if (PAD_PRESSED(PAD_CROSS) || tapCross) {
 +        SOUND.playSound(SOUND_SELECT);
 +        if (task->cursor == 1) {
 +            native_quit();
@@ -107,7 +127,7 @@
  /* Starts the field menu: opens the panels and the windows, with the extra option
     when the player has item 0x192 and option 2 only in a field zone */
  static inline void openFieldMenu(FieldMenu *task, FieldMenuWindows *win) {
-@@ -156,6 +256,23 @@
+@@ -156,6 +276,23 @@
          FIELD_MENU_CHOICE.extra = 0;
      }
      task->count = task->extraOption + 5;
@@ -131,7 +151,7 @@
      if (getFieldZone() >= 0) {
          task->option2Enabled = 1;
      } else {
-@@ -168,6 +285,10 @@
+@@ -168,6 +305,10 @@
  static inline void showFieldMenuOptions(FieldMenu *task, FieldMenuWindows *win) {
      showPartnerPage(task, win, 1, 1);
      for (task->counter = 0; task->counter < task->count; task->counter++) {
@@ -142,7 +162,7 @@
          win->options[task->counter]->setString(win->options[task->counter], FILE_CACHE.load(TEXT_FILE(TEXT_STATUS)),
                                    FIELD_MENU_OPTIONS[task->extraOption][task->counter]);
      }
-@@ -194,16 +315,32 @@
+@@ -194,16 +335,33 @@
      s32 prev;
      s32 done;
  
@@ -155,6 +175,7 @@
 +        task->step = 0; /* the fade, and the title screen */
 +        goto choose;
 +    }
++    tapRows(task, win, task->count);
 +#endif
      prev = task->cursor;
      if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
@@ -175,7 +196,16 @@
      }
      if (prev != task->cursor) {
          SOUND.playSound(SOUND_CURSOR);
-@@ -216,6 +353,13 @@
+@@ -211,11 +369,22 @@
+         return;
+     }
+     done = 0;
++#ifdef NATIVE
++    if (PAD_PRESSED(PAD_CROSS) || tapCross) {
++#else
+     if (PAD_PRESSED(PAD_CROSS)) {
++#endif
+         SOUND.playSound(SOUND_SELECT);
          if (task->option2Enabled == 0 && task->cursor == 2) {
              return;
          }
@@ -189,7 +219,7 @@
          done = 1;
          if (GAME.funcs.getMode() == MODE_STATUS) {
              task->step = 1;
-@@ -223,6 +367,11 @@
+@@ -223,6 +392,11 @@
              task->step = 0;
          }
          FIELD_MENU_CHOICE.option = task->cursor;
@@ -201,7 +231,7 @@
      } else if (PAD_PRESSED(PAD_TRIANGLE)) {
          SOUND.playSound(SOUND_MENU_CANCEL);
          done = 1;
-@@ -232,6 +381,9 @@
+@@ -232,6 +406,9 @@
              task->step = 1;
          }
      }
@@ -211,7 +241,7 @@
      if (done) {
          startPanel(&task->panels[0], 0);
          startPanel(&task->panels[1], 0);
-@@ -283,6 +435,19 @@
+@@ -283,6 +460,19 @@
          }
          break;
      case 6:
@@ -231,10 +261,11 @@
          if (GAME.funcs.getMode() == MODE_STATUS) {
              GAME.funcs.requestMode(GAME.fieldMode, 0);
          } else {
-@@ -320,6 +485,64 @@
+@@ -319,6 +509,64 @@
+         obj2.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), FIELD_MENU_SPRITES[j], 0, 0);
      }
  }
- 
++
 +#ifdef NATIVE
 +/* The options' panel with seven rows (the journal's and the cards'): a sheet
 +   of its own with one frame, the six rows' (0x1B) with one more middle row
@@ -292,11 +323,10 @@
 +    return sheet;
 +}
 +#endif
-+
+ 
  /* Runs the field menu: opens its panels, moves the cursor and switches mode on a choice */
  void updateFieldMenu(FieldMenu *task, FieldMenuWindows *win) {
-     SpriteDrawer obj;
-@@ -406,6 +629,13 @@
+@@ -406,6 +654,13 @@
          }
          if (task->panels[1].level != 0) {
              STRETCH_SPRITE(obj, task->panels[1].level, 0x140, 0x52);

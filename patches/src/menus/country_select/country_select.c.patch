@@ -1,19 +1,18 @@
 --- a/src/menus/country_select/country_select.c
 +++ b/src/menus/country_select/country_select.c
-@@ -1,5 +1,12 @@
+@@ -1,4 +1,11 @@
  #include "menus/country_select.h"
- 
++
 +#ifdef NATIVE
 +/* The screen's sprites with a sixth row, Japanese (platform/language.c) */
 +#define CNTY_SEL_SHEET() ((void *)native_cnty_bank(FILE_CACHE.getEntry(CNTY_SEL_SPRITES)))
 +#else
 +#define CNTY_SEL_SHEET() FILE_CACHE.getEntry(CNTY_SEL_SPRITES)
 +#endif
-+
+ 
  RECT CNTY_SEL_screenRect = {0, 0, SCREEN_WIDTH, SCREEN_HEIGHT};
  RECT CNTY_SEL_vramRect = {0, 0, 1024, 512};
- /* A little larger than the screen */
-@@ -26,8 +33,13 @@
+@@ -26,7 +33,12 @@
  
  #if VERSION_EU
  /* The language of each option */
@@ -22,11 +21,10 @@
 +u8 CNTY_SEL_languages[] = {2, 3, 5, 4, 6, 0, 0};
 +#else
  u8 CNTY_SEL_languages[] = {2, 3, 5, 4, 6, 1, 0};
- #endif
 +#endif
+ #endif
  
  /* The mode's root task: once the sound bank is loaded, sets up the display and the layer,
-    uploads the images, creates the screen's controller and starts the music; stops the
 @@ -89,7 +101,7 @@
      sprite.setTexture(0x280, 0);
      /* The background repeats every 96 pixels */
@@ -84,7 +82,23 @@
                  SOUND.playSound(SOUND_MENU_MOVE);
                  task->selection++;
              }
-@@ -554,7 +570,23 @@
+@@ -508,6 +524,15 @@
+     switch (task->state) {
+     case TASK_INIT:
+     default:
++#ifdef NATIVE
++        /* the language picked before (platform/prefs.c): straight on to the opening */
++        if (native_saved_language() >= 0) {
++            LANGUAGE = native_saved_language();
++            GAME.funcs.requestMode(LANGUAGE == 0 ? MODE_OPENING : MODE_OPENING_2, 0);
++            task->setState(task, TASK_KILL);
++            break;
++        }
++#endif
+         children->background = CNTY_SEL_startBackgroundTask();
+         children->topPanel = CNTY_SEL_startTopPanelTask();
+         children->rightPanel = CNTY_SEL_startRightPanelTask();
+@@ -554,7 +579,23 @@
              task->nextSubstate(task);
              break;
          case MENU_SELECT:
@@ -108,7 +122,15 @@
                  SOUND.playSound(SOUND_MENU_CONFIRM);
                  children->cursor->setState(children->cursor, TASK_DONE);
                  task->nextSubstate(task);
-@@ -567,6 +599,9 @@
+@@ -562,11 +603,17 @@
+ #if VERSION_EU
+                 LANGUAGE = CNTY_SEL_languages[task->selection];
+ #endif
++#ifdef NATIVE
++                native_save_language(LANGUAGE);
++#endif
+             } else {
+                 moveSelection(task);
              }
              children->cursor->setSelection(children->cursor, task->selection);
              break;
