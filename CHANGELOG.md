@@ -2,6 +2,13 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.4
+
+- **Freccia dei dialoghi automatici**: la velocità si legge nei tre trattini della freccia stessa (x1 nessuno, x2
+  due, x3 tre), al posto delle frecce piccole. Verificato su Linux a x2 e x3.
+- **Icona**: disegno originale in pixel art (uovo digitale su fondo viola-blu con cifre binarie, nessun
+  personaggio o titolo).
+
 ### 1.3
 
 - **Campo a tutto schermo in verticale**: la tela prende la forma del telefono (320 × fino a 720; su un 9:20,

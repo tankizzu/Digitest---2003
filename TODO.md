@@ -26,7 +26,7 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [ ] 5. Fascia in alto: Impostazioni, Menu, stato dei partner (grafica del gioco). Fascia in basso: dialoghi
       e comandi. Banner, transizioni tra stanze e inizio battaglia con le misure nuove.
 - [x] 6. Android in verticale (1.2 anteprima, 1.3 a tutto schermo).
-- [ ] 7. Freccia dei dialoghi: i trattini indicano la velocità (aspetta la scelta tra le proposte A e B).
+- [x] 7. Freccia dei dialoghi: i trattini indicano la velocità (A).
 - [ ] 8. Demo da discutere: battaglia verticale (comandi grandi in basso), fascia alta (partner, MENU, OPZIONI),
       schermata Opzioni.
 

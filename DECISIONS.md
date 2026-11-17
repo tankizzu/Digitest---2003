@@ -43,8 +43,8 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - **Dialoghi automatici**: la freccia arancione dei fumetti del gioco (lo sprite vero), ruotata a destra, in
   basso a sinistra sopra la banda nera, senza sfondo; accanto "x1/x2/x3"; animata quando attiva; ogni tocco
   cambia velocità (spento → x1 → x2 → x3 → spento). La velocità cambia sia l'attesa sia la scrittura; x3 è più
-  veloce che tenere premuto (1.0: scrittura x8, 0,2 s per pagina). La velocità si vede come 1, 2 o 3 frecce
-  piccole accanto (stesso sprite): la scritta "x1/x2/x3" era fuori stile (17/11/2026).
+  veloce che tenere premuto (1.0: scrittura x8, 0,2 s per pagina). La velocità si legge nei trattini della freccia
+  stessa: x1 nessuno, x2 due, x3 tre (proposta A, approvata il 17/11/2026).
 
 ## Menu iniziali
 
@@ -77,6 +77,10 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   "vuoi riprendere".
 
 ## App
+
+- **Battaglia in verticale**: a tutto schermo, i pulsanti dei comandi grandi in basso **sopra** la scena 3D
+  (richiesta del 17/11/2026). Demo e interfacce sempre con la grafica del gioco (l'utente ha scartato le demo
+  disegnate a mano).
 
 - L'immagine di copertina proposta dall'utente (17/11/2026) non si usa come icona: contiene personaggi e logo
   protetti; si resta su un'icona originale, eventualmente ridisegnata nei colori della copertina.
