@@ -2,7 +2,20 @@
 
 ## Android (Digimon World 2003 per Android)
 
-### 2.2 (in preparazione)
+### 2.3
+
+- **Battaglia in verticale con la disposizione dell'utente** (dalle demo "Disposizione battaglia"): statistiche
+  più in basso e più grandi, il volto del partner accanto; i messaggi sopra i comandi; Tecniche, Oggetti, DV e Tag
+  più grandi in basso, ognuno dove l'utente l'ha messo (descrizione degli oggetti in alto, MP della tecnica sopra la
+  lista). **Niente L1 / R1** nelle liste: un tocco sceglie una riga, **trascinare** a sinistra o in su va alla pagina
+  dopo, a destra o in giù a quella prima (non provato: su Linux non si simula il trascinamento).
+- Corretto: in verticale il **pallino bianco** della riga scelta (comandi e liste) non si vedeva mai (anche nella
+  2.2): il gioco lo copia a vsync nel buffer già mostrato, e la tela alta si ridisegna tutta. Ora si disegna nel
+  fotogramma, ingrandito come la riga (la stessa immagine del gioco con la sua animazione).
+- Corretto: la cornice degli MP nelle Tecniche si portava dietro la linea che nel gioco la unisce al pannello del
+  partner; ora è ritagliata al suo riquadro.
+
+### 2.2
 
 - **Battaglia in verticale** (prima versione da provare): la tela alta; la **scena 3D a tutta altezza** (il centro
   della ripresa a metà schermo: si vede molto più ambiente sopra e sotto); in alto le **statistiche affiancate**

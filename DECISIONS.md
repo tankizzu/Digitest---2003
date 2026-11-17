@@ -100,6 +100,11 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## App
 
+- **Battaglia in verticale, disposizione dell'utente** (17/11/2026, dalle demo "Disposizione battaglia"): i pezzi
+  dove l'utente li ha messi nel db della demo (tabella NATIVE_XF); le statistiche non più affiancate in cima ma
+  nemico sopra e partner sotto accanto al volto, come nella sua disposizione. Nelle liste **niente L1 / R1**: si
+  sceglie toccando una riga e si cambia pagina **trascinando** a destra / sinistra (nota dell'utente sugli oggetti,
+  estesa a tutte le liste).
 - **Battaglia in verticale, realizzazione** (17/11/2026): la scena 3D ha il centro a metà della tela alta (mostra
   più ambiente, niente ingrandimento); statistiche e volto del partner in alto su un layer a parte; menu e messaggi
   nelle ultime 240 righe; i sei comandi come righe del gioco ingrandite in una griglia 2×3.

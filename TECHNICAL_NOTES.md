@@ -225,6 +225,31 @@ dopo il riscontro sulla 2.0.
 - Prova: `--field 578 --party 0` e camminare a destra e sinistra (incontro verso il fotogramma 1250); griglia a
   y 470 + 108/150/192 (+18 il centro) con H 710.
 
+## Battaglia in verticale: la disposizione dell'utente (2.3)
+
+- types.h: tabella `NATIVE_XF[NXF_COUNT]`, un pezzo per riga `{ox, oy, ow, oh, x, y, w, h}`: il rettangolo del pezzo
+  nel gioco (coordinate 320×240) e dove l'utente l'ha messo nella demo. Pezzi dell'HUD in coordinate della tela (dal
+  layer 0x1007, offset 0), pezzi dei menu in coordinate del layer MENUS (y della demo − (H − 240), cioè −470 con
+  H 710). Si riportano a mano dal db della demo.
+- Macro: `NXF_X/NXF_Y` (un punto del gioco → dove va), `NXF_DRAW` (sprite scalato con perno assoluto nel punto del
+  pezzo), `NXF_PLACE`/`NXF_TEXT` (finestra di testo: posizione, scala, perno), `NXF_DRAW_CUT` (come NXF_DRAW ma
+  ritagliato al rettangolo del pezzo, sopra esatto e `m` pixel di margine negli altri lati).
+- Ritaglio degli sprite (`g_sprite_clip_on`, `g_sprite_clip[4]` in sprite_drawer.c, native.h): solo per le parti
+  disegnate senza scala né rotazione (SPRT), si accorciano x/y/u/v/w/h. Serve alla cornice degli MP (0x29): nel gioco
+  ha anche la linea verticale che la unisce al pannello del partner, che in verticale sta altrove.
+- Barra del cursore (il pallino bianco nel quadratino della riga scelta): il gioco la copia VRAM→VRAM nella
+  callback della vsync, cioè nel buffer già mostrato. In verticale la tela è una e si ridisegna tutta a ogni
+  fotogramma, quindi la copia veniva coperta prima di essere vista (anche nella 2.2). Ora in verticale la callback
+  fa solo avanzare l'animazione, e il task del cursore (`nativeCursorDot`, finché `GFX.vsyncFunc/vsyncArg` sono i
+  suoi) disegna nel fotogramma un POLY_FT4 a 15 bit della stessa immagine (VRAM `frame * 12`, 0xF4, 12×12) sul layer
+  MENUS a profondità 0, **scalato come la riga** (griglia dei comandi o pezzo della disposizione). Provato prima un
+  gancio prima di `present_frame` con la copia del gioco: funziona ma il pallino resta 12×12 in un quadrato
+  ingrandito.
+- Liste (tecniche, oggetti, Tag, forme DV): `native_battle_list(cursor, f)` registra l'area della lista
+  (`native_touch_list`); tocco su una riga → scelta e X; trascinamento di 36 pixel in su o a sinistra → R1 (pagina
+  dopo), in giù o a destra → L1 (pagina prima). L1/R1 a schermo sono nascosti. Il trascinamento non si può simulare
+  su Linux (DW3_PRESS ha solo tocchi).
+
 ## Demo da disporre (artefatto "Disposizione battaglia")
 
 - https://claude.ai/artifact/3DVyDQZggmhr1isbDtUXnL — l'utente trascina e ridimensiona i pezzi veri della grafica

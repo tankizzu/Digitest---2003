@@ -1,6 +1,6 @@
 --- a/src/engine/gfx/sprite_drawer.c
 +++ b/src/engine/gfx/sprite_drawer.c
-@@ -5,6 +5,14 @@
+@@ -5,6 +5,17 @@
  
  /* Small variables, addressed through $gp (see the Makefile) */
  static SpriteDrawer *SPRITE_DRAWER;
@@ -11,11 +11,14 @@
 +#define WIDE_BY 2
 +void *g_wide_sheet;
 +int g_wide_frames[2], g_wide_moved, g_wide_shift;
++/* Parts drawn as they are (no scale or rotation) cut to this rectangle while it is on (native.h) */
++int g_sprite_clip_on;
++s16 g_sprite_clip[4];
 +#endif
  
  /* Makes `obj` the sprite drawer the methods work on */
  void bindSpriteDrawer(SpriteDrawer *obj) {
-@@ -66,6 +74,11 @@
+@@ -66,6 +77,11 @@
      u8 v;
  
      transform = 0;
@@ -27,11 +30,28 @@
      /* the sheet starts with byte offsets: to its parts, its frame ids, then
         each frame's list of parts */
      ids = (u8 *)sheet + sheet[1];
-@@ -139,6 +152,27 @@
+@@ -139,6 +155,44 @@
              prim.sprt->w = part->w;
              prim.sprt->h = part->h;
              prim.sprt->clut = clut;
 +#ifdef NATIVE
++            if (g_sprite_clip_on) {
++                s32 cx0 = prim.sprt->x0 < g_sprite_clip[0] ? g_sprite_clip[0] - prim.sprt->x0 : 0;
++                s32 cy0 = prim.sprt->y0 < g_sprite_clip[1] ? g_sprite_clip[1] - prim.sprt->y0 : 0;
++                s32 cx1 = prim.sprt->x0 + prim.sprt->w > g_sprite_clip[2] ? prim.sprt->x0 + prim.sprt->w - g_sprite_clip[2] : 0;
++                s32 cy1 = prim.sprt->y0 + prim.sprt->h > g_sprite_clip[3] ? prim.sprt->y0 + prim.sprt->h - g_sprite_clip[3] : 0;
++
++                if (cx0 + cx1 >= prim.sprt->w || cy0 + cy1 >= prim.sprt->h) {
++                    p -= 3;
++                    continue;
++                }
++                prim.sprt->x0 += cx0;
++                prim.sprt->u0 += cx0;
++                prim.sprt->w -= cx0 + cx1;
++                prim.sprt->y0 += cy0;
++                prim.sprt->v0 += cy0;
++                prim.sprt->h -= cy0 + cy1;
++            }
 +            if (sheet == g_wide_sheet && (frame == g_wide_frames[0] || frame == g_wide_frames[1]) &&
 +                p[1] + part->w > WIDE_AT) {
 +                if (p[1] > WIDE_AT) {

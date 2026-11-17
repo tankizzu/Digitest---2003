@@ -144,6 +144,10 @@ int native_skip_waiting(int idle); /* 1 while the skipped banner waits for the s
 #define NATIVE_SKIP_HELD() native_skip_held(PAD_HELD(PAD_SQUARE))
 extern void *g_wide_sheet;     /* the name entry's arrow keys a pixel wider (engine/gfx sprite_drawer.c) */
 extern int g_wide_frames[2], g_wide_moved, g_wide_shift;
+/* While g_sprite_clip_on, a sprite drawer's parts drawn without scale or rotation are cut to the rectangle
+   g_sprite_clip (x0, y0, x1, y1, layer coordinates; engine/gfx sprite_drawer.c) */
+extern int g_sprite_clip_on;
+extern short g_sprite_clip[4];
 extern int g_heal_on_levelup; /* heal_on_levelup = 1: a partner that levels up is healed (STFGTREP growth.c) */
 extern int g_save_anywhere;
 extern int g_save_from_menu;

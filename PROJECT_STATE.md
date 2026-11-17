@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Ultimo aggiornamento: 17/11/2026 — versione **2.2** (versionCode 25) pronta (2.0 e 2.1 già mandate); l'ultima
+Ultimo aggiornamento: 17/11/2026 — versione **2.3** (versionCode 26) pronta (2.0, 2.1 e 2.2 già mandate); l'ultima
 provata dall'utente sul telefono è precedente alla 1.9.
 
 ## Obiettivo attuale
@@ -27,6 +27,8 @@ tutto schermo** (modalità principale); poi la battaglia.
 | Fascia alta nel campo: partner (nome, HP) e MENU (2.1) | sì | no |
 | Menu del campo senza tasti PlayStation nei testi (2.1) | sì (EN) | no |
 | Battaglia in verticale: scena alta, statistiche in alto, comandi 2×3 grandi (2.2) | sì | no |
+| Battaglia in verticale con la disposizione dell'utente (HUD, volto, messaggi, Tecniche, Oggetti, DV, Tag) e pallino del cursore (2.3) | sì | no |
+| Liste della battaglia: trascinare per cambiare pagina (2.3) | no (non si simula) | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
 | Salvataggio quando l'app va in secondo piano | no (solo su telefono) | no |
 | Dialoghi: tocco, tenere premuto, automatici x1/x2/x3 (trattini della freccia) | sì | parziale |
@@ -40,8 +42,8 @@ titolo).
 
 - **Impostazioni**: tre proposte (A icona sola, B icona nel pannellino — quella attiva —, C pannello sotto
   CONTINUA). `DW3_SETTINGS_LOOK=1/2/3` per vederle.
-- **Strada di Asuka**: non è in 4:3, la mappa è alta solo 384 pixel; lasciare il nero (decisione attuale),
-  ingrandire x1,4, o ingrandire fino a riempire.
+- **Strada di Asuka**: l'utente la vuole a tutto schermo come le altre (la mappa è alta solo 384 pixel): manca il
+  piano (ingrandire solo la scena) da approvare.
 - Rinominare una memory card dopo il primo salvataggio (oggi non si può).
 - Fascia alta: scelte di partenza (sopra la mappa, solo col giocatore in controllo, prima di Genji solo i
   partner); OPZIONI quando ci sarà la schermata impostazioni.
@@ -55,10 +57,13 @@ titolo).
 
 ## Da dove ripartire
 
-1. Riscontro dell'utente sulla 2.1 (APK in `build-android/dw2003.apk`, da mandare solo a lui).
-2. Le tre scelte qui sopra.
-3. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); battaglia in
-   verticale (statistiche affiancate in alto, comandi grandi sopra la scena); fascia alta del campo (partner, MENU,
-   OPZIONI); orologio facoltativo.
-4. Test: percorsi di prova in TECHNICAL_NOTES ("Test su Linux"); salvataggi di prova in `saves/game5` e `game9`
+1. Riscontro dell'utente sulla 2.3 (APK in `build-android/dw2003.apk`, da mandare solo a lui), soprattutto la
+   battaglia in verticale e il trascinamento nelle liste.
+2. Strada di Asuka a tutto schermo come le altre (richiesta dell'utente): ingrandire solo la scena, non i menu;
+   cambio architetturale, serve un piano da approvare.
+3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.
+4. Le scelte qui sopra.
+5. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); OPZIONI
+   nella fascia alta del campo; orologio facoltativo.
+6. Test: percorsi di prova in TECHNICAL_NOTES ("Test su Linux"); salvataggi di prova in `saves/game5` e `game9`
    (copia di riserva prima di una prova che salva).

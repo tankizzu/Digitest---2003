@@ -1,34 +1,19 @@
 --- a/src/battle/battle_mode/cursor.c
 +++ b/src/battle/battle_mode/cursor.c
-@@ -32,6 +32,27 @@
-                 FIGHTSTG_cursorBarRect.x = 0x90;
-                 y = task->params.y + task->prevSel * task->params.step;
-             }
+@@ -20,6 +20,12 @@
+         if (++task->frame == 12) {
+             task->frame = 0;
+         }
 +#ifdef NATIVE
-+            if (native_portrait()) { /* upright: the one tall screen, the menus at its bottom (types.h) */
-+                s32 x = task->params.x;
-+
-+                if (NATIVE_CMD_GRID(task->params)) { /* the commands' grid: in the button's square */
-+                    s32 k = i < 2 ? task->sel : task->prevSel;
-+
-+                    x = NATIVE_CMD_X(k) + 6;
-+                    y = NATIVE_CMD_Y(k) + (NATIVE_CMD_H - 12) / 2;
-+                } else if (task->nativeXf != NULL) { /* a list where the user put it */
-+                    const NativeXf *f = task->nativeXf;
-+
-+                    x = NXF_X(f, task->params.x);
-+                    y = NXF_Y(f, y);
-+                }
-+                SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, x,
-+                            NATIVE_FIELD_Y + native_field_h() - SCREEN_HEIGHT + y);
-+                addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
-+                continue;
-+            }
++        if (native_portrait()) { /* upright the cursor's task draws the bar in the frame (nativeCursorDot) */
++            task->prevSel = task->sel;
++            return;
++        }
 +#endif
-             SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, task->params.x, y);
-             addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
-             SetDrawMove(&FIGHTSTG_cursorBarMoves[i + 1], &FIGHTSTG_cursorBarRect, task->params.x, y + 0x100);
-@@ -39,6 +60,10 @@
+         ClearOTag(FIGHTSTG_cursorBarOt, 2);
+         for (i = 0; i < 4; i += 2) {
+             if (i == 2 && task->prevSel == task->sel) {
+@@ -39,10 +45,59 @@
          }
          while (IsIdleGPU(0)) {
          }
@@ -39,7 +24,56 @@
          ContinueDraw(FIGHTSTG_cursorBarOt, saved);
      }
      task->prevSel = task->sel;
-@@ -76,6 +101,24 @@
+ }
++
++#ifdef NATIVE
++/* Upright, each frame while the bar's vsync callback is this cursor's: the bar (the dot blinking in the picked line's
++   square) as a quad of its frame in VRAM (FIGHTSTG_cursorBarRect's row), on top of the menus' layer and scaled like
++   the line's sprite. The game copies it into the shown buffer at the vsync instead: the one tall screen is drawn
++   whole each frame, which would cover it */
++static void nativeCursorDot(MenuCursor *task) {
++    Layer *layer = GFX.funcs.getLayer(BATTLE_LAYER_MENUS);
++    POLY_FT4 *q;
++    s32 x, y, w, h;
++
++    if (layer == NULL) {
++        return;
++    }
++    if (NATIVE_CMD_GRID(task->params)) { /* the row's sprite is scaled to a button of the grid (FIGHTSTG_drawCursorSprites) */
++        x = NATIVE_CMD_X(task->sel) + (task->params.x - task->params.spriteX) * NATIVE_CMD_W / 97;
++        y = NATIVE_CMD_Y(task->sel) + (task->params.y - task->params.spriteY) * NATIVE_CMD_H / 18;
++        w = 12 * NATIVE_CMD_W / 97;
++        h = 12 * NATIVE_CMD_H / 18;
++    } else if (task->nativeXf != NULL) { /* a list where the user put it */
++        const NativeXf *f = task->nativeXf;
++
++        x = NXF_X(f, task->params.x);
++        y = NXF_Y(f, task->params.y + task->sel * task->params.step);
++        w = 12 * f->w / f->ow;
++        h = 12 * f->h / f->oh;
++    } else {
++        x = task->params.x;
++        y = task->params.y + task->sel * task->params.step;
++        w = h = 12;
++    }
++    q = GFX.funcs.getPrim();
++    setPolyFT4(q);
++    setRGB0(q, 0x80, 0x80, 0x80);
++    setXYWH(q, x, y, w, h);
++    q->u0 = q->u2 = task->frame * 12;
++    q->u1 = q->u3 = task->frame * 12 + 11;
++    q->v0 = q->v1 = FIGHTSTG_cursorBarRect.y;
++    q->v2 = q->v3 = FIGHTSTG_cursorBarRect.y + 11;
++    q->tpage = GetTPage(2, 0, 0, 0);
++    q->clut = 0;
++    addPrim(layer->getOtEntry(layer, 0), q);
++    GFX.funcs.setPrim(q + 1);
++}
++#endif
+ 
+ /* Draws each line's sprite of the cursor, the picked one blinking through the
+    palettes and the one left fading out */
+@@ -76,6 +131,24 @@
          } else {
              drawer.setClutRow(0);
          }
@@ -64,11 +98,14 @@
          drawer.draw(sheet, task->params.sprite, task->params.spriteX, y);
          y += task->params.spriteStep;
      }
-@@ -107,6 +150,33 @@
+@@ -107,6 +180,36 @@
              if (task->params.sprite != -1) {
                  FIGHTSTG_drawCursorSprites(task);
              }
 +#ifdef NATIVE
++            if (native_portrait() && GFX.vsyncFunc == FIGHTSTG_drawCursorBar && GFX.vsyncArg == (s32)task) {
++                nativeCursorDot(task);
++            }
 +            if (task->locked == 0) {
 +                /* touch: each line of the list; a line tapped is picked and confirmed (X, a frame later). The six
 +                   commands are the turn's first menu: the others go back, so they show the back button */
@@ -98,7 +135,7 @@
              if (task->locked == 0) {
                  pressed = PAD.getRepeated(0) | PAD.getPressed(0);
                  if (pressed & (1 << PAD_UP)) {
-@@ -137,5 +207,51 @@
+@@ -137,5 +240,51 @@
      MenuCursor *task = createTask(FIGHTSTG_updateCursor, sizeof(MenuCursor), 0);
  
      task->params = *layout;

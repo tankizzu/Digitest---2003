@@ -75,13 +75,14 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [ ] Verificare sul telefono il salvataggio automatico quando l'app va in secondo piano.
 - [ ] Schermate del menu del campo (squadra, oggetti, tecniche, mappa), negozi, laboratorio.
 
-## P1 — battaglia in verticale (2.2, prima versione)
+## P1 — battaglia in verticale (2.2 prima versione, 2.3 disposizione dell'utente)
 
 - [x] Tela alta, scena 3D a tutta altezza, statistiche in alto, volto del partner sotto, comandi 2×3 grandi in basso.
-- [ ] Provare sul telefono (l'utente).
-- [ ] Liste Tecniche e Oggetti più grandi; togliere "L1 / R1" e "X" dalle liste (tasti PlayStation) e dare il tocco
-      per cambiare pagina.
-- [ ] DV (digievoluzione) e Tag (cambio partner): controllare in verticale.
+- [ ] Provare sul telefono (l'utente): 2.3, soprattutto il trascinamento per cambiare pagina nelle liste.
+- [x] Disposizione dell'utente dalle demo (2.3): HUD, volto, messaggi, Tecniche, Oggetti, DV, Tag; niente L1 / R1
+      nelle liste, tocco per scegliere, trascinamento per la pagina. Verificato su Linux (aspetto e tocchi).
+- [ ] Menu di entrata del partner dopo Tag (quale Digimon entra, tecnica di coppia: switch_in_menu.c) e cornice MP
+      lì: non ancora ridisposto in verticale.
 - [ ] Inizio e fine battaglia (transizione, risultati, resoconto STFGTREP) a tutto schermo.
 
 ## P3

@@ -1,6 +1,6 @@
 --- a/include/battle/battle_mode/types.h
 +++ b/include/battle/battle_mode/types.h
-@@ -30,11 +30,134 @@
+@@ -30,11 +30,149 @@
  #define BATTLE_LAYER_MODELS 0x1004
  #define BATTLE_LAYER_MENUS 0x1005 /* the HUD, the menus and the messages */
  #define BATTLE_LAYER_FRONT 0x1006 /* the fades, the flashes and the sprite effects over all */
@@ -70,6 +70,21 @@
 +            (drawer).draw((sheet), (frame), (px), (py));                                          \
 +        }                                                                                         \
 +    } while (0)
++/* NXF_DRAW cut to the piece's rectangle, grown by `m` pixels except on top: for a frame that also draws a line
++   joining it to another piece in the game (the MP box's, to the partner's panel) */
++#define NXF_DRAW_CUT(drawer, sheet, frame, px, py, piece, m)                                      \
++    do {                                                                                          \
++        if (native_portrait()) {                                                                  \
++            const NativeXf *nxc_ = NXF(piece);                                                    \
++            g_sprite_clip[0] = nxc_->x - (m);                                                     \
++            g_sprite_clip[1] = nxc_->y;                                                           \
++            g_sprite_clip[2] = nxc_->x + nxc_->w + (m);                                           \
++            g_sprite_clip[3] = nxc_->y + nxc_->h + (m);                                           \
++            g_sprite_clip_on = 1;                                                                 \
++        }                                                                                         \
++        NXF_DRAW(drawer, sheet, frame, px, py, piece);                                            \
++        g_sprite_clip_on = 0;                                                                     \
++    } while (0)
 +/* a text window of the piece's, upright, where the user put it (its own place in the game: tx, ty) */
 +#define NXF_PLACE(win, piece, tx, ty)                                                              \
 +    do {                                                                                          \
@@ -135,7 +150,7 @@
  #define FIGHTSTG_CREATE_LAYERS(screen, frontCallbacks)                          \
      Layer *layer;                                                               \
                                                                                  \
-@@ -60,5 +183,6 @@
+@@ -60,5 +198,6 @@
      layer = GFX.funcs.createLayer(&(screen), 1, BATTLE_LAYER_FRONT);            \
      layer->setOffset(layer, 0, 0);                                              \
      layer->allocCallbacks(layer, frontCallbacks)

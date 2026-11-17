@@ -33,7 +33,7 @@
 +    }
 +#ifdef NATIVE
 +    NXF_DRAW(drawer, sheet, 0x2A, 8, 0x3E, NXF_TECH_LIST);
-+    NXF_DRAW(drawer, sheet, 0x29, 0xA3, 0x21, NXF_TECH_MP);
++    NXF_DRAW_CUT(drawer, sheet, 0x29, 0xA3, 0x21, NXF_TECH_MP, 2);
 +    NXF_DRAW(drawer, sheet, 0x31, 0xB, 0xBC, NXF_TECH_DESC);
 +#else
      drawer.draw(sheet, 0x2A, 8, 0x3E);
