@@ -26,7 +26,7 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +129,311 @@
+@@ -116,9 +129,312 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -127,7 +127,8 @@
 +        while (nativeScroll >= NATIVE_LIST_PITCH / 2 && *top > 0) {
 +            (*top)--, nativeScroll -= NATIVE_LIST_PITCH;
 +        }
-+        if (*top == 0 || *top + NATIVE_LIST_ROWS >= count) {
++        /* at an end only the way that is blocked is dropped: the other gathers until it moves a row */
++        if ((*top == 0 && nativeScroll > 0) || (*top + NATIVE_LIST_ROWS >= count && nativeScroll < 0)) {
 +            nativeScroll = 0;
 +        }
 +        if (*sel < *top) {
@@ -338,7 +339,7 @@
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -135,7 +450,7 @@
+@@ -135,7 +451,7 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          SOUND.playSound(SOUND_CURSOR);
      }
@@ -347,7 +348,7 @@
          win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
          STGMCARD_showPort(saves, win, 1);
          win->windows[1]->setVisible(win->windows[1], 0);
-@@ -302,7 +617,7 @@
+@@ -302,7 +618,7 @@
      s32 status;
  
      if (win->menu->substate == 6) {
@@ -356,7 +357,7 @@
              SOUND.playSound(SOUND_MENU_CONFIRM);
              saves->substate = 400;
              win->menu->substate = 0;
-@@ -359,6 +674,12 @@
+@@ -359,6 +675,12 @@
  
  /* Slides the slots and header out before leaving the screen (601) */
  static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -369,7 +370,7 @@
      if (win->menu->substate == 0) {
          if (win->menu->slid == 2) {
              win->info->hide(win->info);
-@@ -403,6 +724,9 @@
+@@ -403,6 +725,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -379,7 +380,7 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -564,7 +888,7 @@
+@@ -564,7 +889,7 @@
  static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 check;
  
@@ -388,7 +389,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -595,7 +919,7 @@
+@@ -595,7 +920,7 @@
  /* Waits for cross on the loaded message, then waits for the card (400) and leaves
     the screen (600) */
  static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -397,7 +398,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -676,7 +1000,7 @@
+@@ -676,7 +1001,7 @@
              SOUND.playSound(SOUND_CURSOR);
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
          }
@@ -406,7 +407,7 @@
              SOUND.playSound(SOUND_SELECT);
              win->windows[0]->setVisible(win->windows[0], 0);
              win->windows[4]->setVisible(win->windows[4], 0);
-@@ -726,7 +1050,7 @@
+@@ -726,7 +1051,7 @@
                  STGMCARD_showError(saves, win);
              }
          }
@@ -415,7 +416,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->substate = 400;
          saves->prompting = 0;
-@@ -872,8 +1196,24 @@
+@@ -872,8 +1197,24 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -441,7 +442,7 @@
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
-@@ -921,7 +1261,7 @@
+@@ -921,7 +1262,7 @@
          break;
      case 40:
          STGMCARD_moveChoiceCursor(saves, win);

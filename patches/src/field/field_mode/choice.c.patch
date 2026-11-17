@@ -1,6 +1,58 @@
 --- a/src/field/field_mode/choice.c
 +++ b/src/field/field_mode/choice.c
-@@ -61,10 +61,29 @@
+@@ -1,6 +1,13 @@
+ /* The yes/no questions of the story */
+ 
+ #include "field/field_mode.h"
++
++#ifdef NATIVE
++#define NATIVE_CHOICE_BOX_W 0x8C                     /* the answers' boxes (touch), side by side */
++#define NATIVE_CHOICE_BOX_X(i) ((i) == 0 ? 0x10 : 0xA4)
++#define NATIVE_CHOICE_BOX_Y 0xC4
++#define NATIVE_CHOICE_DOWN (native_field_h() - SCREEN_HEIGHT) /* upright: at the bottom of the taller screen */
++#endif
+ 
+ /*
+  * A yes/no question of the story (FIELDSTG_askChoice0 to FIELDSTG_askChoice15
+@@ -19,6 +26,18 @@
+     default:
+         task->nextState(task);
+         task->tween.duration = 10;
++#ifdef NATIVE
++        /* touch: the answers in two boxes side by side under the question, the panel taller (NATIVE_CHOICE_...); at the
++           bottom of the upright field's screen too */
++        for (i = 0; i < 2; i++) {
++            children->options[i] = createTextWindow(FIELD_LAYER_MAP, 1, NATIVE_CHOICE_BOX_X(i) + 0x0C,
++                                                    NATIVE_CHOICE_BOX_Y + 6 + NATIVE_CHOICE_DOWN);
++            children->options[i]->setDepth(children->options[i], 1);
++        }
++        children->cursor = createCursor(FIELD_LAYER_MAP, 1, 0x12, 0xBE);
++        children->cursor->setVisible(children->cursor, 0);
++        children->title = createTextWindow(FIELD_LAYER_MAP, 1, 0x12, 0xB0 + NATIVE_CHOICE_DOWN);
++#else
+         for (i = 0; i < 2; i++) {
+             children->options[i] = createTextWindow(FIELD_LAYER_MAP, 1, 0x1C, 0xBE + i * 14);
+             children->options[i]->setDepth(children->options[i], 1);
+@@ -26,6 +45,7 @@
+         children->cursor = createCursor(FIELD_LAYER_MAP, 1, 0x12, 0xBE);
+         children->cursor->setVisible(children->cursor, 0);
+         children->title = createTextWindow(FIELD_LAYER_MAP, 1, 0x12, 0xB0);
++#endif
+         break;
+     case TASK_RUN:
+         switch (task->substate) {
+@@ -39,7 +59,9 @@
+                 for (j = 0; j < 2; j++) {
+                     children->options[j]->setString(children->options[j], FILE_CACHE.getEntry(FIELDSTG_choices[task->type].text + (TEXT_FILE(1) << 16)), j + 2);
+                 }
+-                children->cursor->setVisible(children->cursor, 1);
++#ifndef NATIVE
++                children->cursor->setVisible(children->cursor, 1); /* touch: the boxes say which */
++#endif
+                 children->title->setString(children->title, FILE_CACHE.getEntry(FIELDSTG_choices[task->type].text + (TEXT_FILE(1) << 16)), 1);
+                 task->substate++;
+             }
+@@ -61,10 +83,29 @@
                  children->cursor->setPos(children->cursor, 0x12, task->selection * 14 + 0xBE);
                  break;
              }
@@ -9,8 +61,8 @@
 +                /* touch: yes and no, tapped, answer at once */
 +                s32 tapped;
 +
-+                native_touch_target(0, 0x10, 0xBC, 200, 14);
-+                native_touch_target(1, 0x10, 0xBC + 14, 200, 14);
++                native_touch_target(0, NATIVE_CHOICE_BOX_X(0) - 8, NATIVE_CHOICE_BOX_Y - 8 + NATIVE_CHOICE_DOWN, NATIVE_CHOICE_BOX_W + 12, 0x2C);
++                native_touch_target(1, NATIVE_CHOICE_BOX_X(1) - 4, NATIVE_CHOICE_BOX_Y - 8 + NATIVE_CHOICE_DOWN, NATIVE_CHOICE_BOX_W + 12, 0x2C);
 +                tapped = native_touch_tap();
 +                if (tapped >= 0) {
 +                    task->selection = tapped;
@@ -30,3 +82,27 @@
              break;
          case 3:
              children->event = FIELDSTG_startEvent(task->selection == 0 ? FIELDSTG_choices[task->type].events[0] : FIELDSTG_choices[task->type].events[1]);
+@@ -99,7 +140,23 @@
+                 drawer.setScale(task->tween.level, 0x1000, 0x1000);
+                 drawer.setPivot(0, 0xC3);
+             }
++#ifdef NATIVE
++            /* the panel a third taller, from its top; once open, the two boxes: the same panel, small */
++            drawer.setLayerId(FIELD_LAYER_MAP, 3); /* behind the boxes (2), behind the texts (1) */
++            drawer.setScale(task->tween.level, 0x1000 * 4 / 3, 0x1000);
++            drawer.setPivot(0, 0xAC + NATIVE_CHOICE_DOWN);
++            drawer.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x45, 0, 0xAC + NATIVE_CHOICE_DOWN);
++            if (task->tween.level == 0x1000 && task->substate == 2) {
++                drawer.setLayerId(FIELD_LAYER_MAP, 2);
++                drawer.setScale(0x1000 * NATIVE_CHOICE_BOX_W / 320, 0x1000 * 24 / 50, 0x1000);
++                for (i = 0; i < 2; i++) {
++                    drawer.setPivot(NATIVE_CHOICE_BOX_X(i), NATIVE_CHOICE_BOX_Y + NATIVE_CHOICE_DOWN);
++                    drawer.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x45, NATIVE_CHOICE_BOX_X(i), NATIVE_CHOICE_BOX_Y + NATIVE_CHOICE_DOWN);
++                }
++            }
++#else
+             drawer.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x45, 0, 0xAC);
++#endif
+         }
+         break;
+     case TASK_DONE:

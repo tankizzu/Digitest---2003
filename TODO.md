@@ -22,9 +22,9 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] 2. Campo con un buffer 320×512 a (0,512) (le righe 496–511 hanno le CLUT del gioco: niente 640). Prova su
       Linux con DW3_PORTRAIT=1: stanza della Sala della Matrice intera, oggetti animati, dialogo, camminata.
 - [x] 3. Mappa: 27 immagini (CLUT in alto, y 896+), fino a 5 righe disegnate, stream sulle righe in vista.
-- [~] 4. Telecamera centrata su 512 righe (fatto); stanze più basse di 512: per ora al centro col nero,
-      ingrandimento da fare.
-- [ ] 5. Dialoghi/banner/fumetti riposizionati.
+- [x] 4. Telecamera centrata su 512 righe; le stanze più basse restano al centro col nero (deciso).
+- [ ] 5. Fascia in alto: Impostazioni, Menu, stato dei partner (grafica del gioco). Fascia in basso: dialoghi
+      e comandi. Banner, transizioni tra stanze e inizio battaglia con le misure nuove.
 - [ ] 6. Android in verticale; screenshot del prologo all'utente.
 
 ## (vecchio) verticale
@@ -33,7 +33,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       menu e battaglia ridisposti con la grafica del gioco, orizzontale come opzione. Il manifest oggi è
       sensorLandscape.
 
-## P2 — menu iniziali (da discutere con l'utente)
+## P2 — menu iniziali a tutto schermo (fase 2 del verticale)
+
+- [ ] Elenco MEMORY CARD a tutto schermo (l'utente: scorrere è ancora complesso; a tutto schermo diventa più
+      semplice).
 
 - [ ] Titolo a tutto schermo, pulsante Impostazioni (lingua), pulsanti più grandi: solo con la grafica del
       gioco. Rifare le proposte partendo da schermate reali e sprite del gioco, senza sfondi finti né pulsanti

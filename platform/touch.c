@@ -128,16 +128,27 @@ static const int AUTO_TEXT_WAIT[4] = {0, 180, 90, 12}; /* vsyncs a page waits at
 /* Automatic dialogues: 1 once the text window `who` has waited AUTO_TEXT_WAIT for the player (text_window.c asks
    each frame it waits; a break of a few vsyncs starts the count again) */
 int native_auto_text_due(void *who) {
-    static void *waiting;
-    static int since, last;
-    int now = VSync(-1);
+    /* each window that waits keeps its own count: two balloons open at once ask in turn every frame */
+    static struct {
+        void *who;
+        int since, last;
+    } waits[4];
+    int now = VSync(-1), i, free = -1;
 
-    if (who != waiting || now - last > 6) {
-        waiting = who, since = now;
+    for (i = 0; i < 4 && waits[i].who != who; i++) {
+        if (free < 0 && (waits[i].who == NULL || now - waits[i].last > 6)) {
+            free = i;
+        }
     }
-    last = now;
-    if (native_auto_text() && now - since >= AUTO_TEXT_WAIT[native_auto_text()]) {
-        waiting = NULL;
+    if (i == 4) { /* a new one (or one that stopped waiting a while ago) */
+        i = free >= 0 ? free : 0;
+        waits[i].who = who, waits[i].since = now;
+    } else if (now - waits[i].last > 6) {
+        waits[i].since = now;
+    }
+    waits[i].last = now;
+    if (native_auto_text() && now - waits[i].since >= AUTO_TEXT_WAIT[native_auto_text()]) {
+        waits[i].who = NULL;
         return 1;
     }
     return 0;

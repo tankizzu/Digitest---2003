@@ -54,6 +54,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   Invio conferma; toccare il nome riapre la tastiera; niente levetta.
 - **Scelta del kit**: le linguette A/B/C scelgono il kit, il pulsante **OK sotto le linguette** (lo sprite OK
   della schermata del nome, stesso pacchetto grafico) conferma. Toccare i Digimon non conferma più.
+- **Domande sì/no della storia** (field/choice.c, es. "Vuoi creare il partner Digimon ora?"): pannello del
+  gioco più alto di un terzo, le due risposte in due riquadri affiancati (lo stesso pannello in piccolo); un tocco
+  risponde. In verticale in fondo alla tela.
 - **Registrazione dell'account**: Sì e No in due riquadri affiancati, con la cornice della barra di
   registrazione del gioco; un tocco risponde.
 - Da discutere con l'utente (in sospeso): titolo a tutto schermo, pulsante Impostazioni per la lingua,
@@ -73,11 +76,23 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - Continua → elenco delle partite (grafica del gioco) → "Automatico" o "Salvataggi". Nessuna finestra Android
   "vuoi riprendere".
 
+## App
+
+- Icona originale (uovo digitale su fondo blu notte, circuiti; nessun personaggio o logo del gioco),
+  `tools/android/make_icon.py`. Sostituisce l'icona di SDL.
+- Android: render_scale massimo 3 (la VRAM 1024×1024 a 4× pesa il doppio).
+
 ## Cronologia git
 
 - 17/11/2026, approvato dall'utente: storia riscritta (filter-branch) senza `build-linux-gles/`; push forzato.
 
 ## Verticale
+
+- **Dove la mappa finisce resta il nero** (17/11/2026): niente ingrandimento delle stanze piccole, dà l'idea del
+  gioco d'epoca. (Sostituisce la vecchia idea "nelle stanze piccole si ingrandisce".)
+- **Fascia in alto** (idea approvata dall'utente, 17/11/2026): pulsante Impostazioni, pulsante Menu e stato dei
+  partner (nome, livello, HP, esperienza), con la grafica del gioco; la fascia in basso per dialoghi e comandi.
+- Tela del campo 320×512 (limite tecnico: CLUT del gioco nelle righe 496–511).
 
 - **Il verticale è la modalità principale** (ribadito il 17/11/2026, "fin dall'inizio"). Tutto schermo vero:
   campo, menu e battaglie riempiono il telefono. L'orizzontale è un di più.

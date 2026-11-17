@@ -409,7 +409,12 @@ int main(int argc, char **argv) {
         SDL_GetDisplayUsableBounds(SDL_GetPrimaryDisplay(), &usable);
         s_scale = SDL_max(1, SDL_min(usable.w / (g_widescreen ? 427 : 320), (usable.h - 40) / 240));
         if (!s_res_set) {
+#ifdef __ANDROID__
+            /* VRAM is 1024x1024 (portrait.c): at 3x the card's copy is 3072x3072, about the memory 4x took at 512 rows */
+            g_res_scale = SDL_min(s_scale, 3);
+#else
             g_res_scale = SDL_min(s_scale, 4);
+#endif
         }
     }
     if (!load_boot_image() || !video_init(s_scale, s_fullscreen)) {

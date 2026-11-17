@@ -2,6 +2,18 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.1
+
+- **Elenco MEMORY CARD**: scorreva in un senso solo (all'inizio e alla fine dell'elenco il trascinamento veniva
+  azzerato a ogni fotogramma). Ora si muove in tutti e due i sensi. Non verificato col dito.
+- **Dialoghi automatici con due fumetti aperti**: si fermavano (il conteggio dell'attesa ripartiva a ogni
+  fotogramma alternandosi tra le due finestre). Ora ogni finestra ha il suo conteggio.
+- **Domande sì/no della storia** in due riquadri grandi affiancati, nel pannello del gioco più alto. Verificato su
+  Linux (DW3_TEST_CHOICE): aspetto e risposta col tocco.
+- **Icona dell'app** originale al posto di quella di SDL.
+- VRAM del port 1024×1024 (base del verticale); su Android render_scale massimo 3.
+- Prototipo del campo in verticale (spento: DW3_PORTRAIT=1 su Linux).
+
 ### 1.0
 
 - **Elenco MEMORY CARD più grande**: le partite stanno nel riquadro grande dello schermo, due alla volta, ogni
