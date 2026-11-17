@@ -36,7 +36,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       menu e battaglia ridisposti con la grafica del gioco, orizzontale come opzione. Il manifest oggi è
       sensorLandscape.
 
-## P2 — menu iniziali a tutto schermo (fase 2 del verticale)
+## P1 — menu iniziali a tutto schermo (fase 2 del verticale, in corso)
+
+- [x] Titolo (sfondo ingrandito, contenuto al centro, tocchi con l'origine).
+- [ ] Memory card (modalità a parte, SCREEN_LAYER: trovare dove crea lo schermo), lingua, nome, kit, conferma.
 
 - [ ] Elenco MEMORY CARD a tutto schermo (l'utente: scorrere è ancora complesso; a tutto schermo diventa più
       semplice).

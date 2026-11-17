@@ -342,6 +342,7 @@ void native_touch_no_stick(void);    /* no stick on this screen */
 /* The field upright (platform/portrait.c): its screen 320 x native_field_h() at VRAM (0, NATIVE_FIELD_Y), one buffer;
    the map's images 12 and up at native_map_image_pos */
 int native_portrait(void);
+void native_touch_origin(int y); /* the 320x240 screen's top on a taller upright display, for the touch targets */
 int native_field_h(void);
 void native_map_image_pos(int slot, int *x, int *y);
 void native_map_clut_pos(int slot, int *x, int *y);

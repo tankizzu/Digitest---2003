@@ -1,0 +1,24 @@
+--- a/src/menus/title/scene.c
++++ b/src/menus/title/scene.c
+@@ -53,8 +53,21 @@
+             rect.y = 0;
+             rect.w = 320;
+             rect.h = 240;
++#ifdef NATIVE
++            if (native_portrait()) { /* upright: the title on the tall screen, its 320x240 in the middle (portrait.c) */
++                GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, native_field_h());
++                rect.y = NATIVE_FIELD_Y;
++                rect.h = native_field_h();
++            }
++#endif
+             layer = GFX.funcs.createLayer(&rect, 2, STDWTITL_TITLE_LAYER);
+             layer->setBgColor(layer, 0, 0, 0);
++#ifdef NATIVE
++            if (native_portrait()) {
++                layer->setOffset(layer, 0, (native_field_h() - SCREEN_HEIGHT) / 2);
++                native_touch_origin((native_field_h() - SCREEN_HEIGHT) / 2);
++            }
++#endif
+             children->title = STDWTITL_startTitleLoaderTask();
+             break;
+         case STDWTITL_SPLASH_MODE:

@@ -1,0 +1,28 @@
+--- a/src/menus/title/background.c
++++ b/src/menus/title/background.c
+@@ -31,6 +31,12 @@
+ 
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(task->layerId, 0);
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background as tall as the screen, about its middle (its sides cut) */
++        sprite.setScale(ONE * native_field_h() / SCREEN_HEIGHT, ONE * native_field_h() / SCREEN_HEIGHT, ONE);
++        sprite.setPivot(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
++    }
++#endif
+     sprite.setAltClut(0, 0x1F3);
+     sprite.setTexture(0x300, 0);
+     sprite.draw(FILE_CACHE.getEntry(STDWTITL_BACKGROUND(0)), 0, 0, 0);
+@@ -55,6 +61,12 @@
+ 
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(task->layerId, 0);
++#ifdef NATIVE
++    if (native_portrait()) { /* as the background (STDWTITL_drawBackground) */
++        sprite.setScale(ONE * native_field_h() / SCREEN_HEIGHT, ONE * native_field_h() / SCREEN_HEIGHT, ONE);
++        sprite.setPivot(SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2);
++    }
++#endif
+     sprite.setTexture(0x3C0, 0);
+     if (frame0 != 300) {
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_BACKGROUND(3)), frame0, 0, 0);

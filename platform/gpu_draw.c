@@ -165,8 +165,8 @@ static void triangle(Vtx a, Vtx b, Vtx c, int flags, int clut) {
     maxx = a.x > b.x ? a.x : b.x; if (c.x > maxx) maxx = c.x;
     miny = a.y < b.y ? a.y : b.y; if (c.y < miny) miny = c.y;
     maxy = a.y > b.y ? a.y : b.y; if (c.y > maxy) maxy = c.y;
-    if (maxx - minx >= 1024 || maxy - miny >= 512) {
-        return; /* the GPU drops polygons this large */
+    if (maxx - minx >= 1024 || maxy - miny >= (g.y1 >= 512 ? 1024 : 512)) {
+        return; /* the GPU drops polygons this large (the upright screens below row 512 are taller: portrait.c) */
     }
     if (minx < g.x1) minx = g.x1;
     if (miny < g.y1) miny = g.y1;
@@ -262,7 +262,7 @@ static int too_big(const Vtx *a, const Vtx *b, const Vtx *c) {
     if (c->x > maxx) maxx = c->x;
     if (c->y < miny) miny = c->y;
     if (c->y > maxy) maxy = c->y;
-    return maxx - minx >= 1024 || maxy - miny >= 512;
+    return maxx - minx >= 1024 || maxy - miny >= (g.y1 >= 512 ? 1024 : 512); /* as triangle() */
 }
 
 /* Widescreen battles' menus (DrawOTag): the x the card draws a packet at,

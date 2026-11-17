@@ -2,6 +2,14 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.6
+
+- **Filmati di nuovo in 4:3** (nella 1.3–1.5 erano stirati in verticale: la regola "pixel quadrati" valeva per
+  ogni area alta; ora solo per la tela del campo).
+- **Titolo a tutto schermo in verticale**: sfondo a circuiti ingrandito a tutta altezza (lati tagliati), logo e
+  scritte al centro; tocchi riallineati (`native_touch_origin`). Verificato su Linux.
+- GPU del port: sulle tele verticali (sotto la riga 512) i poligoni possono essere alti fino a 1023.
+
 ### 1.5
 
 - **Icona adattiva piena** (sfondo viola-blu e uovo in primo piano): riempie la forma del launcher, niente più

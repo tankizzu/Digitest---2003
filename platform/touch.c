@@ -255,8 +255,19 @@ int native_touch_anywhere(void) {
 }
 
 /* The target under a point of the PSX display, or -1 */
+/* Where the screen's 320x240 sits on a taller upright display (portrait.c): the targets are in its coordinates */
+static int s_origin_y;
+
+void native_touch_origin(int y) {
+    s_origin_y = y;
+}
+
 static int target_at(float px, float py) {
     Uint64 now = SDL_GetTicks();
+
+    if (s_disp[1] > 256) {
+        py -= (float)s_origin_y;
+    }
     for (int i = 0; i < s_ntargets; i++) {
         const Target *t = &s_targets[i];
         if (t->until >= now && px >= t->x && px < t->x + t->w && py >= t->y && py < t->y + t->h) {
