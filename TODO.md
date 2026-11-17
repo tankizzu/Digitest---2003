@@ -57,7 +57,7 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       mappe basse (anteprima da screenshot reale; contraddice la decisione "dove la mappa finisce resta il nero").
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
 - [x] Lingua a tutto schermo (sfondo su tutta l'altezza; righe alte 31 px: ingrandirle se l'utente le trova piccole).
-- [ ] Nome, kit, conferma a tutto schermo.
+- [x] Nome, kit, conferma a tutto schermo (sfondo a esagoni ripetuto in altezza). Verificato su Linux.
 
 - [ ] Elenco MEMORY CARD a tutto schermo (l'utente: scorrere è ancora complesso; a tutto schermo diventa più
       semplice).

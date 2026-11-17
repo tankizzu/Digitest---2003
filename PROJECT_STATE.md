@@ -23,6 +23,7 @@ tutto schermo** (modalità principale); poi la battaglia.
 | Sì/No affiancati: storia, registrazione, memory card originale (nuovo file, sovrascrittura, salvare qui) | sì (verticale) | no |
 | Automatico: lista dei due autosalvataggi coi dati del gioco; immagine del campo nelle liste (2.0) | sì (verticale) | no |
 | Nome con la tastiera del telefono, OK sotto il nome; kit con linguette + OK | sì | da riverificare |
+| Lingua, nome, kit e conferma a tutto schermo in verticale (2.0) | sì | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
 | Salvataggio quando l'app va in secondo piano | no (solo su telefono) | no |
 | Dialoghi: tocco, tenere premuto, automatici x1/x2/x3 (trattini della freccia) | sì | parziale |
@@ -51,7 +52,7 @@ titolo).
 
 1. Riscontro dell'utente sulla 2.0 (APK in `build-android/dw2003.apk`, da mandare solo a lui).
 2. Le tre scelte qui sopra.
-3. In coda: lingua, nome, kit e conferma a tutto schermo in verticale; volume nelle impostazioni; battaglia in
+3. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); battaglia in
    verticale (statistiche affiancate in alto, comandi grandi sopra la scena); fascia alta del campo (partner, MENU,
    OPZIONI); orologio facoltativo.
 4. Test: percorsi di prova in TECHNICAL_NOTES ("Test su Linux"); salvataggi di prova in `saves/game5` e `game9`
