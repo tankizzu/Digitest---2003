@@ -1,6 +1,16 @@
---- a/src/field/field_mode/speech.c	2026-11-15 21:44:29.969466400 -0300
-+++ b/src/field/field_mode/speech.c	2026-11-15 21:44:32.040764700 -0300
-@@ -61,6 +61,60 @@
+--- a/src/field/field_mode/speech.c
++++ b/src/field/field_mode/speech.c
+@@ -23,6 +23,9 @@
+     } else {
+         pos.y -= 7;
+     }
++#ifdef NATIVE
++    native_field_zoom_point(&pos.x, &pos.y); /* upright with the scene zoomed: by the actor where it shows */
++#endif
+     *out = pos;
+ }
+ 
+@@ -61,6 +64,60 @@
  
  /* Creates the speech of an event's text entry: a message box, or a talk box
     of a type */
@@ -61,7 +71,7 @@
  Speech *FIELDSTG_createSpeech(Actor *actor, s32 entry, s32 type, s32 isMessage) {
      Speech *task = createTask(FIELDSTG_updateSpeech, sizeof(Speech), 4);
  
-@@ -68,7 +122,11 @@
+@@ -68,7 +125,11 @@
      task->entry = entry;
      task->type = type;
      task->isMessage = isMessage;
@@ -73,7 +83,7 @@
      return task;
  }
  
-@@ -80,7 +138,11 @@
+@@ -80,9 +141,16 @@
  
      task->actor = actor;
      task->entry = entry;
@@ -84,4 +94,9 @@
 +#endif
      pos = actor->tile;
      FIELDSTG_scriptHelpers[0](&pos);
++#ifdef NATIVE
++    native_field_zoom_point(&pos.x, &pos.y); /* upright with the scene zoomed: the side the actor shows on */
++#endif
      switch (actor->dir) {
+         case 0:
+         case 1:

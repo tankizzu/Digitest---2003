@@ -270,6 +270,7 @@ static int too_big(const Vtx *a, const Vtx *b, const Vtx *c) {
 #define WIDE_PARTNER_LAYER 0x1009 /* fightstg/partner_view.c's, the partner's picture */
 #define WIDE_MENUS_LAYER 0x1005 /* fightstg/types.h's BATTLE_LAYER_MENUS: the HUD, the menus, the messages */
 static float s_map_a, s_map_s = 1, s_map_d; /* x to a + (x - a) * s + d on the card (widescreen) */
+static float s_map_b, s_map_t = 1;          /* and y to b + (y - b) * t (the upright field's zoom) */
 static float s_clip_a, s_clip_s = 1;          /* and the drawing area's x to a + (x - a) * s */
 int g_draw_layer;
 
@@ -288,7 +289,7 @@ static GVtx gvtx(float x, float y, int r, int gg, int b, int u, int v, int clut,
     GVtx o;
 
     o.x = s_map_a + (x - s_map_a) * s_map_s + s_map_d;
-    o.y = y;
+    o.y = s_map_b + (y - s_map_b) * s_map_t;
     o.u = (float)u;
     o.v = (float)v;
     o.r = (uint8_t)r;
@@ -904,7 +905,7 @@ void gpu_gp0(const uint32_t *p, int n) {
                 gv[k] = gvtx(fx[k], fy[k], v[k].r, v[k].g, v[k].b, v[k].u, v[k].v, clut, i | (s_far == nv ? 2048 : 0), dither);
                 gv[k].z = deep ? fz[k] : 0;
                 gv[k].w = known ? fz[k] : 0;
-                gv[k].mx = fmx[k] * s_map_s, gv[k].my = fmy[k];
+                gv[k].mx = fmx[k] * s_map_s, gv[k].my = fmy[k] * s_map_t;
             }
             if (!too_big(&v[0], &v[1], &v[2])) {
                 gl_tri(gv[0], gv[1], gv[2]);
@@ -1240,9 +1241,33 @@ static void wide_plan(uint32_t *p) {
     }
 }
 
+/* The upright field's zoom (native.h, field camera.c): the map layer's packets from OT depth ZOOM_DEPTH up (the map's
+   pieces and the characters; under it the menus and the choices' cursor) s times bigger about (cx, cy); 0: none */
+#define FIELD_MAP_LAYER 0x1002 /* field_map.h's FIELD_LAYER_MAP */
+#define ZOOM_DEPTH 3
+static float s_zoom, s_zoom_cx, s_zoom_cy, s_zoom_top; /* the middle in the layer's coordinates, its top in VRAM */
+static uint32_t *g_draw_ot; /* the OT of the layer being drawn and its length (native_draw_ot) */
+static int g_draw_ot_len;
+
+void native_draw_ot(void *ot, int len) {
+    g_draw_ot = ot, g_draw_ot_len = len;
+}
+
+void native_field_zoom(float s, float cx, float cy, int top) {
+    s_zoom = s > 1.0f ? s : 0, s_zoom_cx = cx, s_zoom_cy = cy, s_zoom_top = (float)top;
+}
+
+void native_field_zoom_point(int *x, int *y) {
+    if (s_zoom > 0) {
+        *x = (int)floorf(s_zoom_cx + (*x - s_zoom_cx) * s_zoom + 0.5f);
+        *y = (int)floorf(s_zoom_cy + (*y - s_zoom_cy) * s_zoom + 0.5f);
+    }
+}
+
 /* Walks an ordering table: each tag is {next address: 24, words: 8}, then the words */
 void DrawOTag(uint32_t *p) {
     int guard = 0, wide = gte_widescreen() && g_draw_layer == WIDE_MENUS_LAYER, k = 0, drawn = 0;
+    int zoom = s_zoom > 0 && !gte_in_battle() && g_draw_layer == FIELD_MAP_LAYER && g_draw_ot != NULL;
 
     perf_begin(PF_DRAW);
     gfx_sync(0);
@@ -1262,6 +1287,12 @@ void DrawOTag(uint32_t *p) {
         uint32_t tag = *p;
         int n = tag >> 24;
 
+        if (zoom && p >= g_draw_ot && p < g_draw_ot + g_draw_ot_len) { /* an entry of the OT: its depth */
+            int on = p - g_draw_ot >= ZOOM_DEPTH;
+
+            s_map_a = on ? s_zoom_cx : 0, s_map_s = on ? s_zoom : 1;
+            s_map_b = on ? s_zoom_top + s_zoom_cy : 0, s_map_t = on ? s_zoom : 1;
+        }
         if (n) {
             if (wide && k < s_wide_n) {
                 s_map_a = s_wide[k].a, s_map_s = s_wide[k].s;
@@ -1276,6 +1307,7 @@ void DrawOTag(uint32_t *p) {
         p = (uint32_t *)(uintptr_t)(tag & 0xFFFFFF);
     }
     s_map_a = 0, s_map_s = 1, s_map_d = 0;
+    s_map_b = 0, s_map_t = 1;
     s_clip_a = 0, s_clip_s = 1;
     gfx_shadows_resolve();
     if (gte_in_battle() && g_draw_layer == 0x1002) { /* BATTLE_LAYER_STAGE: its depth, for the props (stagefx.c) */

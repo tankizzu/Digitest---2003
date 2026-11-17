@@ -12,11 +12,21 @@
      if (task->hasBounds == 0) {
          map = TASK_REGISTRY.funcs.find(FIELD_TASK_MAP, -1, -1);
          if (map != NULL) {
-@@ -30,6 +34,11 @@
+@@ -30,6 +34,21 @@
              task->bounds.y = 0x400;
          }
      }
 +#ifdef NATIVE
++    /* upright, the prologue's street in Asuka City (a proposal, DW3_ZOOM_MAP=1): lower than the tall screen, the map
++       fills it, its scene zoomed about the screen's middle (gpu_draw.c), the map's middle there */
++    if (native_field_zoom_on() && GAME.funcs.getMode() == MODE_NEW_GAME && task->hasBounds &&
++        task->bounds.y < native_field_h()) {
++        y = task->bounds.y / 2 - native_field_h() / 2;
++        native_field_zoom((float)native_field_h() / task->bounds.y, SCREEN_WIDTH / 2.0f, native_field_h() / 2.0f,
++                          NATIVE_FIELD_Y);
++    } else {
++        native_field_zoom(0, 0, 0, 0);
++    }
 +    if (native_portrait()) {
 +        /* upright: the player always mid-screen, the black past the map's edges shown (DECISIONS.md) */
 +    } else {
@@ -24,7 +34,7 @@
      if (x < 0) {
          x = 0;
      }
-@@ -39,9 +48,16 @@
+@@ -39,9 +58,16 @@
      if (task->bounds.x - SCREEN_WIDTH < x) {
          x = task->bounds.x - SCREEN_WIDTH;
      }

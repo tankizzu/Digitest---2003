@@ -1,7 +1,7 @@
 --- a/src/field/field_mode/balloon.c
 +++ b/src/field/field_mode/balloon.c
-@@ -21,6 +21,13 @@
-     Point pos;
+@@ -21,10 +21,31 @@
+     Vec2 pos;
      s32 frame;
  
 +#ifdef NATIVE
@@ -14,3 +14,21 @@
      pos.x = task->actor->tile.x;
      pos.y = task->actor->tile.y - (task->actor->z >> 8);
      initSpriteDrawer(&sprite);
+     sprite.setLayerId(FIELD_LAYER_MAP, 1);
++#ifdef NATIVE
++    { /* upright with the scene zoomed: over the actor where it shows, at its own size (it follows the scroll) */
++        Layer *layer = GFX.funcs.getLayer(FIELD_LAYER_MAP);
++        Vec2 scroll;
++        s32 x, y;
++
++        layer->getScroll(layer, &scroll);
++        x = pos.x - scroll.x;
++        y = pos.y - 0x1B - scroll.y;
++        native_field_zoom_point(&x, &y);
++        pos.x = x + scroll.x;
++        pos.y = y + 0x1B + scroll.y;
++    }
++#endif
+     sprite.setTexture(FIELD_SPRITES_X, FIELD_SPRITES_Y);
+     if (task->substate == 2) {
+         frame = FIELDSTG_stepBalloonAnim(task);

@@ -183,6 +183,49 @@ Stato reale (17/11/2026, prototipo su Linux, `DW3_PORTRAIT=1`):
 - Su Android il port sceglie render_scale fino a 4: con la VRAM 1024×1024 la copia GL è 4096² → da limitare (2
   o 3) prima di accendere il verticale sul telefono.
 
+## Piano: strada di Asuka a tutto schermo (da approvare, 17/11/2026)
+
+Richiesta dell'utente: "Strada di asuka se possibile a tutto schermo come tutte le altre" (anteprima C di
+asuka_opzioni.png: ingrandita fino a riempire). La mappa (MODE_NEW_GAME 0x2D7) è 640×384: in verticale (H 710)
+restano 326 righe nere. Riempire vuol dire ingrandire la **sola scena** di H / 384 ≈ 1,85 (si vedono 173 pixel di
+mappa in larghezza invece di 320); testi, fascia alta, levetta e pulsanti restano come sono.
+
+Cosa c'è già: il renderer (gl, `gpu_draw.c`) sposta per layer le coordinate x dei pacchetti (`gvtx`: x → a + (x −
+a)·s + d, per le battaglie 16:9) sapendo il layer che disegna (`g_draw_layer`). Si estende alla y.
+
+Ostacolo: sul layer della mappa (FIELD_LAYER_MAP 0x1002, OT di 16) ci sono sia la scena sia i menu: profondità 11,
+7, 3 i pezzi della mappa (FIELDSTG_spriteDepths), attori a `actor->depth` (+1), menu e testi a 1–2, il cursore delle
+scelte a 3, il menu del campo e le transizioni a 0.
+
+Passi proposti:
+1. **Quando**: in verticale, solo nelle mappe di una lista (per ora la strada di Asuka), fattore s = H / altezza
+   della mappa. Le altre stanze basse restano col nero (decisione "dove la mappa finisce resta il nero").
+2. **Telecamera** (camera.c): in quelle mappe la y al centro della mappa (la mappa riempie l'altezza), la x sul
+   giocatore come ora.
+3. **Renderer**: layer.c dice al GPU dove sta l'OT del layer che disegna; `DrawOTag`, passando dalle voci dell'OT,
+   sa la profondità e ingrandisce attorno al centro della tela i pacchetti a profondità ≥ 3 (x e y in `gvtx`, righe
+   comprese). Il cursore delle scelte passa a profondità 2 nelle mappe ingrandite.
+4. **Cose della scena disegnate altrove** (fumetto sopra i personaggi, riquadro del nome vicino a chi parla,
+   bersagli del tocco sugli attori): la stessa trasformazione sulle loro coordinate.
+5. **GPU software** (miniature dei salvataggi): resta senza ingrandimento (la miniatura mostra la scena col nero).
+   Direct3D 12 non aggiornato (come il resto del verticale).
+6. Prova su Linux (`--field 727`), confronto con l'anteprima C, poi APK.
+Rischi: pezzi della mappa e attori che non combaciano dopo l'ingrandimento (righe di un pixel tra i pezzi da 128),
+qualità più bassa (la scena è 1,85 volte più grossa).
+
+**Prototipo** (17/11/2026, spento: si accende con `DW3_ZOOM_MAP=1`, `native_field_zoom_on` in portrait.c):
+- camera.c: nella strada (`GAME.funcs.getMode() == MODE_NEW_GAME`, mappa più bassa della tela) la y della telecamera
+  mette il centro della mappa a metà tela e chiama `native_field_zoom(H / altezza, 160, H / 2, NATIVE_FIELD_Y)`;
+  altrimenti `native_field_zoom(0, ...)`. `resetGraphics` (display.c) lo spegne a ogni cambio di schermata.
+- display.c passa al GPU l'OT del layer che disegna (`native_draw_ot`); gpu_draw.c `DrawOTag`, a ogni voce dell'OT
+  del layer della mappa, accende o spegne la trasformazione (`s_map_a/s` per la x, nuovi `s_map_b/t` per la y in
+  `gvtx`) secondo la profondità (≥ 3). Solo la scheda grafica: la VRAM del GPU software resta senza ingrandimento.
+- Gli attori sono a profondità 3–4 (provato con soglie 5/8/12): ingranditi con la mappa.
+- speech.c (riquadro di chi parla) e balloon.c (fumetto, profondità 1) spostano il loro punto con
+  `native_field_zoom_point`, restando della loro grandezza.
+- Verificato su Linux (`--field 727`, `DW3_ZOOM_MAP=1`): la strada riempie la tela, Junior e i suoi dialoghi
+  combaciano, le auto passano. Non provati: scelte Sì/No nella strada, il fumetto, la miniatura del salvataggio.
+
 ## Fascia alta del campo (fatta, 2.1)
 
 - `FieldChildren.nativeBand` (field_mode.h, slot in più in fondo: runChildTasks lo fa girare col campo e muore con

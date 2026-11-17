@@ -74,3 +74,16 @@ int native_settings_look(void) {
 
     return look >= 1 && look <= 3 ? look : 2;
 }
+
+/* The field filled with its scene zoomed where the map is lower than the tall screen (the prologue's street in Asuka
+   City): a proposal to show, on with DW3_ZOOM_MAP=1 until the user approves it (TECHNICAL_NOTES.md) */
+int native_field_zoom_on(void) {
+    static int on = -1;
+
+    if (on < 0) {
+        const char *env = SDL_getenv("DW3_ZOOM_MAP");
+
+        on = native_portrait() && env != NULL && SDL_atoi(env) != 0;
+    }
+    return on;
+}
