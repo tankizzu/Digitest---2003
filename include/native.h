@@ -349,6 +349,15 @@ void native_touch_in_menu(void);        /* the back button shows this frame; tap
    (engine/pad/port.c reads native_touch_buttons) */
 void native_touch_hold(int button, int frames);
 int native_touch_buttons(void); /* a tap anywhere on the picture (a "press Start" screen), 1 once */
+/* The player's games (platform/games.c), each with its own saves and two autosaves (state.c) */
+int native_game_count(void);
+int native_game_number(int i); /* the i-th game's number (1 on) */
+int native_game_current(void); /* the game being played, 0 if none */
+void native_game_select(int game);
+void native_game_new(void);
+int native_autosave_exists(int game);
+void native_autosave_load(int game); /* at this frame's end */
+
 /* The language picked at the language select, remembered (platform/prefs.c): -1 if none yet */
 int native_saved_language(void);
 void native_save_language(int language);

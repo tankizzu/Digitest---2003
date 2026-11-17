@@ -29,6 +29,9 @@ SAVED static int s_pending;
 /* The card image, written whole to a file beside and renamed over the card: a crash
    or a full disk mid-write leaves the card as it was, not half a save */
 static void save_card(void) {
+    if (s_path[0] == 0) {
+        return; /* no game chosen yet: nothing to keep */
+    }
     char tmp[1110];
     FILE *f;
 
@@ -220,13 +223,19 @@ static psx_long finish(psx_long cmd, psx_long chan, psx_long result) {
 
 psx_long MemCardFormat(psx_long chan);
 
-void MemCardInit(psx_long val) {
+void native_game_card_path(char *out, size_t n); /* games.c */
+
+/* The card image at `path` (a game's, games.c), a formatted one if there is none yet; "" a blank card kept in memory
+   only, until a game is chosen */
+void memcard_open(const char *path) {
     FILE *f;
 
-    (void)val;
-    snprintf(s_path, sizeof s_path, "%s/../saves", data_dir());
-    SDL_CreateDirectory(s_path); /* a first run has none */
-    snprintf(s_path, sizeof s_path, "%s/../saves/card1.mcd", data_dir());
+    snprintf(s_path, sizeof s_path, "%s", path);
+    if (s_path[0] == 0) {
+        memset(s_card, 0, CARD_SIZE);
+        MemCardFormat(0);
+        return;
+    }
     f = fopen(s_path, "rb");
     if (f == NULL) {
         /* a new player: a formatted card, so the first save doesn't ask to format */
@@ -239,6 +248,16 @@ void MemCardInit(psx_long val) {
         }
         fclose(f);
     }
+}
+
+void MemCardInit(psx_long val) {
+    char path[1100];
+
+    (void)val;
+    snprintf(path, sizeof path, "%s/../saves", data_dir());
+    SDL_CreateDirectory(path); /* a first run has none */
+    native_game_card_path(path, sizeof path);
+    memcard_open(path);
 }
 
 void MemCardStart(void) {}

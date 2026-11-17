@@ -31,10 +31,15 @@ int g_full_exp_report; /* the option captured once when a reward report starts *
 
 /* The files options make anew (files.c): the lobby's Veemon (packs.c),
    BladeGarurumon's model and the fighters' file (bladegaru.c) */
+const uint8_t *savetexts_file(int fid, long *size); /* savetexts.c: the memory card screen's texts, for the games */
+
 const uint8_t *made_file(int fid, long *size) {
     const uint8_t *made = packs_file(fid, size);
 
-    return made != NULL ? made : bladegaru_file(fid, size);
+    if (made == NULL) {
+        made = bladegaru_file(fid, size);
+    }
+    return made != NULL ? made : savetexts_file(fid, size);
 }
 
 int VSync(int mode);

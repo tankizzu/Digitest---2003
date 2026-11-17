@@ -80,10 +80,13 @@ static void state_path(char *path, size_t n) {
     snprintf(path, n, "%s/../saves/quick.state", data_dir());
 }
 
-/* The autosave (Android): saves/auto.state, written when the app goes to the background and every few minutes of
-   play, offered back at the title */
-static void auto_path(char *path, size_t n) {
-    snprintf(path, n, "%s/../saves/auto.state", data_dir());
+/* The autosaves (games.c): each game's auto_a.state and auto_b.state, written in turn */
+void native_game_dir(int game, char *out, size_t n); /* games.c */
+int native_game_current(void);
+static void auto_path(int game, int slot, char *path, size_t n) {
+    char dir[1100];
+    native_game_dir(game, dir, sizeof dir);
+    snprintf(path, n, "%s/auto_%c.state", dir, 'a' + slot);
 }
 
 static Header header(void) {
@@ -188,27 +191,79 @@ static int state_fits(const char *path) {
 }
 
 #define AUTOSAVE_EVERY (60 * 60 * 3) /* vsyncs: three minutes */
-static int s_auto_last, s_auto_asked;
+static int s_auto_last, s_auto_load;
+
+/* When a state file was written (0: none, or not this build's) */
+static Sint64 state_time(const char *path) {
+    SDL_PathInfo info;
+    return state_fits(path) && SDL_GetPathInfo(path, &info) ? info.modify_time : 0;
+}
+
+/* The game's newest autosave this build can load (its slot), or -1 */
+static int newest_autosave(int game) {
+    char a[1200], b[1200];
+    Sint64 ta, tb;
+
+    auto_path(game, 0, a, sizeof a);
+    auto_path(game, 1, b, sizeof b);
+    ta = state_time(a), tb = state_time(b);
+    if (ta == 0 && tb == 0) {
+        return -1;
+    }
+    return ta >= tb ? 0 : 1;
+}
+
+int native_autosave_exists(int game) {
+    return game > 0 && newest_autosave(game) >= 0;
+}
+
+/* Loads the game's newest autosave at this frame's end (Continue, STGMCARD's patch) */
+void native_autosave_load(int game) {
+    s_auto_load = game;
+}
+
+/* The current game's autosave, into the slot not written last (the older, or one that doesn't load) */
+static void autosave(void) {
+    int game = native_game_current(), newest;
+    char path[1200];
+
+    if (game == 0) {
+        return;
+    }
+    newest = newest_autosave(game);
+    auto_path(game, newest == 0 ? 1 : 0, path, sizeof path);
+    save_state_to(path);
+    s_auto_last = VSync(-1);
+}
 
 /* The app is about to go to the background: called from SDL's event pump, on the game's thread at a frame's end */
 static bool SDLCALL on_lifecycle(void *data, SDL_Event *e) {
     (void)data;
     if (e->type == SDL_EVENT_WILL_ENTER_BACKGROUND && touch_enabled() && !movie_playing() && getMode() >> 8 != MODE_TITLE >> 8 &&
-        getMode() >> 8 != MODE_LANGUAGE >> 8) {
-        char path[1200];
-        auto_path(path, sizeof path);
-        save_state_to(path);
-        s_auto_last = VSync(-1);
+        getMode() >> 8 != MODE_LANGUAGE >> 8 && getMode() >> 8 != 0x0C) {
+        autosave();
     }
     return true;
 }
 
-/* Once a frame (Android only, where touch is on): the offer at the title, then a save every few minutes of play */
+/* Once a frame: an autosave Continue asked for, and (where touch is on) a save every few minutes of play, not at
+   the title, the language select, the memory card screen (0x0C) or a movie */
 static void autosave_frame(void) {
     static int watching;
-    char path[1200];
-    int mode = getMode() >> 8;
+    int mode = getMode() >> 8, every;
 
+    if (s_auto_load > 0) {
+        int game = s_auto_load, slot = newest_autosave(game);
+        char path[1200];
+
+        s_auto_load = 0;
+        if (slot >= 0) {
+            auto_path(game, slot, path, sizeof path);
+            load_state_from(path);
+            s_auto_last = VSync(-1);
+        }
+        return;
+    }
     if (!touch_enabled()) {
         return;
     }
@@ -217,29 +272,9 @@ static void autosave_frame(void) {
         watching = 1;
         s_auto_last = VSync(-1);
     }
-    auto_path(path, sizeof path);
-    if (!s_auto_asked && mode == MODE_TITLE >> 8 && !movie_playing()) {
-        s_auto_asked = 1;
-        if (state_fits(path)) {
-            static const SDL_MessageBoxButtonData BUTTONS[] = {
-                {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Riprendi"},
-                {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Dal titolo"},
-            };
-            SDL_MessageBoxData box = {SDL_MESSAGEBOX_INFORMATION, NULL, "Digimon World 2003",
-                                      "Vuoi riprendere da dove eri rimasto?", 2, BUTTONS, NULL};
-            int which = 0;
-
-            if (SDL_ShowMessageBox(&box, &which) && which == 1) {
-                load_state_from(path);
-            }
-        }
-        s_auto_last = VSync(-1);
-        return;
-    }
-    if (mode != MODE_TITLE >> 8 && mode != MODE_LANGUAGE >> 8 && !movie_playing() &&
-        VSync(-1) - s_auto_last >= (SDL_getenv("DW3_AUTOSAVE_VSYNCS") ? SDL_atoi(SDL_getenv("DW3_AUTOSAVE_VSYNCS")) : AUTOSAVE_EVERY)) {
-        save_state_to(path);
-        s_auto_last = VSync(-1);
+    every = SDL_getenv("DW3_AUTOSAVE_VSYNCS") ? SDL_atoi(SDL_getenv("DW3_AUTOSAVE_VSYNCS")) : AUTOSAVE_EVERY;
+    if (mode != MODE_TITLE >> 8 && mode != MODE_LANGUAGE >> 8 && mode != 0x0C && !movie_playing() && VSync(-1) - s_auto_last >= every) {
+        autosave();
     }
 }
 
