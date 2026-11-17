@@ -25,8 +25,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] 4. Telecamera centrata su 512 righe; le stanze più basse restano al centro col nero (deciso).
 - [x] 5. Fascia in alto: partner (nome, HP) e MENU con la grafica del gioco (2.1). Manca OPZIONI (serve la
       schermata impostazioni con volume, da progettare con l'utente).
-- [x] Testi del menu del campo (file STATUS) senza tasti PlayStation (2.1). Restano da cercare gli altri file con
-      "Tasto"/"Button" (negozi, laboratorio, battaglia).
+- [x] Testi del menu del campo (file STATUS) senza tasti PlayStation (2.1).
+- [ ] Altri testi con "Tasto": CARD_ALBUM (40), CARD_SHOP (54), DIGI_LAB (61), DIGIMON_NAMING (68), ITEM_SHOP (117),
+      TRAINING (271) (fid italiani). Alcuni indicano funzioni del tasto □ (dettagli, effetti, ordina): riscriverli
+      quando quelle schermate avranno i loro tocchi.
 - [x] 6. Android in verticale (1.2 anteprima, 1.3 a tutto schermo).
 - [x] 7. Freccia dei dialoghi: i trattini indicano la velocità (A).
 - [ ] 8. Demo da discutere: battaglia verticale (comandi grandi in basso), fascia alta (partner, MENU, OPZIONI),
