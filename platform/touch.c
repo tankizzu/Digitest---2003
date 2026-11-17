@@ -423,7 +423,21 @@ void native_touch_auto_sprite(const void *sheet_ptr, int tex_x, int tex_y, int c
 
 /* For gl/touch.c: the arrow's pixels (ARROW_MAX wide rows), its size; 0 if not read yet */
 int touch_arrow(const uint32_t **pixels, int *w, int *h) {
-    *pixels = s_arrow, *w = s_arrow_w, *h = s_arrow_h;
+    /* the speed in the arrow's own three dashes (its rows 0-1, 3-4, 6-7, on its left once turned): none at x1 (and
+       off), the two by the shaft at x2, all three at x3 */
+    static uint32_t shown[ARROW_MAX * ARROW_MAX];
+    static const int DASHES[3][2] = {{6, 7}, {3, 4}, {0, 1}};
+    int speed = native_auto_text(), keep = speed >= 3 ? 3 : speed == 2 ? 2 : 0;
+
+    SDL_memcpy(shown, s_arrow, sizeof shown);
+    if (s_arrow_h >= 12) {
+        for (int d = keep; d < 3; d++) {
+            for (int k = 0; k < 2; k++) {
+                SDL_memset(&shown[DASHES[d][k] * ARROW_MAX], 0, ARROW_MAX * sizeof shown[0]);
+            }
+        }
+    }
+    *pixels = shown, *w = s_arrow_w, *h = s_arrow_h;
     return s_arrow_ok;
 }
 
@@ -852,10 +866,6 @@ int touch_shapes(TouchShape *out, int max) {
         auto_button(&x, &y, &r);
         /* value: the arrows (the speed, one dim when off) and the animation's phase, while on */
         out[n++] = (TouchShape){x, y, r, TOUCH_AUTO, speed ? 1.0f : (s_auto_down ? 0.9f : 0.6f), (float)speed};
-        for (int i = 0; i < speed && n < max; i++) { /* the speed: one small copy of the arrow for each step */
-            /* each half the button's arrow (1.9 radii long once turned), side by side after it */
-            out[n++] = (TouchShape){x + r * (1.4f + 1.1f * (float)i), y, r * 0.5f, TOUCH_LABEL, 1.0f, (float)speed};
-        }
     }
     if (menu_shown() && n < max) {
         float x, y, r;
