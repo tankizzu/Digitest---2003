@@ -358,6 +358,10 @@ int native_touch_list_event(int *y, int *dy);       /* 1 tap, 2 hold (at display
 int native_games_list_text(int top, int rows, unsigned char *out, int room); /* the games' rows, game-encoded */
 int native_game_delete(int game);                   /* games.c: the game's saves gone */
 int native_game_exists(int game);
+int native_games_full(void);           /* every MEMORY CARD slot taken */
+void native_game_new_at(int game);    /* a new game in that slot */
+void native_replace_pending(int on);  /* the title asks the memory card screen for a slot to replace */
+int native_replace_is_pending(void);
 int native_games_column_text(int first, int count, const char *empty, unsigned char *out, int room);
 int native_touch_stick_level(void); /* 0 the stick isn't pushed, 1 a little (walk), 2 most of the way (run) */
 void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */

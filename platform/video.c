@@ -102,6 +102,13 @@ int video_init(int scale, int fullscreen) {
     for (;;) { /* the renderer picked, or OpenGL when it can't start: a new window, as its flags differ */
         s_window = SDL_CreateWindow("Digimon World 2003", video_window_width(scale), 240 * scale,
                                     gfx_window_flags() | SDL_WINDOW_RESIZABLE | (fullscreen ? SDL_WINDOW_FULLSCREEN : 0) | (g_render_sounds ? SDL_WINDOW_HIDDEN : 0));
+#ifdef __ANDROID__
+        /* the phone: the whole screen, the status and navigation bars hidden (a swipe from an edge shows them a
+           moment, SDL's immersive mode) */
+        if (s_window != NULL) {
+            SDL_SetWindowFullscreen(s_window, true);
+        }
+#endif
         if (s_window == NULL) {
             LOG("window: %s", SDL_GetError());
             return 0;

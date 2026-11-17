@@ -2,6 +2,18 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.9
+
+- **Tutto schermo vero sul telefono**: barre di sistema nascoste (modalità immersiva di SDL; uno scorrimento dal
+  bordo le mostra un momento), immagine anche sotto il notch. **Pulsanti nell'area sicura** del telefono (notch,
+  angoli arrotondati, barra dei gesti): `SDL_GetWindowSafeArea`. Non verificato sul telefono.
+- **Memory card in verticale riordinata**: **5 slot** (massimo) in una colonna, a destra del tubo, ognuno nel
+  riquadro del gioco (sprite 29) con l'icona della memory card, nome e data; la finestra del gioco alla sua
+  grandezza (niente linee stirate); "CARICA" nel riquadro di metallo appeso; scelte sempre a **due pulsanti
+  affiancati**: Carica / Elimina, poi Automatico / Salvataggi (se c'è un autosalvataggio), Sì / No.
+- **Slot pieni**: INIZIA chiede quale slot sostituire ("Scegli lo slot da sostituire", "Sostituire MEMORY CARD N?").
+- Verificati su Linux: aspetto, Carica/Elimina, Elimina → Sì/No, INIZIA con 5 slot pieni → scelta e conferma.
+
 ### 1.8
 
 - **Memory card in verticale con 10 slot**: due colonne da cinque, ogni slot con l'icona della memory card del

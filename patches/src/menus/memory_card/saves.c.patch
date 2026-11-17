@@ -1,6 +1,6 @@
 --- a/src/menus/memory_card/saves.c
 +++ b/src/menus/memory_card/saves.c
-@@ -2,12 +2,37 @@
+@@ -2,12 +2,45 @@
     errors */
  
  #include "menus/memory_card.h"
@@ -10,18 +10,26 @@
 +#define MC_CROSS() (PAD_PRESSED(PAD_CROSS) || native_touch_text_tap())
 +static s32 nativeTop, nativeSel, nativeSource; /* the games' rows (below) */
 +static s32 nativeScroll, nativeDelete;          /* the list's drag not yet a row; the game asked to delete */
-+/* Upright (platform/portrait.c): the ten MEMORY CARD slots in two columns of five, each with the game's card icon;
-+   nativeSel the slot (0-9, game nativeSel + 1); a slot picked offers its autosave, its saves and its deletion */
++/* Upright (platform/portrait.c): the game's frame where it was, the five MEMORY CARD slots under it, each in the
++   game's small box (sprite 29) with the game's card icon (0x23), its name and when it was made; the choices in the
++   frame, always two big boxes side by side (Load / Delete, Autosave / Saves, Yes / No). nativeSel the slot (0-4,
++   game nativeSel + 1) */
 +#define NATIVE_UP native_portrait()
-+#define NATIVE_SLOTS 10
-+#define NATIVE_GRID_X(i) ((i) < 5 ? 0x0E : 0xA2)       /* a slot's icon */
-+#define NATIVE_GRID_Y(i) (0x81 + (i) % 5 * 28)         /* its first line */
-+#define NATIVE_PROMPT_Y 0x13E                           /* in the frame's bottom band, drawn 1.9 times as tall */
-+#define NATIVE_TEXT_DX 0x22                             /* a slot's text, right of its icon */
-+#define NATIVE_ICON_DY (-15) /* the card beside its slot's two lines */
-+#define NATIVE_TITLE_Y (-0x34)                          /* "LOAD" / "SAVE" in the metal bar above the frame */
-+static s32 nativeGame, nativeOpts[3], nativeOptCount;   /* the game picked; its choices (0x2A autosave, 0x2B, 0x2D) */
-+static u8 nativeColText[400];
++#define NATIVE_SLOTS 5
++#define NATIVE_BOX_X 72  /* right of the pipe: under it, the back button's corner stays free */
++#define NATIVE_BOX_W 238
++#define NATIVE_BOX_H 38
++#define NATIVE_BOX_Y(i) (0xF0 + (i) * 42)
++#define NATIVE_TEXT_X (NATIVE_BOX_X + 48)              /* a slot's text, right of its icon, two lines */
++#define NATIVE_ICON_DY (-18)                            /* the card sprite's own offset, at 0.6 */
++#define NATIVE_TITLE_X 0x3C                             /* "LOAD" / "SAVE" in the metal box hanging over the frame */
++#define NATIVE_TITLE_Y (-0x2A)
++#define NATIVE_BTN_X(i) ((i) == 0 ? 16 : 168)          /* the two choices in the frame */
++#define NATIVE_BTN_Y 0x78
++#define NATIVE_BTN_W 136
++#define NATIVE_BTN_H 40
++static s32 nativeGame, nativeStep;   /* the slot's game; its choices: 0 Load / Delete, 1 Autosave / Saves, 2 Yes / No */
++static s32 nativeBtn[2];             /* the two boxes' strings (MEMCRD) */
 +static u8 nativeListText[512];
 +static void nativeShowRows(MemCardSaves *saves, MemCardSavesWindows *win);
 +#endif
@@ -38,7 +46,7 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +141,452 @@
+@@ -116,9 +149,507 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -47,8 +55,8 @@
 +        nativeTop = nativeSel = 0;
 +        if (NATIVE_UP) {
 +            nativeSel = native_game_current() >= 1 && native_game_current() <= NATIVE_SLOTS ? native_game_current() - 1 : 0;
-+            win->title->setPos(win->title, 0x1E, NATIVE_TITLE_Y);
-+            win->windows[1]->setPos(win->windows[1], saves->origin[0] + 15, NATIVE_PROMPT_Y);
++            win->title->setPos(win->title, NATIVE_TITLE_X, NATIVE_TITLE_Y);
++            nativeStep = -1;
 +            nativeShowRows(saves, win);
 +            return;
 +        }
@@ -63,7 +71,7 @@
 +    }
 +#ifdef NATIVE
 +    if (NATIVE_UP && saves->choosing) { /* upright: the title in the metal bar, no second heading under it */
-+        win->title->setPos(win->title, 0x1E, NATIVE_TITLE_Y);
++        win->title->setPos(win->title, NATIVE_TITLE_X, NATIVE_TITLE_Y);
 +        win->windows[4]->setVisible(win->windows[4], 0);
 +        return;
 +    }
@@ -110,40 +118,33 @@
 +    s32 count = native_game_count();
 +
 +    if (NATIVE_UP) {
-+        const char *empty = LANGUAGE == 4 ? "vuota" : "empty";
-+
-+        win->windows[4]->setVisible(win->windows[4], 0);
-+        win->windows[3]->setVisible(win->windows[3], 0);
 +        win->cursor->setVisible(win->cursor, 0);
-+        if (saves->substate == 5 || saves->substate == 6) { /* the choices, one under the other, in the left column */
-+            static const s32 YES_NO[2] = {0x16, 0x17};
-+
-+            win->windows[2]->setVisible(win->windows[2], 0);
-+            if (saves->substate == 5) {
-+                win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x28);
-+                win->windows[1]->setNumber(win->windows[1], 1, nativeGame);
-+                nativeListStrings(nativeOpts, nativeOptCount);
-+            } else {
-+                win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x2C);
-+                win->windows[1]->setNumber(win->windows[1], 1, nativeGame);
-+                nativeListStrings(YES_NO, 2);
-+            }
-+            win->windows[0]->setPos(win->windows[0], NATIVE_GRID_X(0) + 0x18, NATIVE_GRID_Y(0));
-+            win->windows[0]->setLines(win->windows[0], 10);
-+            win->windows[0]->setString(win->windows[0], nativeListText, -1);
-+            win->cursor->setVisible(win->cursor, 1);
-+            win->cursor->setPos(win->cursor, NATIVE_GRID_X(0) + 6, NATIVE_GRID_Y(nativeSource));
++        win->windows[2]->setVisible(win->windows[2], 0);
++        /* the slots, two lines each (name, when it was made), in their boxes under the frame */
++        native_games_column_text(1, NATIVE_SLOTS, LANGUAGE == 4 ? "vuota" : "empty", nativeListText, sizeof nativeListText);
++        win->windows[0]->setPos(win->windows[0], NATIVE_TEXT_X, NATIVE_BOX_Y(0) + 5);
++        win->windows[0]->setDepth(win->windows[0], 0); /* in front of the boxes */
++        win->windows[3]->setDepth(win->windows[3], 0);
++        win->windows[4]->setDepth(win->windows[4], 0);
++        win->windows[0]->setLines(win->windows[0], 15);
++        win->windows[0]->setString(win->windows[0], nativeListText, -1);
++        if (nativeStep < 0) { /* no slot picked: the question only */
++            win->windows[3]->setVisible(win->windows[3], 0);
++            win->windows[4]->setVisible(win->windows[4], 0);
++            win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)),
++                                       native_replace_is_pending() ? 0x2E : 0x1D);
 +            return;
 +        }
-+        win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x1D);
-+        native_games_column_text(1, 5, empty, nativeListText, sizeof nativeListText);
-+        win->windows[0]->setPos(win->windows[0], NATIVE_GRID_X(0) + NATIVE_TEXT_DX, NATIVE_GRID_Y(0));
-+        win->windows[0]->setLines(win->windows[0], 10);
-+        win->windows[0]->setString(win->windows[0], nativeListText, -1);
-+        native_games_column_text(6, 5, empty, nativeColText, sizeof nativeColText);
-+        win->windows[2]->setPos(win->windows[2], NATIVE_GRID_X(5) + NATIVE_TEXT_DX, NATIVE_GRID_Y(5));
-+        win->windows[2]->setLines(win->windows[2], 10);
-+        win->windows[2]->setString(win->windows[2], nativeColText, -1);
++        /* a slot picked: its question and the two boxes' words */
++        win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)),
++                                   nativeStep < 2 ? 0x28 : native_replace_is_pending() ? 0x2F : 0x2C);
++        win->windows[1]->setNumber(win->windows[1], 1, nativeGame);
++        nativeBtn[0] = nativeStep == 0 ? 0x30 : nativeStep == 1 ? 0x2A : 0x16;
++        nativeBtn[1] = nativeStep == 0 ? 0x2D : nativeStep == 1 ? 0x2B : 0x17;
++        win->windows[3]->setPos(win->windows[3], NATIVE_BTN_X(0) + 16, NATIVE_BTN_Y + 13);
++        win->windows[3]->setString(win->windows[3], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), nativeBtn[0]);
++        win->windows[4]->setPos(win->windows[4], NATIVE_BTN_X(1) + 16, NATIVE_BTN_Y + 13);
++        win->windows[4]->setString(win->windows[4], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), nativeBtn[1]);
 +        return;
 +    }
 +
@@ -286,19 +287,31 @@
 +    saves->screen->step = 1;
 +}
 +
-+/* Upright: the slot picked; its choices: its autosave (if any), its saves (if any), its deletion */
-+static void nativeOpenSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
-+    nativeGame = nativeSel + 1;
-+    nativeOptCount = 0;
-+    if (native_autosave_exists(nativeGame)) {
-+        nativeOpts[nativeOptCount++] = 0x2A;
++/* Upright: the windows of the game's own screens back where it had them (leaving the slots for a card's saves) */
++static void nativeRestoreWindows(MemCardSaves *saves, MemCardSavesWindows *win) {
++    win->windows[0]->setPos(win->windows[0], saves->origin[0] + 15, saves->origin[1] + 40);
++    win->windows[0]->setLines(win->windows[0], 5);
++    nativeListText[0] = 0;
++    win->windows[0]->setString(win->windows[0], nativeListText, -1);
++    win->windows[3]->setPos(win->windows[3], 207, 203);
++    win->windows[4]->setPos(win->windows[4], saves->origin[0] + 15, saves->origin[1] + 24);
++    win->windows[3]->setVisible(win->windows[3], 0);
++    win->windows[4]->setVisible(win->windows[4], 0);
++}
++
++/* Upright: the box tapped (0 left, 1 right), else -1 */
++static s32 nativeButtonTap(void) {
++    s32 i;
++
++    for (i = 0; i < 2; i++) {
++        native_touch_target(0x7A70 + i, NATIVE_BTN_X(i) - 4, NATIVE_BTN_Y - 6, NATIVE_BTN_W + 8, NATIVE_BTN_H + 12);
 +    }
-+    nativeOpts[nativeOptCount++] = 0x2B;
-+    nativeOpts[nativeOptCount++] = 0x2D;
-+    nativeSource = 0;
-+    saves->substate = 5;
-+    SOUND.playSound(SOUND_SELECT);
-+    nativeShowRows(saves, win);
++    for (i = 0; i < 2; i++) {
++        if (native_touch_tap_id(0x7A70 + i)) {
++            return i;
++        }
++    }
++    return -1;
 +}
 +
 +static void nativePickSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -306,21 +319,17 @@
 +
 +    native_touch_in_menu();
 +    for (i = 0; i < NATIVE_SLOTS; i++) {
-+        native_touch_target(0x7A60 + i, NATIVE_GRID_X(i) - 6, NATIVE_GRID_Y(i) - 4, 0x92, 28);
++        native_touch_target(0x7A60 + i, NATIVE_BOX_X, NATIVE_BOX_Y(i) - 2, NATIVE_BOX_W, NATIVE_BOX_H + 4);
 +    }
 +    for (i = 0; i < NATIVE_SLOTS; i++) {
 +        if (native_touch_tap_id(0x7A60 + i)) {
 +            tapped = i;
 +        }
 +    }
-+    if (PAD_PRESSED(PAD_UP) && nativeSel % 5 > 0) {
++    if (PAD_PRESSED(PAD_UP) && nativeSel > 0) {
 +        nativeSel--;
-+    } else if (PAD_PRESSED(PAD_DOWN) && nativeSel % 5 < 4) {
++    } else if (PAD_PRESSED(PAD_DOWN) && nativeSel < NATIVE_SLOTS - 1) {
 +        nativeSel++;
-+    } else if (PAD_PRESSED(PAD_LEFT) && nativeSel >= 5) {
-+        nativeSel -= 5;
-+    } else if (PAD_PRESSED(PAD_RIGHT) && nativeSel < 5) {
-+        nativeSel += 5;
 +    }
 +    if (tapped >= 0) {
 +        nativeSel = tapped;
@@ -329,12 +338,22 @@
 +        SOUND.playSound(SOUND_CURSOR);
 +    }
 +    if (tapped >= 0 || PAD_PRESSED(PAD_CROSS)) {
-+        if (native_game_exists(nativeSel + 1)) {
-+            nativeOpenSlot(saves, win);
++        nativeGame = nativeSel + 1;
++        if (native_replace_is_pending()) { /* a new game's slot: replace it? */
++            SOUND.playSound(SOUND_SELECT);
++            nativeStep = 2;
++            saves->substate = 6;
++            nativeShowRows(saves, win);
++        } else if (native_game_exists(nativeGame)) { /* load or delete it */
++            SOUND.playSound(SOUND_SELECT);
++            nativeStep = 0;
++            saves->substate = 5;
++            nativeShowRows(saves, win);
 +        } else {
 +            SOUND.playSound(SOUND_MENU_CANCEL); /* an empty slot: nothing to load */
 +        }
 +    } else if (PAD_PRESSED(PAD_TRIANGLE)) {
++        native_replace_pending(0);
 +        nativeLeave(saves);
 +    }
 +}
@@ -397,35 +416,43 @@
 +static void nativePickSource(MemCardSaves *saves, MemCardSavesWindows *win) {
 +    s32 prev = nativeSource;
 +
-+    if (NATIVE_UP) { /* the slot's choices: autosave, saves, delete */
-+        if (nativeListInput(&nativeSource, nativeOptCount, NULL) == 1) {
-+            switch (nativeOpts[nativeSource]) {
-+            case 0x2D:
-+                SOUND.playSound(SOUND_SELECT);
-+                nativeSource = 1; /* no, to start with */
-+                saves->substate = 6;
-+                nativeShowRows(saves, win);
-+                return;
-+            case 0x2B:
-+                native_game_select(nativeGame);
-+                win->windows[0]->setPos(win->windows[0], saves->origin[0] + 15, saves->origin[1] + 40);
-+                win->windows[0]->setLines(win->windows[0], 5);
-+                nativeStartCheck(saves, win);
-+                return;
-+            }
-+            native_game_select(nativeGame); /* the autosave, as below */
-+            nativeSel = nativeGame - 1;
-+        } else if (PAD_PRESSED(PAD_TRIANGLE)) {
++    if (NATIVE_UP) { /* the slot's two boxes: Load / Delete, then Autosave / Saves */
++        s32 tapped = nativeButtonTap();
++
++        native_touch_in_menu();
++        if (PAD_PRESSED(PAD_TRIANGLE) || (tapped < 0 && PAD_PRESSED(PAD_CROSS) && 0)) {
++            tapped = -2;
++        }
++        if (tapped == -2) {
 +            SOUND.playSound(SOUND_MENU_CANCEL);
-+            saves->substate = 2;
++            nativeStep = nativeStep == 1 ? 0 : -1;
++            saves->substate = nativeStep < 0 ? 2 : 5;
 +            nativeShowRows(saves, win);
 +            return;
-+        } else {
-+            if (prev != nativeSource) {
-+                nativeListCursor(win, nativeSource);
-+            }
++        }
++        if (tapped < 0) {
 +            return;
 +        }
++        SOUND.playSound(SOUND_SELECT);
++        if (nativeStep == 0 && tapped == 1) { /* delete: yes or no, no first */
++            nativeStep = 2;
++            saves->substate = 6;
++            nativeShowRows(saves, win);
++            return;
++        }
++        if (nativeStep == 0 && native_autosave_exists(nativeGame)) { /* load: from where */
++            nativeStep = 1;
++            nativeShowRows(saves, win);
++            return;
++        }
++        native_game_select(nativeGame);
++        nativeSel = nativeGame - 1;
++        nativeRestoreWindows(saves, win);
++        if (nativeStep == 0 || tapped == 1) { /* the card's saves */
++            nativeStartCheck(saves, win);
++            return;
++        }
++        /* the autosave, as below */
 +    }
 +
 +    if (NATIVE_UP || nativeListInput(&nativeSource, 2, NULL) == 1) { /* upright: the autosave was picked above */
@@ -472,6 +499,42 @@
 +static void nativePickDelete(MemCardSaves *saves, MemCardSavesWindows *win) {
 +    s32 prev = nativeSource;
 +
++    if (NATIVE_UP) { /* Yes / No side by side: delete the slot, or replace it with the new game */
++        s32 tapped = nativeButtonTap();
++
++        native_touch_in_menu();
++        if (PAD_PRESSED(PAD_TRIANGLE)) {
++            tapped = 1;
++        }
++        if (tapped == 0 && native_replace_is_pending()) {
++            SOUND.playSound(SOUND_SELECT);
++            native_replace_pending(0);
++            native_game_new_at(nativeGame);
++            GAME.funcs.newGame();
++            GAME.funcs.resetPlayTime();
++            BATTLE_SETUP.clearGauges();
++            MEMCARD_FUNCS.setFileName();
++            GAME.funcs.requestMode(MODE_NEW_GAME, 0);
++            saves->substate = 500; /* nothing more here: the new game's mode starts */
++            return;
++        }
++        if (tapped == 0) {
++            SOUND.playSound(SOUND_SELECT);
++            native_game_delete(nativeGame);
++            nativeStep = -1;
++            saves->substate = 2;
++            nativeShowRows(saves, win);
++            return;
++        }
++        if (tapped == 1) {
++            SOUND.playSound(SOUND_MENU_CANCEL);
++            nativeStep = native_replace_is_pending() ? -1 : 0;
++            saves->substate = nativeStep < 0 ? 2 : 5;
++            nativeShowRows(saves, win);
++        }
++        return;
++    }
++
 +    if (nativeListInput(&nativeSource, 2, NULL) == 1 || PAD_PRESSED(PAD_TRIANGLE)) {
 +        if (nativeSource == 0 && !PAD_PRESSED(PAD_TRIANGLE)) {
 +            SOUND.playSound(SOUND_SELECT);
@@ -492,7 +555,7 @@
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -135,7 +603,7 @@
+@@ -135,7 +666,7 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          SOUND.playSound(SOUND_CURSOR);
      }
@@ -501,7 +564,7 @@
          win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
          STGMCARD_showPort(saves, win, 1);
          win->windows[1]->setVisible(win->windows[1], 0);
-@@ -302,7 +770,7 @@
+@@ -302,7 +833,7 @@
      s32 status;
  
      if (win->menu->substate == 6) {
@@ -510,7 +573,7 @@
              SOUND.playSound(SOUND_MENU_CONFIRM);
              saves->substate = 400;
              win->menu->substate = 0;
-@@ -359,6 +827,12 @@
+@@ -359,6 +890,12 @@
  
  /* Slides the slots and header out before leaving the screen (601) */
  static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -523,7 +586,7 @@
      if (win->menu->substate == 0) {
          if (win->menu->slid == 2) {
              win->info->hide(win->info);
-@@ -403,6 +877,9 @@
+@@ -403,6 +940,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -533,7 +596,7 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -564,7 +1041,7 @@
+@@ -564,7 +1104,7 @@
  static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 check;
  
@@ -542,7 +605,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -595,7 +1072,7 @@
+@@ -595,7 +1135,7 @@
  /* Waits for cross on the loaded message, then waits for the card (400) and leaves
     the screen (600) */
  static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -551,7 +614,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -676,7 +1153,7 @@
+@@ -676,7 +1216,7 @@
              SOUND.playSound(SOUND_CURSOR);
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
          }
@@ -560,7 +623,7 @@
              SOUND.playSound(SOUND_SELECT);
              win->windows[0]->setVisible(win->windows[0], 0);
              win->windows[4]->setVisible(win->windows[4], 0);
-@@ -726,7 +1203,7 @@
+@@ -726,7 +1266,7 @@
                  STGMCARD_showError(saves, win);
              }
          }
@@ -569,7 +632,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->substate = 400;
          saves->prompting = 0;
-@@ -872,8 +1349,24 @@
+@@ -872,8 +1412,24 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -595,7 +658,7 @@
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
-@@ -921,7 +1414,7 @@
+@@ -921,7 +1477,7 @@
          break;
      case 40:
          STGMCARD_moveChoiceCursor(saves, win);
@@ -604,7 +667,7 @@
              STGMCARD_hideChoices(win);
              SOUND.playSound(SOUND_SELECT);
              /* match depends on the 400 going through status */
-@@ -1017,6 +1510,30 @@
+@@ -1017,6 +1573,46 @@
      }
      sprite.setTexture(0x280, 0);
      sprite.setClutRow(0);
@@ -612,23 +675,39 @@
 +    if (NATIVE_UP) {
 +        s32 i;
 +
-+        /* upright: the frame 1.9 times as tall from its top, the slots' card icons (the one picked blinking) */
-+        sprite.setScale(ONE, ONE * 19 / 10, ONE);
-+        sprite.setPivot(0, saves->origin[1] + saves->slide[1].value);
++        /* upright: the frame as the game has it; under it the five slots in the game's small box (sprite 29) with the
++           game's card (0x23, the picked one blinking); in the frame the two choices in the same boxes */
 +        sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 33, saves->origin[0] + saves->slide[0].value, saves->origin[1] + saves->slide[1].value);
-+        sprite.setScale(ONE, ONE, ONE);
-+        if (saves->choosing != 0 && saves->substate == 2) {
-+            sprite.setLayerId(saves->layer, 1);
-+            for (i = 0; i < NATIVE_SLOTS; i++) {
-+                if (native_game_exists(i + 1)) {
-+                    sprite.setClutRow(i == nativeSel ? (GFX.funcs.getTime() >> 2) % 12 : 0);
-+                    sprite.setScale(ONE / 2, ONE / 2, ONE); /* the game's card, at half its size */
-+                    sprite.setPivot(NATIVE_GRID_X(i), NATIVE_GRID_Y(i));
-+                    sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 0x23, NATIVE_GRID_X(i), NATIVE_GRID_Y(i) + NATIVE_ICON_DY);
-+                }
-+            }
-+            sprite.setClutRow(0);
++        if (saves->choosing == 0) {
++            return;
 +        }
++        sprite.setLayerId(saves->layer, 1);
++        if (saves->substate != 2 && saves->substate != 5 && saves->substate != 6) { /* the game's own screens */
++            sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 29, 188, 185);
++            return;
++        }
++        for (i = 0; i < NATIVE_SLOTS; i++) {
++            sprite.setScale(ONE * NATIVE_BOX_W / 117, ONE * NATIVE_BOX_H / 33, ONE);
++            sprite.setPivot(NATIVE_BOX_X, NATIVE_BOX_Y(i));
++            sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 29, NATIVE_BOX_X, NATIVE_BOX_Y(i));
++            if (native_game_exists(i + 1)) {
++                sprite.setLayerId(saves->layer, 0); /* in front of its box */
++                sprite.setClutRow(i == nativeSel ? (GFX.funcs.getTime() >> 2) % 12 : 0);
++                sprite.setScale(ONE * 6 / 10, ONE * 6 / 10, ONE);
++                sprite.setPivot(NATIVE_BOX_X + 8, NATIVE_BOX_Y(i) + 4);
++                sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 0x23, NATIVE_BOX_X + 8, NATIVE_BOX_Y(i) + 4 + NATIVE_ICON_DY);
++                sprite.setClutRow(0);
++                sprite.setLayerId(saves->layer, 1);
++            }
++        }
++        if (saves->substate == 5 || saves->substate == 6) {
++            for (i = 0; i < 2; i++) {
++                sprite.setScale(ONE * NATIVE_BTN_W / 117, ONE * NATIVE_BTN_H / 33, ONE);
++                sprite.setPivot(NATIVE_BTN_X(i), NATIVE_BTN_Y);
++                sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 29, NATIVE_BTN_X(i), NATIVE_BTN_Y);
++            }
++        }
++        sprite.setScale(ONE, ONE, ONE);
 +        return;
 +    }
 +#endif

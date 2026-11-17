@@ -18,7 +18,7 @@ long native_read_raw(int fid, uint8_t **out); /* files.c */
 #define FID_FIRST 120
 #define FID_LAST 126
 #define ORIGINAL_COUNT 41
-#define TEXT_COUNT 46
+#define TEXT_COUNT 49
 
 typedef struct {
     int id;
@@ -48,6 +48,9 @@ static const Text IT[] = {
     {0x2B, "Salvataggi"},
     {0x2C, "Eliminare MEMORY CARD #."},
     {0x2D, "Elimina"},
+    {0x2E, "Scegli lo slot da sostituire"},
+    {0x2F, "Sostituire MEMORY CARD #."},
+    {0x30, "Carica"},
     {0, NULL},
 };
 
@@ -74,6 +77,9 @@ static const Text EN[] = {
     {0x2B, "Saves"},
     {0x2C, "Delete MEMORY CARD #."},
     {0x2D, "Delete"},
+    {0x2E, "Choose a slot to replace"},
+    {0x2F, "Replace MEMORY CARD #."},
+    {0x30, "Load"},
     {0, NULL},
 };
 
@@ -167,7 +173,7 @@ const uint8_t *savetexts_file(int fid, long *size) {
     if (s_made[i] == NULL) {
         uint8_t *orig = NULL;
         long n = native_read_raw(fid, &orig);
-        static const Text ADDED_ONLY[] = {{0x29, "Continue from where."}, {0x2A, "Autosave"}, {0x2B, "Saves"}, {0x2C, "Delete MEMORY CARD #."}, {0x2D, "Delete"}, {0, NULL}};
+        static const Text ADDED_ONLY[] = {{0x29, "Continue from where."}, {0x2A, "Autosave"}, {0x2B, "Saves"}, {0x2C, "Delete MEMORY CARD #."}, {0x2D, "Delete"}, {0x2E, "Choose a slot to replace"}, {0x2F, "Replace MEMORY CARD #."}, {0x30, "Load"}, {0, NULL}};
 
         if (n <= 0) {
             return NULL;

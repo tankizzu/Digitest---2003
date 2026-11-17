@@ -13,7 +13,7 @@ void memcard_open(const char *path);     /* memcard.c */
 void log_once(const char *what);
 
 #define MAX_GAMES 99   /* folders looked at (older builds made more) */
-#define NATIVE_SLOTS 10 /* the MEMORY CARD slots offered */
+#define NATIVE_SLOTS 5 /* the MEMORY CARD slots offered (five: big enough for a finger) */
 
 static int s_games[MAX_GAMES], s_count = -1; /* the games' numbers, ascending */
 
@@ -62,6 +62,43 @@ static void ready(void) {
 }
 
 int native_game_delete(int game);
+
+int native_game_exists(int game);
+void native_game_select(int game);
+
+/* Whether every MEMORY CARD slot is taken: a new game asks which to replace (title.c, STGMCARD's patches) */
+int native_games_full(void) {
+    for (int g = 1; g <= NATIVE_SLOTS; g++) {
+        if (!native_game_exists(g)) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* A new game in slot `game`, whatever it held */
+static SDL_Time created(int game);
+void native_game_new_at(int game) {
+    char path[1250], text[32];
+    SDL_Time now = 0;
+
+    native_game_delete(game);
+    native_game_select(game);
+    native_game_dir(game, path, sizeof path);
+    SDL_strlcat(path, "/created.txt", sizeof path);
+    SDL_GetCurrentTime(&now);
+    SDL_snprintf(text, sizeof text, "%lld\n", (long long)(now / SDL_NS_PER_SECOND));
+    SDL_SaveFile(path, text, SDL_strlen(text));
+}
+
+/* The title asked for a slot to replace (native_games_full): the memory card screen picks it */
+static int s_replace;
+void native_replace_pending(int on) {
+    s_replace = on;
+}
+int native_replace_is_pending(void) {
+    return s_replace;
+}
 
 /* Whether game `game` (a MEMORY CARD slot) has a folder */
 int native_game_exists(int game) {
@@ -149,7 +186,7 @@ void native_game_new(void) {
             next = g;
         }
     }
-    if (next == 0) {
+    if (next == 0) { /* all taken: the title asks which to replace first (native_games_full); else the oldest */
         SDL_Time oldest = 0;
 
         next = 1;
@@ -232,8 +269,9 @@ void native_game_card_path(char *out, size_t n) {
     SDL_strlcat(out, "/card.mcd", n);
 }
 
-/* The upright memory card screen's column (STGMCARD's patches): slots `first` to first + count - 1, two lines each:
-   "MEMORY CARD N", then the day and time it was made or the word for an empty one (`empty`). Game-encoded, its 00 at
+/* The upright memory card screen's column (STGMCARD's patches): slots `first` to first + count - 1, two lines each
+   and a blank one between (the boxes are three lines apart): "MEMORY CARD N", then the day and time it was made or
+   the word for an empty one (`empty`). Game-encoded, its 00 at
    the end; the length written */
 int native_games_column_text(int first, int count, const char *empty, unsigned char *out, int room) {
     int n = 0;
@@ -245,12 +283,12 @@ int native_games_column_text(int first, int count, const char *empty, unsigned c
         SDL_Time t = native_game_exists(g) ? created(g) : 0;
 
         if (!native_game_exists(g)) {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %s", g > first ? "\n" : "", g, empty);
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %s", g > first ? "\n\n" : "", g, empty);
         } else if (t != 0 && SDL_TimeToDateTime(t, &dt, true)) {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %02d|01|05%02d|01|05%02d %02d|01|07%02d", g > first ? "\n" : "",
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %02d|01|05%02d|01|05%02d %02d|01|07%02d", g > first ? "\n\n" : "",
                          g, dt.day, dt.month, dt.year % 100, dt.hour, dt.minute);
         } else {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n", g > first ? "\n" : "", g);
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n", g > first ? "\n\n" : "", g);
         }
         n += native_text_encode(line, out + n, room - n) - 1;
     }

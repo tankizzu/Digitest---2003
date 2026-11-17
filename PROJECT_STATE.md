@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Ultimo aggiornamento: 17/11/2026 — versione **1.8** (versionCode 21) consegnata all'utente.
+Ultimo aggiornamento: 17/11/2026 — versione **1.9** (versionCode 22) consegnata all'utente.
 
 ## Obiettivo attuale
 

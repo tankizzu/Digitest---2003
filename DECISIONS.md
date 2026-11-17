@@ -75,9 +75,15 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - Elenco grande: due partite alla volta nel riquadro principale, righe alte il doppio, giorno e ora di
   creazione accanto (created.txt), trascinare per scorrere, tocco per scegliere, **tenere premuto per
   eliminare** (con Sì/No).
-- **10 slot MEMORY CARD al massimo** (17/11/2026). In verticale tutti visibili su due colonne, con l'icona della
-  memory card del gioco; un tocco su uno slot offre Automatico / Salvataggi / Elimina. Una partita nuova va nel
-  primo slot libero; con 10 occupati riusa il più vecchio (da confermare con l'utente).
+- **5 slot MEMORY CARD al massimo** (17/11/2026, prima erano 10): una colonna di riquadri grandi del gioco con
+  l'icona della memory card, nome e data. Toccando uno slot: Carica / Elimina; Carica → Automatico / Salvataggi.
+  Una partita nuova va nel primo slot libero; **con tutti pieni si chiede quale sostituire**.
+- **Tutti i Sì/No affiancati** (17/11/2026).
+- **Nome della memory card** (da fare): "MEMORY CARD N" è il nome generico; al primo salvataggio si sceglie un
+  nome, mostrato col font del gioco.
+- **Salvataggi / Autosalvataggio** (da fare): ognuno apre una lista con immagine e dati (i salvataggi manuali; i
+  due autosalvataggi alternati).
+- **Barre di sistema nascoste** su Android, pulsanti nell'area sicura del telefono.
 - Continua → elenco delle partite (grafica del gioco) → "Automatico" o "Salvataggi". Nessuna finestra Android
   "vuoi riprendere".
 

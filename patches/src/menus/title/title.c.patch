@@ -1,10 +1,18 @@
 --- a/src/menus/title/title.c
 +++ b/src/menus/title/title.c
-@@ -13,6 +13,9 @@
+@@ -13,6 +13,17 @@
              break;
          case 1:
              left = 1;
 +#ifdef NATIVE
++            if (native_games_full()) { /* every MEMORY CARD slot taken: the memory card screen asks which to replace */
++                native_replace_pending(1);
++                GAME.funcs.newGame();
++                BATTLE_SETUP.clearGauges();
++                MEMCARD_FUNCS.setFileName();
++                GAME.funcs.requestMode(MODE_CONTINUE, 0);
++                break;
++            }
 +            native_game_new(); /* a game of its own: its saves and autosaves apart (platform/games.c) */
 +#endif
              GAME.funcs.newGame();

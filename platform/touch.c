@@ -450,12 +450,34 @@ int touch_arrow(const uint32_t **pixels, int *w, int *h) {
     return s_arrow_ok;
 }
 
+/* The window's safe area (cut-outs, round corners, the system's gesture bars), as insets in pixels: the buttons keep
+   inside it, whatever the phone's shape */
+static float s_safe[4]; /* left, top, right, bottom */
+
+static void update_safe(void) {
+    int count = 0;
+    SDL_Window **wins = SDL_GetWindows(&count);
+    SDL_Rect r;
+
+    if (wins != NULL && count > 0 && SDL_GetWindowSafeArea(wins[0], &r) && r.w > 0 && r.h > 0) {
+        int pw = 0, ph = 0, ww = 0, wh = 0;
+        float k;
+
+        SDL_GetWindowSizeInPixels(wins[0], &pw, &ph);
+        SDL_GetWindowSize(wins[0], &ww, &wh);
+        k = ww > 0 ? (float)pw / (float)ww : 1.0f; /* the safe area is in points */
+        s_safe[0] = r.x * k, s_safe[1] = r.y * k;
+        s_safe[2] = (float)pw - (r.x + r.w) * k, s_safe[3] = (float)ph - (r.y + r.h) * k;
+    }
+    SDL_free(wins);
+}
+
 /* The automatic dialogues button: the bottom left corner of the window, over the black band */
 static void auto_button(float *x, float *y, float *r) {
     float u = (float)SDL_min(s_w, s_h);
     *r = u * 0.1f;
-    *x = *r * 1.3f;
-    *y = s_h - *r * 1.3f;
+    *x = s_safe[0] + *r * 1.3f;
+    *y = s_h - s_safe[3] - *r * 1.3f;
 }
 
 void native_touch_menu_available(void) {
@@ -537,13 +559,13 @@ static void corner(int right, float *x, float *y, float *r) {
     float u = (float)SDL_min(s_w, s_h);
     if (right) {
         *r = u * 0.065f;
-        *x = s_w - *r * 1.6f;
-        *y = *r * 1.6f;
+        *x = s_w - s_safe[2] - *r * 1.6f;
+        *y = s_safe[1] + *r * 1.6f;
         return;
     }
     *r = u * 0.08f;
-    *x = *r * 1.5f;
-    *y = s_h - *r * 1.5f;
+    *x = s_safe[0] + *r * 1.5f;
+    *y = s_h - s_safe[3] - *r * 1.5f;
     if (dialog_shown()) {
         float ax, ay, ar;
         auto_button(&ax, &ay, &ar);
@@ -663,6 +685,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     if (w != s_w || h != s_h) {
         layout(w, h);
     }
+    update_safe();
     for (int i = 0; i < s_nkeys; i++) {
         s_keys[i].down = 0;
     }
