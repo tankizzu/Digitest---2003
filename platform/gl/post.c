@@ -427,7 +427,8 @@ void gl_present(const SDL_Surface *menu, SDL_Surface **shot) {
     GLuint tex = 0;
     float uv[4];
     int aw = gte_widescreen() ? 16 : 4, ah = gte_widescreen() ? 9 : 3; /* the picture's aspect */
-    if (d.h > 256) { /* the upright field (portrait.c): square pixels, as the game's 320x240 has them */
+    if (d.y >= 512 && d.h > 256) { /* the upright field (portrait.c, below row 512): square pixels, as the game's
+                                       320x240 has them; the movies (taller too, up in VRAM) stay 4:3 */
         aw = d.w, ah = d.h;
     }
 
