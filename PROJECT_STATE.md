@@ -5,7 +5,8 @@ Ultimo aggiornamento: 17/11/2026 — versione **1.0** (versionCode 13) consegnat
 ## Obiettivo attuale
 
 Prologo perfetto fino alla prima battaglia "tutorial", tutto col touch e con la grafica del gioco; poi la
-battaglia. In parallelo: piano per il verticale come modalità principale (da approvare).
+battaglia. In parallelo: verticale a tutto schermo come modalità principale (direzione approvata, piano in
+TODO P1).
 
 ## Funziona
 
@@ -33,12 +34,9 @@ battaglia. In parallelo: piano per il verticale come modalità principale (da ap
 ## Problemi aperti
 
 - Il gioco è ancora solo in orizzontale (manifest sensorLandscape); il verticale richiede di far disegnare al
-  campo un'area più alta di 320×240 (piano da preparare e approvare).
+  campo un'area più alta di 320×240.
 - I menu iniziali vanno rivisti con l'utente, solo con la grafica del gioco (la demo del 17/11 è stata scartata).
-- `build-linux-gles/` è nella storia git (commit 05c507c): tolto dalla versione attuale, la riscrittura della
-  storia aspetta il sì dell'utente.
 - Il repository su GitHub è stato rinominato `tankizzu/Digitest---2003` (il vecchio indirizzo reindirizza).
-
 - Dialoghi automatici che si fermano con più dialoghi di fila: non riprodotto su Linux (il prologo va avanti da
   solo con x2); chiedere all'utente il punto esatto.
 
