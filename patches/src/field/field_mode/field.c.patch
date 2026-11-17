@@ -33,15 +33,133 @@
      layer = GFX.funcs.createLayer(&rect, 1, FIELD_LAYER_BACK);
      layer->setBgColor(layer, 1, 1, 1);
      GFX.funcs.createLayer(&rect, 1, FIELD_LAYER_COVER);
-@@ -468,6 +485,25 @@
+@@ -466,8 +483,143 @@
+  * From the STORY_GENJI_BEATEN on, START opens the field menu (STSTATUS) while
+  * the field is idle; the player's place is kept to come back to
   */
++#ifdef NATIVE
++/* Upright, the top band (TECHNICAL_NOTES, "fascia alta"), while the player has the control: the three partners, each
++   in the menus' bar (menu sprite 0x41, twice as tall) with its name in the game's font and its HP as a bar; MENU on
++   the right in the same bar once the field menu exists (from Genji on), a tap on it being Start. All of it from
++   what the field has in VRAM, on the message layer, inside the phone's safe area */
++#define NATIVE_BAND_BAR 0x41    /* 136 x 17 */
++#define NATIVE_BAND_W 150
++#define NATIVE_BAND_H 30
++#define NATIVE_BAND_PITCH 33
++#define NATIVE_BAND_MENU_W 84
++#define NATIVE_BAND_MENU_ID 0x7A20
++static s32 nativeBandAt = -100; /* the last frame the player had the control */
++
++typedef struct NativeBand {
++    TASK_HEADER(NativeBand);
++    s32 names[3]; /* the partners' names shown (TEXT_DIGIMON_NAMES), 0 none */
++} NativeBand;
++
++static u8 nativeMenuText[16];
++
++static void nativeBandBar(s32 x, s32 y, s32 w, s32 h) {
++    SpriteDrawer sprite;
++
++    initSpriteDrawer(&sprite);
++    sprite.setLayerId(FIELD_LAYER_TEXT, 1);
++    sprite.setTexture(0x140, 0);
++    sprite.setFollowScroll(0);
++    sprite.setScale(ONE * w / 136, ONE * h / 17, ONE);
++    sprite.setPivot(x, y);
++    sprite.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), NATIVE_BAND_BAR, x, y);
++}
++
++/* A flat rectangle on the message layer, in front */
++static void nativeBandRect(s32 x, s32 y, s32 w, s32 h, s32 r, s32 g, s32 b) {
++    Layer *layer = GFX.funcs.getLayer(FIELD_LAYER_TEXT);
++    u_long *ot = layer->getOtEntry(layer, 0);
++    POLY_F4 *poly = GFX.funcs.getPrim();
++
++    setPolyF4(poly);
++    setRGB0(poly, r, g, b);
++    setXYWH(poly, x, y, w, h);
++    addPrim(ot, poly);
++    GFX.funcs.setPrim(poly + 1);
++}
++
++static void nativeBandUpdate(NativeBand *task, TextWindow **windows) {
++    s32 i, member, hp, max, top, shown, x, y, w;
++
++    switch (task->state) {
++    case TASK_INIT:
++    default:
++        for (i = 0; i < 4; i++) {
++            windows[i] = createTextWindow(FIELD_LAYER_TEXT, 1, 0, 0);
++            windows[i]->setDepth(windows[i], 0);
++            windows[i]->setVisible(windows[i], 0);
++        }
++        task->nextState(task);
++        break;
++    case TASK_RUN:
++        shown = native_portrait() && GFX.funcs.getTime() - nativeBandAt <= 1;
++        top = 6 + native_touch_safe_inset(1);
++        for (i = 0; i < 3; i++) {
++            member = GAME.funcs.getPartyMember(i);
++            if (!shown || member < 0 || member >= PARTNER_COUNT || GAME.partners[member].unlocked < 3) {
++                windows[i]->setVisible(windows[i], 0);
++                continue;
++            }
++            x = 6 + native_touch_safe_inset(0);
++            y = top + i * NATIVE_BAND_PITCH;
++            nativeBandBar(x, y, NATIVE_BAND_W, NATIVE_BAND_H);
++            if (task->names[i] != GAME.partners[member].unlocked - 2) {
++                task->names[i] = GAME.partners[member].unlocked - 2; /* the partner's id + 1 */
++                windows[i]->setString(windows[i], FILE_CACHE.load(TEXT_FILE(TEXT_DIGIMON_NAMES)), task->names[i]);
++            }
++            windows[i]->setPos(windows[i], x + 9, y + 3);
++            windows[i]->setVisible(windows[i], 1);
++            /* the HP: green over a dark trough, as the game's bars */
++            hp = GAME.partners[member].info.stats[STAT_HP];
++            max = GAME.partners[member].info.stats[STAT_MAX_HP];
++            hp = hp < 0 ? 0 : hp > max ? max : hp;
++            w = max > 0 ? (NATIVE_BAND_W - 20) * hp / max : 0;
++            nativeBandRect(x + 10, y + NATIVE_BAND_H - 10, w, 4, 0x38, 0xD8, 0x50);
++            nativeBandRect(x + 10, y + NATIVE_BAND_H - 10, NATIVE_BAND_W - 20, 4, 0x08, 0x10, 0x28);
++        }
++        if (shown && GAME.progress >= STORY_GENJI_BEATEN) { /* MENU: Start */
++            x = SCREEN_WIDTH - 6 - NATIVE_BAND_MENU_W - native_touch_safe_inset(2);
++            nativeBandBar(x, top, NATIVE_BAND_MENU_W, NATIVE_BAND_H);
++            if (nativeMenuText[0] == 0) {
++                native_text_encode("MENU", nativeMenuText, sizeof nativeMenuText);
++                windows[3]->setString(windows[3], nativeMenuText, -1);
++            }
++            windows[3]->setPos(windows[3], x + NATIVE_BAND_MENU_W / 2 - 14, top + 8);
++            windows[3]->setVisible(windows[3], 1);
++            native_touch_target(NATIVE_BAND_MENU_ID, x - 4, top - 4, NATIVE_BAND_MENU_W + 8, NATIVE_BAND_H + 8);
++            if (native_touch_tap_id(NATIVE_BAND_MENU_ID)) {
++                native_touch_hold(PAD_START, 6);
++            }
++        } else {
++            windows[3]->setVisible(windows[3], 0);
++        }
++        break;
++    case TASK_DONE:
++    case TASK_KILL:
++        break;
++    }
++}
++
++static Task *nativeCreateBand(void) {
++    NativeBand *task = createTask(nativeBandUpdate, sizeof(NativeBand), sizeof(TextWindow *) * 4);
++
++    task->names[0] = task->names[1] = task->names[2] = 0;
++    return (Task *)task;
++}
++#endif
++
  static inline void openFieldMenu(FieldTask *task, FieldChildren *children) {
      if (FIELDSTG_state.menuOpen != 1 && FIELDSTG_state.busy == 0 && FIELDSTG_state.acting == 0) {
 +#ifdef NATIVE
-+        if (GAME.progress >= STORY_GENJI_BEATEN) {
-+            native_touch_menu_available(); /* touch: the menu button shows; tapped, it is Start */
++        if (GAME.progress >= STORY_GENJI_BEATEN && !native_portrait()) {
++            native_touch_menu_available(); /* touch: the menu button shows; tapped, it is Start (upright: the band's) */
 +        }
 +        if (children->event == NULL) {
++            nativeBandAt = GFX.funcs.getTime(); /* the top band shows (upright) */
 +            /* the player has the control: the stick walks and a tap is X; and the place an autosave keeps */
 +            native_touch_field_free();
 +            native_autosave_point(GAME.funcs.getMode(), children->actors[0]->pos.x, children->actors[0]->pos.y,
@@ -59,7 +177,7 @@
          do {
              if (GAME.progress < STORY_GENJI_BEATEN || !(PAD.getPressed(0) & (1 << PAD_START))) {
                  break;
-@@ -494,7 +530,11 @@
+@@ -494,7 +646,11 @@
      s32 mode;
  
      if (FIELDSTG_keepsFileCache() == 0) {
@@ -71,7 +189,7 @@
      }
      setUpFieldScreen();
      if (FIELDSTG_keepsFileCache() == 0) {
-@@ -511,7 +551,14 @@
+@@ -511,7 +667,14 @@
      if (FIELDSTG_state.stageInit != NULL) {
          children->stage = FIELDSTG_state.stageInit(task);
      }
@@ -86,7 +204,19 @@
      FLAGS_00.applyAction(FIELD_VISITED_FLAG(GAME.funcs.getMode()), 1);
      mode = GAME.funcs.getPrevMode();
      /* from other than a field (0x2xx, 0x3xx), STDWTITL,
-@@ -635,6 +682,13 @@
+@@ -524,6 +687,11 @@
+         FIELDSTG_state.defaultStartDir = GAME.fieldDir;
+     }
+     children->banner = FIELDSTG_createBanner(1);
++#ifdef NATIVE
++    if (children->nativeBand == NULL) {
++        children->nativeBand = nativeCreateBand();
++    }
++#endif
+     task->nextSubstate(task);
+ }
+ 
+@@ -635,6 +803,13 @@
          switch (task->substate) {
          case 0:
          default:
@@ -100,7 +230,7 @@
              openFieldMenu(task, children);
              break;
          case 1:
-@@ -974,6 +1028,9 @@
+@@ -974,6 +1149,9 @@
      if (task != NULL) {
          FIELDSTG_state.busy = 1;
          FIELDSTG_state.battleStarting = 1;
@@ -110,7 +240,7 @@
          next = MODE_BATTLE_MOVIE;
          if (GAME.progress != STORY_MOVIE_BATTLES) {
              next = MODE_BATTLE;
-@@ -1020,7 +1077,12 @@
+@@ -1020,7 +1198,12 @@
      FieldTask *field = TASK_REGISTRY.funcs.find(FIELD_TASK_FIELD, -1, -1);
      FieldChildren *children = field->children;
  

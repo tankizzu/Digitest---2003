@@ -25,3 +25,13 @@
      /* 0x104 */ MapTile *tiles; /* width * height */
      /* 0x108 */ u8 viewTiles[30]; /* by the slots around the view, their tiles */
      /* 0x128 */ s32 viewX; /* the tile column of the slots' left edge */
+@@ -729,6 +738,9 @@
+     /* 0x70 */ struct MapStreamer *mapStreamer; /* FIELDSTG_createMapStreamer's */
+     /* 0x74 */ FieldMenu *menu; /* createFieldMenu's */
+     /* 0x78 */ struct MapObjects *mapObjects; /* FIELDSTG_createMapObjects's */
++#ifdef NATIVE
++    Task *nativeBand; /* upright, the top band: the partners and MENU (field.c) */
++#endif
+ } FieldChildren;
+ 
+ /* An encounter of FIELDSTG_encounters, which FIELDSTG_startEncounter starts: its enemies and
