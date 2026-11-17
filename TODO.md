@@ -14,7 +14,17 @@ Priorità: P1 subito, P2 dopo, P3 più avanti. Obiettivo attuale: **prologo perf
 - [ ] Rivedere con l'utente: scale, salti e minigiochi automatici come le porte?
 - [ ] Dialoghi automatici che si fermano con più dialoghi di fila: farsi dire il punto (su Linux non succede).
 
-## P1 — verticale (serve approvazione del piano)
+## P1 — verticale, fase 1 (approvata il 17/11/2026): il campo a tutto schermo
+
+Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
+- [ ] 1. VRAM del port 1024×1280 (righe alte solo per il port), test che tutto il resto resti uguale.
+- [ ] 2. Campo con un buffer 320×640 a (0,512).
+- [ ] 3. Mappa: 27 immagini, 4×6 pezzi disegnati, stream 4×7.
+- [ ] 4. Telecamera centrata su 640 righe; stanze piccole ingrandite.
+- [ ] 5. Dialoghi/banner/fumetti riposizionati.
+- [ ] 6. Android in verticale; screenshot del prologo all'utente.
+
+## (vecchio) verticale
 
 - [ ] Piano per il **verticale come modalità principale**: campo a tutto schermo con più mappa sopra e sotto,
       menu e battaglia ridisposti con la grafica del gioco, orizzontale come opzione. Il manifest oggi è

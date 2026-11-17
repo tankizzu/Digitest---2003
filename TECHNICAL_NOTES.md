@@ -89,3 +89,35 @@
 - `native_touch_tap` non deve consumare gli id ≥ 0x7A00.
 - Fumetto dei personaggi invisibile (0.8): creato senza genitore, non girava mai. Ora è figlio del giocatore.
 - Righe della memory card troppo lunghe ("Slot MEMORY CARD N" tagliato): accorciate in "MEMORY CARD N".
+
+## Verticale, fase 1: il campo a tutto schermo (progetto, 17/11/2026)
+
+Cosa fa oggi il gioco (verificato nel codice):
+- Schermo 320×240 (`SCREEN_WIDTH/HEIGHT`, engine/gfx.h); due buffer a (0,0) e (0,256) (display.c,
+  `setDisplayMode`); ogni layer ha il suo DRAWENV per buffer (layer.c).
+- La VRAM è 1024×512 (PlayStation). Nel port c'è il GPU software (gpu_draw.c) nella VRAM e la stessa cosa
+  disegnata più fine da OpenGL in una copia della VRAM (gl/); lo schermo è l'area del DISPENV in quella copia.
+- La mappa del campo è a pezzi da 128×128 (map_streamer.c): 30 "stream" tengono in RAM, compressi, i pezzi di un
+  vicinato 6×5 attorno al giocatore (disposizione da FIELDSTG_slotLayouts secondo direzione e quadrante); 12
+  "immagini" sono i pezzi decompressi nella VRAM (texture a 8 bit, CLUT dello stream); se ne disegnano 4×3
+  attorno allo scroll. Ogni pezzo è fatto di sprite su 3 profondità (stream.c), per stare davanti/dietro agli
+  attori. Un pezzo non ancora decompresso si copre di nero.
+- La telecamera (camera.c) centra a (centro − 0xA0, centro − 0x8C) e tiene lo schermo dentro la mappa.
+
+Progetto (tela verticale 320×640, larga quanto l'originale, più alta di 400 righe):
+1. **VRAM del port più alta** (1024×1280): righe ≥ 512 solo per il port. Pagina texture: bit 11 = y 512 (come
+   la GPU con 2 MB). Toccare: platform.h (VRAM_H), gpu.c, gpu_draw.c (maschere `& 511`), gl/ (texture della copia),
+   state.c (dimensione degli stati), post.c (lettura dell'area mostrata). Con render_scale alto la copia GL
+   diventa grande: limitare la scala in verticale (texture ≤ 4096).
+2. **Campo in verticale**: in modalità campo un solo buffer 320×640 a (0,512) (display.c / layer.c via patch,
+   solo nel campo); i vecchi buffer 320×480 a (0,0) restano liberi.
+3. **Più immagini di mappa**: da 12 a 27 (le 15 in più nell'area dei vecchi buffer, x 0–319, y 0–479), e
+   disegno di 4 colonne × fino a 6 righe; vicinato degli stream ridisposto 4 colonne × 7 righe (28 di 30) al
+   posto delle tabelle 6×5.
+4. **Telecamera**: centro con 640 di altezza; nelle mappe più basse di 640 righe (stanze piccole) ingrandire
+   quanto basta (decisione già presa) invece del nero.
+5. **Interfaccia del campo**: dialoghi, banner dell'area, fumetti e menu sono posizionati per 320×240 → vanno
+   spostati (dialoghi in basso, ecc.).
+6. **Android**: manifest in verticale; touch con le nuove dimensioni (s_disp).
+Prima prova: il prologo (Online Center, Atrio principale), screenshot da mandare all'utente prima di andare
+oltre.
