@@ -334,7 +334,9 @@ void native_touch_target(int id, int x, int y, int w, int h);
 int native_touch_tap(void);
 int native_touch_anywhere(void);
 int native_touch_tap_id(int id); /* a tap on the port's own target id (0x7A00 on), once */
-int native_auto_text(void);      /* automatic dialogues on (platform/prefs.c) */
+int native_auto_text(void);      /* automatic dialogues: 0 off, else the speed 1-3 (platform/prefs.c) */
+void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialogues button shows (touch.c) */
+void native_touch_no_stick(void);    /* no stick on this screen */
 /* The phone's keyboard for the name entry (touch.c): on Android its own keys replace the screen's */
 int native_soft_keyboard(void);
 void native_text_begin(void); /* shows it; call each frame it is wanted */

@@ -34,11 +34,16 @@
          sprite.setClutRow(4);
          sprite.draw(FILE_CACHE.getEntry(NAME_ENTRY_SPRITES), 0x2C, 0xCB, 0xC3);
          sprite.draw(FILE_CACHE.getEntry(NAME_ENTRY_SPRITES), 0x2D, 0xDE, 0xC3);
-@@ -120,6 +131,10 @@
+@@ -120,6 +131,15 @@
          sprite.draw(FILE_CACHE.getEntry(NAME_ENTRY_SPRITES), NAME_ENTRY_TEXT_SPRITE(0x44), 0xCB, 0xAE);
          sprite.draw(FILE_CACHE.getEntry(NAME_ENTRY_SPRITES), NAME_ENTRY_TEXT_SPRITE(0x4C), 0xF6, 0xC3);
          sprite.setClutRow(0);
 +#ifdef NATIVE
++        } else if (task->active) {
++            /* the phone's keyboard: the end key, under the name, is the button that ends it */
++            sprite.setClutRow(4);
++            sprite.draw(FILE_CACHE.getEntry(NAME_ENTRY_SPRITES), NAME_ENTRY_TEXT_SPRITE(0x4C), 0x8C, 0x5E);
++            sprite.setClutRow(0);
 +        }
 +        if (!native_soft_keyboard()) /* nor the keys' grid */
 +#endif

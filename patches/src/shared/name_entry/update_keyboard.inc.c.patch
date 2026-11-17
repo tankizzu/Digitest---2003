@@ -61,7 +61,7 @@
  /* The keyboard's input: moving the cursor, turning the pages and typing the name */
  void OVL_NAME(updateKeyboard)(NameEntry *task, NameEntryWindows *windows) {
      s32 page;
-@@ -22,6 +79,62 @@
+@@ -22,6 +79,67 @@
          }
          break;
      case 2:
@@ -70,14 +70,14 @@
 +            /* touch: every key of the page, and the page arrows; a key tapped is typed at once (as X on it) */
 +            s32 r, col, tapped;
 +
-+            for (r = 0; r < 7; r++) {
++            for (r = 0; r < 7 && !native_soft_keyboard(); r++) { /* hidden keys, with the phone's: no targets */
 +                for (col = 0; col < 15; col++) {
 +                    if (OVL_NAME(keyboard).pages[task->page].cells[r][col].kind != 0) {
 +                        native_touch_target(r * 15 + col, col * 14 + 0x2F + col / 5 * 8, r * 18 + 0x5A, 14, 18);
 +                    }
 +                }
 +            }
-+            if (OVL_NAME(keyboard).pageCount >= 2) {
++            if (OVL_NAME(keyboard).pageCount >= 2 && !native_soft_keyboard()) {
 +                native_touch_target(200, 0, 0x50, 0x28, 0x40);
 +                native_touch_target(201, 0x110, 0x50, 0x30, 0x40);
 +            }
@@ -96,9 +96,14 @@
 +                    task->cursor = SDL_MIN_CURSOR(j + 1, task->maxLength - 1);
 +                }
 +                lastTime = GFX.funcs.getTime();
++                native_touch_no_stick();
 +                native_touch_target(0x7A30, 0x40, 0x38, 0xB0, 0x20); /* the name: a tap shows the keyboard again */
++                native_touch_target(0x7A31, 0x78, 0x58, 0x60, 0x1C); /* the button under it: the name is done */
 +                if (native_touch_tap_id(0x7A30)) {
 +                    native_text_reopen();
++                }
++                if (native_touch_tap_id(0x7A31)) {
++                    task->row = NAME_KEY_END / 15, task->column = NAME_KEY_END % 15, touchKey = 1;
 +                }
 +                native_text_begin();
 +                ch = native_text_next();
@@ -124,7 +129,7 @@
          if (PAD_PRESSED(PAD_START)) {
              SOUND.playSound(SOUND_MENU_MOVE);
              task->column = 13;
-@@ -30,11 +143,19 @@
+@@ -30,11 +148,19 @@
          }
          if (OVL_NAME(keyboard).pageCount >= 2) {
              page = task->page;
@@ -144,7 +149,7 @@
                  if (++task->page > OVL_NAME(keyboard).pageCount - 1) {
                      task->page = 0;
                  }
-@@ -96,7 +217,11 @@
+@@ -96,7 +222,11 @@
              } while (OVL_NAME(keyboard).pages[task->page].cells[task->row][task->column].kind == 0);
              SOUND.playSound(SOUND_MENU_MOVE);
          }

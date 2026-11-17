@@ -81,8 +81,11 @@ void native_touch_target(int id, int x, int y, int w, int h) {
 
 int native_touch_tap(void) {
     int t = s_tap;
+    if (t >= 0x7A00) {
+        return -1; /* the port's own targets (0x7A00 on) are no option's: left for native_touch_tap_id */
+    }
     s_tap = -1;
-    return t >= 0x7A00 ? -1 : t; /* the port's own targets (0x7A00 on) are no option's */
+    return t;
 }
 
 static int s_logical[16]; /* native_touch_hold: game frames each logical button is still held for */
@@ -118,7 +121,7 @@ int native_touch_tap_id(int id) {
 }
 
 int native_auto_text(void); /* prefs.c */
-#define AUTO_TEXT_WAIT 150      /* vsyncs a page waits before it goes on by itself: two and a half seconds */
+static const int AUTO_TEXT_WAIT[4] = {0, 150, 75, 38}; /* vsyncs a page waits at each speed: 2.5 s, 1.25 s, 0.6 s */
 
 /* Automatic dialogues: 1 once the text window `who` has waited AUTO_TEXT_WAIT for the player (text_window.c asks
    each frame it waits; a break of a few vsyncs starts the count again) */
@@ -131,7 +134,7 @@ int native_auto_text_due(void *who) {
         waiting = who, since = now;
     }
     last = now;
-    if (native_auto_text() && now - since >= AUTO_TEXT_WAIT) {
+    if (native_auto_text() && now - since >= AUTO_TEXT_WAIT[native_auto_text()]) {
         waiting = NULL;
         return 1;
     }
@@ -289,6 +292,32 @@ static void layout(int w, int h) {
     s_keys[s_nkeys++] = (Key){w - sr * 1.8f, h * 0.36f, sr, B_R1, TOUCH_R1, 0};
 }
 
+static Uint64 s_dialog_until, s_no_stick_until;
+static int s_auto_down;
+void native_auto_text_toggle(void); /* prefs.c */
+
+/* A dialogue is open: the automatic dialogues button shows, at the screen's bottom left (talk_box.c, message_box.c) */
+void native_touch_dialog_open(void) {
+    s_dialog_until = SDL_GetTicks() + 150;
+}
+
+/* No stick on this screen (the name entry): a finger off the options does nothing */
+void native_touch_no_stick(void) {
+    s_no_stick_until = SDL_GetTicks() + 150;
+}
+
+static int dialog_shown(void) {
+    return SDL_GetTicks() < s_dialog_until;
+}
+
+/* The automatic dialogues button: the bottom left corner of the window, over the black band */
+static void auto_button(float *x, float *y, float *r) {
+    float u = (float)SDL_min(s_w, s_h);
+    *r = u * 0.1f;
+    *x = *r * 1.3f;
+    *y = s_h - *r * 1.3f;
+}
+
 void native_touch_menu_available(void) {
     s_menu_until = SDL_GetTicks() + 150;
 }
@@ -413,7 +442,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     SDL_FingerID now_down[10];
     int now_n = 0;
 
-    s_menu_down = s_back_down = 0;
+    s_menu_down = s_back_down = s_auto_down = 0;
     {
         /* the system's back (gesture or key, SDL_ANDROID_TRAP_BACK_BUTTON) is Triangle, the game's cancel */
         static int back_was;
@@ -445,6 +474,17 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                 }
                 if (was && held_target(fingers[i]->id)) {
                     continue; /* still on the option it tapped */
+                }
+                if (dialog_shown()) {
+                    float bx, by, br;
+                    auto_button(&bx, &by, &br);
+                    if ((x - bx) * (x - bx) + (y - by) * (y - by) <= br * br * 1.6f) {
+                        if (!was) {
+                            native_auto_text_toggle();
+                        }
+                        s_auto_down = 1;
+                        continue;
+                    }
                 }
                 if (menu_shown() && in_corner(1, x, y)) {
                     if (!was) {
@@ -487,6 +527,8 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                 }
                 seen_skip = 1;
                 s_skip_x = x, s_skip_y = y;
+            } else if (SDL_GetTicks() < s_no_stick_until) {
+                /* no stick here */
             } else if (!s_stick_on) { /* a new finger off the keys: the stick appears under it */
                 s_stick_on = seen_stick = 1;
                 s_stick_id = fingers[i]->id;
@@ -574,6 +616,14 @@ int touch_shapes(TouchShape *out, int max) {
     if (s_stick_on && n + 2 <= max) {
         out[n++] = (TouchShape){s_bx, s_by, s_rad * 1.25f, TOUCH_RING, 0.45f, 0};
         out[n++] = (TouchShape){s_bx + s_vx * s_rad, s_by + s_vy * s_rad, s_rad * 0.5f, TOUCH_KNOB, 0.75f, 0};
+    }
+    if (dialog_shown() && n < max) {
+        float x, y, r;
+        int speed = native_auto_text();
+        auto_button(&x, &y, &r);
+        /* value: the arrows (the speed, one dim when off) and the animation's phase, while on */
+        out[n++] = (TouchShape){x, y, r, TOUCH_AUTO, speed ? 1.0f : (s_auto_down ? 0.9f : 0.55f),
+                                (float)SDL_max(speed, 1) + (speed ? (float)(SDL_GetTicks() % 1000) / 1001.0f : 0.0f)};
     }
     if (menu_shown() && n < max) {
         float x, y, r;

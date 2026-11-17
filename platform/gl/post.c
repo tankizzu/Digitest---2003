@@ -531,6 +531,9 @@ void gl_present(const SDL_Surface *menu, SDL_Surface **shot) {
         GL(glDisable)(GL_BLEND);
     }
     GL(glColorMask)(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    if (shot != NULL && SDL_getenv("DW3_SHOT_TOUCH") != NULL) {
+        gl_touch_draw(w, h); /* tests: the frame dumps (DW3_DUMP) with the touch controls on them */
+    }
     if (shot != NULL && (*shot = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ABGR8888)) != NULL) {
         GL(glPixelStorei)(GL_PACK_ALIGNMENT, 4);
         GL(glReadPixels)(0, 0, w, h, GL_RGBA, GL_UNSIGNED_BYTE, (*shot)->pixels);

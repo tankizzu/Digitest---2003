@@ -86,11 +86,13 @@ void native_save_language(int language) {
     pref_set("language", language);
 }
 
-/* Automatic dialogues: a text waiting for the player goes on by itself after a pause (text_window.c) */
+/* Automatic dialogues: 0 off, else the speed (1-3) at which a text waiting for the player goes on by itself
+   (text_window.c); the button turns it off, x1, x2, x3, off again */
 int native_auto_text(void) {
-    return pref_get("auto_text", 0);
+    int v = pref_get("auto_text", 0);
+    return v >= 0 && v <= 3 ? v : 0;
 }
 
 void native_auto_text_toggle(void) {
-    pref_set("auto_text", !native_auto_text());
+    pref_set("auto_text", (native_auto_text() + 1) % 4);
 }
