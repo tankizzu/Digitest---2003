@@ -1,6 +1,44 @@
 --- a/src/field/field_mode/map_streamer.c
 +++ b/src/field/field_mode/map_streamer.c
-@@ -207,8 +207,14 @@
+@@ -125,7 +125,13 @@
+    entry the oldest of the 12 */
+ void FIELDSTG_drawMapTiles(MapStreamer *task, StreamPool *pool) {
+     Vec2 tile;
++#ifdef NATIVE
++    MapSlot slots[4 * 7]; /* upright: up to 7 rows in view */
++    s32 rows = native_portrait() ? (task->scroll.y + native_field_h()) / 128 - (task->scroll.y >= 8 ? (task->scroll.y - 8) / 128 : 0) + 1 : 3;
++    s32 images = native_portrait() ? NATIVE_MAP_IMAGES : 12;
++#else
+     MapSlot slots[12];
++#endif
+     Layer *layer;
+     StreamTask *stream;
+     s32 count;
+@@ -142,7 +148,11 @@
+     count = 0;
+     tile.x = task->scroll.x >= 0x20 ? (task->scroll.x - 0x20) / 128 : 0;
+     tile.y = task->scroll.y >= 8 ? (task->scroll.y - 8) / 128 : 0;
++#ifdef NATIVE
++    for (r = 0; r < rows && r < 7; r++) {
++#else
+     for (r = 0; r < 3; r++) {
++#endif
+         if (r + tile.y >= task->height) {
+             break;
+         }
+@@ -192,7 +202,11 @@
+                 if (slots[i].loaded && slots[i].entry == -1 && slots[i].stream->isLoaded(slots[i].stream)) {
+                 best = 0;
+                 oldest = GFX.funcs.getTime();
++#ifdef NATIVE
++                for (j = 0; j < images; j++) {
++#else
+                 for (j = 0; j < 12; j++) {
++#endif
+                     if (task->images[j].time < oldest) {
+                         oldest = task->images[j].time;
+                         best = j;
+@@ -207,8 +221,14 @@
                  }
                  task->images[best].frame = slots[i].frame;
                  task->images[best].time = GFX.funcs.getTime();
@@ -15,3 +53,79 @@
              }
          }
      }
+@@ -225,6 +245,39 @@
+  * on x holding the horizontal flip before it becomes the tile column, and on
+  * col counting the slots the first loop clears.
+  */
++#ifdef NATIVE
++/* Upright (platform/portrait.c): the 30 streams on 4 columns from the view's left and the rows in view, the row
++   below, then the one above, in that order (requestTiles reads them first to last) */
++static void nativePickUprightTiles(MapStreamer *task) {
++    s32 top = task->scroll.y >= 0 ? task->scroll.y / 128 : -1;
++    s32 last = (task->scroll.y + native_field_h()) / 128;
++    s32 order[7];
++    s32 n = 0, k = 0, i, c, y, x;
++
++    for (y = top; y <= last && n < 6; y++) {
++        order[n++] = y;
++    }
++    order[n++] = last + 1;
++    if (n < 7) {
++        order[n++] = top - 1;
++    }
++    for (i = 0; i < 30; i++) {
++        task->viewTiles[i] = 0xFF;
++    }
++    task->viewX = task->scroll.x / 128;
++    task->viewY = top;
++    for (i = 0; i < n; i++) {
++        y = order[i];
++        for (c = 0; c < 4; c++, k++) {
++            x = task->viewX + c;
++            if (y >= 0 && y < task->height && x >= 0 && x < task->width) {
++                task->viewTiles[k] = x + y * task->width;
++            }
++        }
++    }
++}
++#endif
++
+ void FIELDSTG_pickViewTiles(MapStreamer *task) {
+     u8 slots[5][6];
+     s32 quadrant;
+@@ -326,7 +379,11 @@
+                 for (i = 0; i < 30; i++) {
+                     pool->tasks[i] = FIELDSTG_createStream(task->frameSectors << 11, task->file);
+                 }
++#ifdef NATIVE
++                for (i = 0; i < NATIVE_MAP_IMAGES; i++) {
++#else
+                 for (i = 0; i < 12; i++) {
++#endif
+                     task->images[i].frame = -1;
+                     task->images[i].time = 0;
+                 }
+@@ -339,6 +396,11 @@
+     case TASK_RUN:
+         layer = GFX.funcs.getLayer(FIELD_LAYER_MAP);
+         layer->getScroll(layer, &task->scroll);
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativePickUprightTiles(task);
++        } else
++#endif
+         FIELDSTG_pickViewTiles(task);
+         FIELDSTG_drawMapTiles(task, pool);
+         FIELDSTG_requestTiles(task, pool);
+@@ -379,7 +441,11 @@
+     s32 y;
+ 
+     if (layer != NULL) {
++#ifdef NATIVE
++        for (y = 0; y < native_field_h(); y += 0x80) {
++#else
+         for (y = 0; y < SCREEN_HEIGHT; y += 0x80) {
++#endif
+             for (x = 0; x < SCREEN_WIDTH; x += 0x80) {
+                 FIELDSTG_drawCoverBlock(layer, x, y, level);
+             }

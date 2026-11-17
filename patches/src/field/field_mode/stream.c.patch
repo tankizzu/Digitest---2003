@@ -15,3 +15,31 @@
  }
  
  /* Takes a decompressed tile's sprites and loads its image into its slot's
+@@ -106,10 +112,27 @@
+         }
+     }
+     task->loadedSlot = slot;
++#ifdef NATIVE
++    if (slot >= 12) { /* the port's images, upright (platform/portrait.c) */
++        s32 x, y;
++
++        native_map_image_pos(slot, &x, &y);
++        task->imageX = x;
++        task->imageY = y;
++    } else
++#endif
++    {
+     task->imageX = FIELDSTG_slotImages[slot].x;
+     task->imageY = FIELDSTG_slotImages[slot].y;
++    }
+     task->clutX = 0;
+     task->clutY = slot + 0xF0;
++#ifdef NATIVE
++    if (native_portrait()) { /* upright, the field's banners use the rows of the old screens: the CLUTs up high */
++        task->clutX = 384;
++        task->clutY = 896 + slot;
++    }
++#endif
+     initTimLoader(&loader);
+     loader.setImagePos(task->imageX, task->imageY);
+     loader.setClutPos(task->clutX, task->clutY);

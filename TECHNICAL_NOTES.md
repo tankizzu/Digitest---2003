@@ -123,3 +123,16 @@ Progetto (tela verticale 320×640, larga quanto l'originale, più alta di 400 ri
 6. **Android**: manifest in verticale; touch con le nuove dimensioni (s_disp).
 Prima prova: il prologo (Online Center, Atrio principale), screenshot da mandare all'utente prima di andare
 oltre.
+
+Stato reale (17/11/2026, prototipo su Linux, `DW3_PORTRAIT=1`):
+- Tela 320×512 a VRAM (0,512): le righe 496–511 sotto i vecchi buffer contengono le CLUT del gioco (x 0–831),
+  quindi la tela non può partire prima; 640 righe non ci stanno in 1024.
+- layer.c: un layer con `clip.y >= NATIVE_FIELD_Y` ha un solo buffer e il suo offset parte da NATIVE_FIELD_Y;
+  `getViewRect` e `setClipPos` lavorano dall'alto della tela (prima gli oggetti animati sparivano: la vista
+  risultava 512 righe più in basso).
+- gpu.c: lo sfondo di un layer (TILE) è al massimo 511 righe: diviso in pezzi da 256.
+- gl/post.c: con un'area mostrata più alta di 256 righe le proporzioni sono quelle dell'area (pixel quadrati).
+- CLUT: il port legge la y delle CLUT su 10 bit; quelle delle immagini di mappa, in verticale, a x 384, y 896+slot
+  (le righe dei vecchi buffer le usano i banner dell'area).
+- Su Android il port sceglie render_scale fino a 4: con la VRAM 1024×1024 la copia GL è 4096² → da limitare (2
+  o 3) prima di accendere il verticale sul telefono.

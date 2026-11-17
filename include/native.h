@@ -339,6 +339,13 @@ void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialog
 /* The balloons' arrow for that button: the menu sprites' sheet, its texture's place and the CLUT row to show */
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */
+/* The field upright (platform/portrait.c): its screen 320 x native_field_h() at VRAM (0, NATIVE_FIELD_Y), one buffer;
+   the map's images 12 and up at native_map_image_pos */
+int native_portrait(void);
+int native_field_h(void);
+void native_map_image_pos(int slot, int *x, int *y);
+#define NATIVE_FIELD_Y 512
+#define NATIVE_MAP_IMAGES 27
 #define NATIVE_RUN_PERCENT 58 /* the player's run on the stick, against the game's (actor_control.c) */
 void native_touch_list(int x, int y, int w, int h); /* a scrolling list this frame, in display pixels */
 int native_touch_list_event(int *y, int *dy);       /* 1 tap, 2 hold (at display row *y); *dy dragged since */

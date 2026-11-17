@@ -2,6 +2,7 @@
    area. Drawing (DrawOTag and the primitives) is milestone 2. */
 #include <stdlib.h>
 #include <string.h>
+#include <SDL3/SDL_stdinc.h>
 #include "platform.h"
 
 uint16_t *g_vram;
@@ -267,12 +268,15 @@ void SetDrawEnv(uint32_t *dr, DRAWENV *env) {
     dr[n++] = draw_mode(env->dfe, env->dtd, env->tpage);
     dr[n++] = 0xE2000000u | ((env->tw.y >> 3) & 31) << 15 | ((env->tw.x >> 3) & 31) << 10 | twh << 5 | tww;
     dr[n++] = 0xE6000000u;
-    if (env->isbg && c.w > 0 && c.h > 0) {
+    for (int top = 0; env->isbg && c.w > 0 && top < c.h; top += 256) {
         /* a TILE, clipped to the area like libgpu's: a fill (GP0 02) ignores
-           the area and its 16-pixel rounding reached past the clip */
+           the area and its 16-pixel rounding reached past the clip. A TILE is at most 511 high: the upright field's
+           640 (portrait.c) in pieces of 256 */
+        int h = SDL_min(256, c.h - top);
+
         dr[n++] = 0x1E000000u | env->b0 << 16 | env->g0 << 8 | env->r0; /* as a TILE, the sky's (gpu_draw.c) */
-        dr[n++] = (uint32_t)((c.y - env->ofs[1]) << 16 | ((c.x - env->ofs[0]) & 0xFFFF));
-        dr[n++] = (uint32_t)(c.h << 16 | (c.w & 0xFFFF));
+        dr[n++] = (uint32_t)((c.y + top - env->ofs[1]) << 16 | ((c.x - env->ofs[0]) & 0xFFFF));
+        dr[n++] = (uint32_t)(h << 16 | (c.w & 0xFFFF));
     }
     dr[0] = (dr[0] & 0xFFFFFF) | (uint32_t)(n - 1) << 24;
 }

@@ -19,9 +19,11 @@ Priorità: P1 subito, P2 dopo, P3 più avanti. Obiettivo attuale: **prologo perf
 Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] 1. VRAM del port 1024×1024 (come la GPU con 2 MB; righe ≥ 512 solo per il port). Verificato: menu e
       caricamento identici pixel per pixel, campo regolare. Il backend Direct3D 12 (solo Windows) non è aggiornato.
-- [ ] 2. Campo con un buffer 320×640 a (0,512).
-- [ ] 3. Mappa: 27 immagini, 4×6 pezzi disegnati, stream 4×7.
-- [ ] 4. Telecamera centrata su 640 righe; stanze piccole ingrandite.
+- [x] 2. Campo con un buffer 320×512 a (0,512) (le righe 496–511 hanno le CLUT del gioco: niente 640). Prova su
+      Linux con DW3_PORTRAIT=1: stanza della Sala della Matrice intera, oggetti animati, dialogo, camminata.
+- [x] 3. Mappa: 27 immagini (CLUT in alto, y 896+), fino a 5 righe disegnate, stream sulle righe in vista.
+- [~] 4. Telecamera centrata su 512 righe (fatto); stanze più basse di 512: per ora al centro col nero,
+      ingrandimento da fare.
 - [ ] 5. Dialoghi/banner/fumetti riposizionati.
 - [ ] 6. Android in verticale; screenshot del prologo all'utente.
 

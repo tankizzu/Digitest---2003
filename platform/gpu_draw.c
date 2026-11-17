@@ -61,7 +61,7 @@ static void plot(int x, int y, int c, int semi) {
 
 /* The texel at (u, v) of the current page with the given CLUT; 0 = transparent */
 static int texel(int u, int v, int clut) {
-    int cx = (clut & 0x3F) << 4, cy = clut >> 6 & 0x1FF;
+    int cx = (clut & 0x3F) << 4, cy = clut >> 6 & (VRAM_H - 1);
     uint16_t w;
 
     u &= 255;
@@ -296,7 +296,7 @@ static GVtx gvtx(float x, float y, int r, int gg, int b, int u, int v, int clut,
     o.b = (uint8_t)b;
     o.a = 0;
     o.clut_x = (uint16_t)((clut & 0x3F) << 4);
-    o.clut_y = (uint16_t)(clut >> 6 & 0x1FF);
+    o.clut_y = (uint16_t)(clut >> 6 & (VRAM_H - 1));
     o.tx = (uint16_t)g.tx;
     o.ty = (uint16_t)g.ty;
     o.umin = o.vmin = 0;
@@ -483,8 +483,8 @@ static unsigned s_soft_frame; /* vsyncs, as soft_age counts them */
 /* Where the queue writes or reads: 64x64 blocks, and 8x8 cells for when a
    block is shared (the CLUTs under the frame buffers) */
 typedef struct {
-    uint16_t block[8];
-    uint8_t cell[64][16];
+    uint16_t block[VRAM_H / 64];
+    uint8_t cell[VRAM_H / 8][16];
 } Cells;
 static Cells s_soft_w, s_soft_r;
 
@@ -709,7 +709,7 @@ static void soft_queue(Soft *e, int x1, int y1, int x2, int y2, int textured, in
     e->read[0][0] = e->read[1][0] = 1, e->read[0][2] = e->read[1][2] = 0;
     if (textured) {
         /* the page (wrapping past x 1023: all across) and the CLUT row */
-        int cx = (clut & 0x3F) << 4, cy = clut >> 6 & 0x1FF, cw = g.depth == 0 ? 16 : 256;
+        int cx = (clut & 0x3F) << 4, cy = clut >> 6 & (VRAM_H - 1), cw = g.depth == 0 ? 16 : 256;
 
         e->read[0][0] = g.tx + w > VRAM_W ? 0 : g.tx, e->read[0][1] = g.ty;
         e->read[0][2] = g.tx + w > VRAM_W ? VRAM_W - 1 : g.tx + w - 1, e->read[0][3] = SDL_min(g.ty + 255, VRAM_H - 1);

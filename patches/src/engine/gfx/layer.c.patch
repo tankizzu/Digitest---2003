@@ -1,0 +1,40 @@
+--- a/src/engine/gfx/layer.c
++++ b/src/engine/gfx/layer.c
+@@ -139,7 +139,13 @@
+     dr = GFX.prim;
+     ot = layer->ot[GFX.buffer] + layer->otLen;
+     tag = ot - 1;
++#ifdef NATIVE
++    if (layer->env.clip.y >= NATIVE_FIELD_Y) { /* the upright field: one buffer, its offset from its own top (portrait.c) */
++        env.ofs[1] += NATIVE_FIELD_Y;
++    } else if (GFX.buffer != 0) {
++#else
+     if (GFX.buffer != 0) {
++#endif
+         env.clip.y += 256;
+         env.ofs[1] += 256;
+     }
+@@ -228,6 +234,11 @@
+ s16 y;
+ {
+     layer->x = x;
++#ifdef NATIVE
++    if (layer->y >= NATIVE_FIELD_Y) { /* the upright field: the clip from its screen's top (portrait.c) */
++        y += NATIVE_FIELD_Y;
++    }
++#endif
+     layer->y = y;
+ }
+ 
+@@ -245,6 +256,11 @@
+ void layerGetViewRect(LayerView *layer, Rect16 *rect) {
+     rect->x = layer->x - layer->offsetX + (layer->scrollX >> 8);
+     rect->y = layer->y - layer->offsetY + (layer->scrollY >> 8);
++#ifdef NATIVE
++    if (layer->y >= NATIVE_FIELD_Y) { /* the upright field's screen, from its own top (portrait.c) */
++        rect->y -= NATIVE_FIELD_Y;
++    }
++#endif
+     rect->w = layer->w;
+     rect->h = layer->h;
+ }

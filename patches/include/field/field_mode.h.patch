@@ -1,5 +1,5 @@
---- include/field/field_mode.h
-+++ include/field/field_mode.h
+--- a/include/field/field_mode.h
++++ b/include/field/field_mode.h
 @@ -291,7 +291,12 @@
  typedef struct EventChildren {
      /* 0x00 */ struct Task *task; /* start's */
@@ -13,3 +13,15 @@
  } EventChildren;
  
  /* --- script.c --- */
+@@ -494,7 +499,11 @@
+     /* 0x068 */ s32 width; /* in 128-pixel tiles */
+     /* 0x06C */ s32 height;
+     /* 0x070 */ s32 frameSectors; /* a tile's sectors on the CD */
++#ifdef NATIVE
++    MapImage images[NATIVE_MAP_IMAGES]; /* upright, 27 (platform/portrait.c); else the first 12 */
++#else
+     /* 0x074 */ MapImage images[12];
++#endif
+     /* 0x104 */ MapTile *tiles; /* width * height */
+     /* 0x108 */ u8 viewTiles[30]; /* by the slots around the view, their tiles */
+     /* 0x128 */ s32 viewX; /* the tile column of the slots' left edge */
