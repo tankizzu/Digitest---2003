@@ -85,6 +85,29 @@ int native_touch_tap(void) {
     return t == 0x7A11 ? -1 : t; /* a tap meant for native_touch_anywhere is no option's */
 }
 
+static int s_logical[16]; /* native_touch_hold: game frames each logical button is still held for */
+
+void native_touch_hold(int button, int frames) {
+    if (button >= 0 && button < 16) {
+        s_logical[button] = frames;
+    }
+}
+
+/* Held for its last two frames only: the frames before let a list take the line picked first (the battle's
+   technique and item lists ignore X the frame their cursor moves) */
+int native_touch_buttons(void) {
+    int mask = 0;
+    for (int i = 0; i < 16; i++) {
+        if (s_logical[i] > 0) {
+            if (s_logical[i] <= 2) {
+                mask |= 1 << i;
+            }
+            s_logical[i]--;
+        }
+    }
+    return mask;
+}
+
 #define ANYWHERE_ID 0x7A11
 int native_touch_anywhere(void) {
     native_touch_target(ANYWHERE_ID, -10000, -10000, 20000, 20000); /* the whole display and the bars around it */

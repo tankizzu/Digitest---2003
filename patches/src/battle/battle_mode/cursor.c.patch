@@ -11,3 +11,33 @@
          ContinueDraw(FIGHTSTG_cursorBarOt, saved);
      }
      task->prevSel = task->sel;
+@@ -107,6 +111,29 @@
+             if (task->params.sprite != -1) {
+                 FIGHTSTG_drawCursorSprites(task);
+             }
++#ifdef NATIVE
++            if (task->locked == 0) {
++                /* touch: each line of the list; a line tapped is picked and confirmed (X, a frame later). The six
++                   commands are the turn's first menu: the others go back, so they show the back button */
++                s32 line, tapped;
++
++                for (line = 0; line < task->params.count; line++) {
++                    native_touch_target(line, task->params.x - 6, task->params.y + line * task->params.step - 2, 150,
++                                        task->params.step);
++                }
++                tapped = native_touch_tap();
++                if (tapped >= 0) {
++                    if (task->sel != tapped) {
++                        SOUND.playSound(SOUND_MENU_MOVE);
++                    }
++                    task->sel = tapped;
++                    native_touch_hold(PAD_CROSS, 3);
++                }
++                if (!(task->params.count == 6 && task->params.x == 17)) {
++                    native_touch_in_menu();
++                }
++            }
++#endif
+             if (task->locked == 0) {
+                 pressed = PAD.getRepeated(0) | PAD.getPressed(0);
+                 if (pressed & (1 << PAD_UP)) {

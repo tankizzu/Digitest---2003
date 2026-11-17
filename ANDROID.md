@@ -15,12 +15,16 @@ mai il `.bin`, i dati estratti o il binario compilato, che contiene parti del gi
 
 | Passo | Stato |
 |---|---|
-| Compilazione per Linux a 64 bit (`build_unix.py`) | Fatto: arriva all'esplorazione, in italiano, con i filmati |
-| Correzioni per i 64 bit (`long` a 32 bit, puntatori negli slot degli eventi) | In corso: altre si trovano giocando |
-| Compilazione per Android arm64 + APK | Da fare |
-| Comandi touch (levetta mobile, fumetti, dialoghi) | Da fare: vedi [docs/prototipo-touch.html](docs/prototipo-touch.html) |
+| Compilazione per Linux a 64 bit e OpenGL ES (`build_unix.py`, `--gles`) | Fatto |
+| APK Android arm64 (`tools/android/build_apk.sh`), lettura del disco dal telefono | Fatto (0.3) |
+| Comandi touch: levetta mobile, filmati saltati tenendo premuto | Fatto |
+| Tocco nei menu: lingua (ricordata), titolo, dialoghi, Sì/No, nome, kit, menu del campo | Fatto |
+| Battaglia: comandi, tecniche, oggetti, cambio, messaggi, risultati | Fatto |
+| Pulsanti ☰ (menu) e ‹ (indietro), gesto Indietro di Android | Fatto |
+| Salvataggio automatico (uscita dall'app, ogni 3 minuti) con ripresa al titolo | Fatto |
+| Schermate del menu (squadra, oggetti, tecniche, mappa), negozi, memory card, laboratorio | Da fare |
 | Verticale a tutto schermo con la mappa 2D estesa | Da fare |
-| Menu e battaglia adattati al verticale | Da fare |
+| Togliere i tasti provvisori ✕ ○ △ □ | Quando tutte le schermate saranno toccabili |
 
 ## Scelte di interfaccia decise
 

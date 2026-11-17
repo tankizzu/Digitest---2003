@@ -3,6 +3,7 @@
     python3 tools/unix/patchedit.py show src/menus/title/menu.c          prints the patched source
     python3 tools/unix/patchedit.py apply src/menus/title/menu.c EDITS   EDITS: a Python file defining
                                                                          EDITS = [(old, new), ...]
+                                                                         ((old, new, True): every occurrence)
 
 Each old text must occur exactly once in the patched source. The patch goes to
 patches/<path>.patch, against ../dw3_decomp/<path>.
@@ -37,8 +38,9 @@ def main():
     if cmd == "show":
         sys.stdout.write(text)
         return
-    for old, new in runpy.run_path(sys.argv[3])["EDITS"]:
-        if text.count(old) != 1:
+    for edit in runpy.run_path(sys.argv[3])["EDITS"]:
+        old, new, every = (*edit, False)[:3]  # a third item True: every occurrence, at least one
+        if (text.count(old) != 1 and not every) or text.count(old) == 0:
             sys.exit(f"{text.count(old)} matches for:\n{old}")
         text = text.replace(old, new)
     orig = (DECOMP / rel).read_text(newline="").splitlines(keepends=True)

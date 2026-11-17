@@ -1,9 +1,9 @@
---- a/src/engine/pad/port.c	2026-11-15 21:28:11.768069800 -0300
-+++ b/src/engine/pad/port.c	2026-11-15 21:28:43.453761800 -0300
-@@ -1,6 +1,15 @@
+--- a/src/engine/pad/port.c
++++ b/src/engine/pad/port.c
+@@ -1,5 +1,14 @@
  #include "engine/game.h"
  #include <libpad.h>
- 
++
 +#ifdef NATIVE
 +/* The time a held button's repeat counts (ff_menu_speed, platform/etc.c): with the option on, the
 +   vsyncs shown, not the game's own ticks, which fast forward runs several of per vsync shown, so a
@@ -12,10 +12,9 @@
 +#else
 +#define PAD_TIME() GFX.funcs.getTime()
 +#endif
-+
+ 
  /*
   * The libpad state of a port while it can be read (0 otherwise); a stable pad gets its actuators
-  * aligned
 @@ -75,7 +84,11 @@
          /* the Japanese language keeps the buttons as they are (the Japanese
             version's only one, LANGUAGE 0) */
@@ -28,7 +27,7 @@
              b = buttons;
              circle = (b >> RAW_CIRCLE) & 1;
              cross = (b >> RAW_CROSS) & 1;
-@@ -120,17 +133,17 @@
+@@ -120,20 +133,25 @@
  
          if ((buttons >> bit) & 1) {
              if (PAD.repeatRate > 0) {
@@ -49,3 +48,11 @@
              *count = 0;
          }
      }
++#ifdef NATIVE
++    if (slot == &PAD.slots[0][0]) {
++        buttons |= native_touch_buttons(); /* touch: the logical buttons a tap stands for (platform/touch.c) */
++    }
++#endif
+     b = slot->held;
+     slot->held = buttons;
+     slot->prevHeld = b;

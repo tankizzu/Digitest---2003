@@ -334,7 +334,12 @@ void native_touch_target(int id, int x, int y, int w, int h);
 int native_touch_tap(void);
 int native_touch_anywhere(void);
 void native_touch_menu_available(void); /* the menu button shows this frame; tapped, it is Start */
-void native_touch_in_menu(void);        /* the back button shows this frame; tapped, it is Triangle */ /* a tap anywhere on the picture (a "press Start" screen), 1 once */
+void native_touch_in_menu(void);        /* the back button shows this frame; tapped, it is Triangle */
+/* A logical button (PAD_CROSS...) as if pressed: `frames` game frames from now it is held for the last two of them
+   (3: a frame's pause, then pressed). A tap that picks an option confirms it where the screen waits for the button
+   (engine/pad/port.c reads native_touch_buttons) */
+void native_touch_hold(int button, int frames);
+int native_touch_buttons(void); /* a tap anywhere on the picture (a "press Start" screen), 1 once */
 /* The language picked at the language select, remembered (platform/prefs.c): -1 if none yet */
 int native_saved_language(void);
 void native_save_language(int language);

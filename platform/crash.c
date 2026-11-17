@@ -58,8 +58,13 @@ static void on_signal(int sig, siginfo_t *info, void *uc) {
     char report[1024];
     int n = snprintf(report, sizeof report, "CRASH signal %d (access %p)\nstack:", sig, info->si_addr);
     (void)uc;
-    for (int i = 0; i < 24 && fp != NULL && n < (int)sizeof report - 24; i++, fp = (uintptr_t *)fp[0]) {
+    for (int i = 0; i < 24 && fp != NULL && ((uintptr_t)fp & 7) == 0 && n < (int)sizeof report - 24; i++) {
+        uintptr_t *next = (uintptr_t *)fp[0];
         n += snprintf(report + n, sizeof report - n, " %llx", (unsigned long long)fp[1]);
+        if (next <= fp || (uintptr_t)next - (uintptr_t)fp > (1 << 20)) {
+            break; /* a frame chain goes up the stack, a little at a time */
+        }
+        fp = next;
     }
     fprintf(stderr, "%s\n", report);
     fflush(stderr);
