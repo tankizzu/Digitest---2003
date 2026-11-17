@@ -78,12 +78,14 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## App
 
-- **Battaglia in verticale**: a tutto schermo, i pulsanti dei comandi grandi in basso **sopra** la scena 3D
+- **Battaglia in verticale**: nomi e statistiche in alto **affiancati** (non uno sopra l'altro); a tutto schermo, i pulsanti dei comandi grandi in basso **sopra** la scena 3D
   (richiesta del 17/11/2026). Demo e interfacce sempre con la grafica del gioco (l'utente ha scartato le demo
   disegnate a mano).
 
 - L'immagine di copertina proposta dall'utente (17/11/2026) non si usa come icona: contiene personaggi e logo
   protetti; si resta su un'icona originale, eventualmente ridisegnata nei colori della copertina.
+- Icona: niente personaggi Digimon (né la copertina né arte di fan): pixel art originale, icona **adattiva piena**
+  (mipmap-anydpi-v26), senza contorno bianco.
 - Icona originale (uovo digitale su fondo blu notte, circuiti; nessun personaggio o logo del gioco),
   `tools/android/make_icon.py`. Sostituisce l'icona di SDL.
 - Android: render_scale massimo 3 (la VRAM 1024×1024 a 4× pesa il doppio).
@@ -94,9 +96,12 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## Verticale
 
+- **Il personaggio sempre al centro dello schermo** (17/11/2026): in verticale la telecamera non si ferma ai
+  bordi della mappa.
 - **Dove la mappa finisce resta il nero** (17/11/2026): niente ingrandimento delle stanze piccole, dà l'idea del
   gioco d'epoca. (Sostituisce la vecchia idea "nelle stanze piccole si ingrandisce".)
-- **Fascia in alto** (idea approvata dall'utente, 17/11/2026): pulsante Impostazioni, pulsante Menu e stato dei
+- **Fascia in alto** (demo approvata dall'utente, 17/11/2026: tre partner coi pannelli HP del gioco, MENU e
+  OPZIONI): pulsante Impostazioni, pulsante Menu e stato dei
   partner (nome, livello, HP, esperienza), con la grafica del gioco; la fascia in basso per dialoghi e comandi.
 - Tela del campo 320 × (forma del telefono, max 720), da VRAM (0,512) in una VRAM del port 1024×2048; su
   Android render_scale 2 (l'utente accetta meno risoluzione pur di avere tutto schermo, 17/11/2026).

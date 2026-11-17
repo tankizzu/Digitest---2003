@@ -2,6 +2,13 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.5
+
+- **Icona adattiva piena** (sfondo viola-blu e uovo in primo piano): riempie la forma del launcher, niente più
+  contorno bianco.
+- **Personaggio sempre al centro** in verticale: la telecamera non si ferma più ai bordi della mappa, oltre si
+  vede il nero. Verificato su Linux.
+
 ### 1.4
 
 - **Freccia dei dialoghi automatici**: la velocità si legge nei tre trattini della freccia stessa (x1 nessuno, x2

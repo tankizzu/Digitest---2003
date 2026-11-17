@@ -12,7 +12,19 @@
      if (task->hasBounds == 0) {
          map = TASK_REGISTRY.funcs.find(FIELD_TASK_MAP, -1, -1);
          if (map != NULL) {
-@@ -39,9 +43,18 @@
+@@ -30,6 +34,11 @@
+             task->bounds.y = 0x400;
+         }
+     }
++#ifdef NATIVE
++    if (native_portrait()) {
++        /* upright: the player always mid-screen, the black past the map's edges shown (DECISIONS.md) */
++    } else {
++#endif
+     if (x < 0) {
+         x = 0;
+     }
+@@ -39,9 +48,16 @@
      if (task->bounds.x - SCREEN_WIDTH < x) {
          x = task->bounds.x - SCREEN_WIDTH;
      }
@@ -20,8 +32,6 @@
 +    if (task->bounds.y - native_field_h() < y) {
 +        y = task->bounds.y - native_field_h();
 +    }
-+    if (task->bounds.y < native_field_h()) { /* a map lower than the screen: in its middle */
-+        y = (task->bounds.y - native_field_h()) / 2;
 +    }
 +#else
      if (task->bounds.y - SCREEN_HEIGHT < y) {

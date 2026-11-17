@@ -20,7 +20,8 @@ def lerp(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-def draw():
+def draw(layer="both"):
+    """the whole icon, or one layer of the adaptive one: "back" the field and its digits, "fore" the egg and sparks"""
     im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
     p = im.load()
     # the field: violet at the top to blue below, a lighter ring around the middle
@@ -31,14 +32,19 @@ def draw():
             if 12.5 < d < 14.5:
                 c = lerp(c, (140, 170, 255), 0.45)
             p[x, y] = c + (255,)
+    if layer == "fore":
+        im = Image.new("RGBA", (N, N), (0, 0, 0, 0))
+        p = im.load()
     # binary digits, faint
     for (x0, y0, s) in ((1, 2, "10"), (24, 3, "01"), (1, 24, "01"), (25, 25, "10"), (2, 13, "1"), (28, 14, "0")):
         for k, ch in enumerate(s):
             for j, row in enumerate(DIGITS[ch]):
                 for i, bit in enumerate(row):
                     x, y = x0 + k * 4 + i, y0 + j
-                    if bit == "1" and 0 <= x < N and 0 <= y < N:
+                    if bit == "1" and 0 <= x < N and 0 <= y < N and layer != "fore":
                         p[x, y] = lerp(p[x, y][:3], (120, 230, 170), 0.55) + (255,)
+    if layer == "back":
+        return im
     # the egg: an outline narrower at the top, shaded from yellow to orange, a dark rim
     for y in range(N):
         for x in range(N):
@@ -63,19 +69,35 @@ def draw():
     for x, y in ((6, 8), (26, 9), (7, 22), (25, 21)):
         for dx, dy in ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1)):
             p[x + dx, y + dy] = (180, 240, 255, 255)
-    # rounded corners
-    mask = Image.new("L", (N, N), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, N - 1, N - 1), radius=5, fill=255)
-    im.putalpha(mask)
-    return im
+    return im  # full: square, no corners of its own (the launcher's shape cuts it)
+
+
+ADAPTIVE = """<?xml version="1.0" encoding="utf-8"?>
+<!-- the launcher icon in two layers that fill whatever shape the phone gives it (tools/android/make_icon.py) -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@mipmap/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>
+"""
 
 
 def main():
     im = draw()
+    back, fore = draw("back"), draw("fore")
     for name, size in SIZES.items():
-        out = ROOT / f"android/app/src/main/res/mipmap-{name}/ic_launcher.png"
-        im.resize((size, size), Image.NEAREST).save(out)
-        print(out.relative_to(ROOT))
+        res = ROOT / f"android/app/src/main/res/mipmap-{name}"
+        im.resize((size, size), Image.NEAREST).save(res / "ic_launcher.png")
+        # adaptive layers: 108 dp of which the middle 72 dp show; the egg, in 32 cells, keeps to that middle
+        big = size * 108 // 48
+        back.resize((big, big), Image.NEAREST).save(res / "ic_launcher_background.png")
+        f = Image.new("RGBA", (big, big), (0, 0, 0, 0))
+        inner = fore.resize((size * 72 // 48, size * 72 // 48), Image.NEAREST)
+        f.paste(inner, ((big - inner.width) // 2, (big - inner.height) // 2), inner)
+        f.save(res / "ic_launcher_foreground.png")
+        print(res.relative_to(ROOT))
+    any26 = ROOT / "android/app/src/main/res/mipmap-anydpi-v26"
+    any26.mkdir(exist_ok=True)
+    (any26 / "ic_launcher.xml").write_text(ADAPTIVE)
     im.resize((512, 512), Image.NEAREST).save(ROOT / "android/icon_preview.png")
 
 
