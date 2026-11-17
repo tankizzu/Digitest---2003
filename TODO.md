@@ -56,7 +56,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       piccole). **Chiedere all'utente**: lasciare il nero (A), ingrandire x1,4 (B) o fino a riempire (C) solo nelle
       mappe basse (anteprima da screenshot reale; contraddice la decisione "dove la mappa finisce resta il nero").
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
-- [ ] Lingua, nome, kit, conferma a tutto schermo.
+- [x] Lingua a tutto schermo (sfondo su tutta l'altezza; righe alte 31 px: ingrandirle se l'utente le trova piccole).
+- [ ] Nome, kit, conferma a tutto schermo.
 
 - [ ] Elenco MEMORY CARD a tutto schermo (l'utente: scorrere è ancora complesso; a tutto schermo diventa più
       semplice).

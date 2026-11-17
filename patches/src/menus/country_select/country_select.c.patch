@@ -25,16 +25,62 @@
  #endif
  
  /* The mode's root task: once the sound bank is loaded, sets up the display and the layer,
-@@ -89,7 +101,7 @@
+@@ -52,7 +64,21 @@
+             loader.setClutPos(0, 0x1F0);
+             loader.loadArchive(FILE_CACHE.getEntry(CNTY_SEL_IMAGES));
+             /* A full-screen layer cleared to dark gray */
++#ifdef NATIVE
++            if (native_portrait()) { /* upright: the screen on the tall canvas, its 320x240 in the middle (portrait.c) */
++                RECT rect = {0, NATIVE_FIELD_Y, SCREEN_WIDTH, 0};
++
++                rect.h = native_field_h();
++                GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, native_field_h());
++                layer = GFX.funcs.createLayer(&rect, 3, CNTY_SEL_LAYER);
++                layer->setOffset(layer, 0, (native_field_h() - SCREEN_HEIGHT) / 2);
++                native_touch_origin((native_field_h() - SCREEN_HEIGHT) / 2);
++            } else {
++                layer = GFX.funcs.createLayer(&CNTY_SEL_screenRect, 3, CNTY_SEL_LAYER);
++            }
++#else
+             layer = GFX.funcs.createLayer(&CNTY_SEL_screenRect, 3, CNTY_SEL_LAYER);
++#endif
+             layer->setBgColor(layer, 0x1F, 0x1F, 0x1F);
+             *menu = CNTY_SEL_startMenuTask();
+             task->nextState(task);
+@@ -89,7 +115,18 @@
      sprite.setTexture(0x280, 0);
      /* The background repeats every 96 pixels */
      offset = (s16)((s16)(task->scroll / 2) % 96);
 -    sprite.draw(FILE_CACHE.getEntry(CNTY_SEL_SPRITES), SPRITE_BACKGROUND, offset, offset);
++#ifdef NATIVE
++    native_sheet_dump(CNTY_SEL_SHEET(), 0x280, 0, "cnty"); /* tests: DW3_SHEET_DUMP */
++    if (native_portrait()) { /* upright: the pattern over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = offset - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(CNTY_SEL_SHEET(), SPRITE_BACKGROUND, offset, y);
++        }
++        return;
++    }
++#endif
 +    sprite.draw(CNTY_SEL_SHEET(), SPRITE_BACKGROUND, offset, offset);
  }
  
  /* How dark the fade-out is on its frame `time`: 0 to 255 over 30 frames */
-@@ -194,7 +206,7 @@
+@@ -118,6 +155,12 @@
+     poly->y1 = CNTY_SEL_fadeRect.y;
+     poly->y2 = CNTY_SEL_fadeRect.y + CNTY_SEL_fadeRect.h;
+     poly->y3 = CNTY_SEL_fadeRect.y + CNTY_SEL_fadeRect.h;
++#ifdef NATIVE
++    if (native_portrait()) { /* the whole tall canvas */
++        poly->y0 = poly->y1 = -(native_field_h() - SCREEN_HEIGHT) / 2;
++        poly->y2 = poly->y3 = poly->y0 + native_field_h();
++    }
++#endif
+     /* the texture page packet goes right after the polygon */
+     mode = (DR_TPAGE *)(poly + 1);
+     addPrim(ot, poly);
+@@ -194,7 +237,7 @@
      sprite.setLayerId(CNTY_SEL_LAYER, 1);
      sprite.setTexture(0x280, 0);
      sprite.setClutRow(task->frame);
@@ -43,7 +89,7 @@
  }
  
  /* Moves the highlight to option `selection` (CursorTask.setSelection) */
-@@ -267,7 +279,7 @@
+@@ -267,7 +310,7 @@
      sprite.setTexture(0x280, 0);
      sprite.setPivot(148, 0);
      sprite.setScale(task->scaleX, task->scaleY, ONE);
@@ -52,7 +98,7 @@
  }
  
  /* The top panel's task: draws it; each TASK_DONE from the controller opens it, the
-@@ -338,7 +350,7 @@
+@@ -338,7 +381,7 @@
      sprite.setTexture(0x280, 0);
      sprite.setPivot(320, 20);
      sprite.setScale(task->scaleX, task->scaleY, ONE);
@@ -61,7 +107,7 @@
  }
  
  /* The right panel's task: draws it; each TASK_DONE from the controller opens it, the
-@@ -411,7 +423,7 @@
+@@ -411,7 +454,7 @@
      sprite.setAltClut(0, 0x1F0);
      sprite.setPivot(0, 158);
      sprite.setScale(task->scaleX, task->scaleY, ONE);
@@ -70,7 +116,7 @@
  }
  
  /* The left panel's task: draws it; each TASK_DONE from the controller opens it, the
-@@ -473,7 +485,11 @@
+@@ -473,7 +516,11 @@
                  task->selection--;
              }
          } else if (PAD_PRESSED(PAD_DOWN) || PAD_REPEATED(PAD_DOWN)) {
@@ -82,7 +128,7 @@
                  SOUND.playSound(SOUND_MENU_MOVE);
                  task->selection++;
              }
-@@ -508,6 +524,15 @@
+@@ -508,6 +555,15 @@
      switch (task->state) {
      case TASK_INIT:
      default:
@@ -98,7 +144,7 @@
          children->background = CNTY_SEL_startBackgroundTask();
          children->topPanel = CNTY_SEL_startTopPanelTask();
          children->rightPanel = CNTY_SEL_startRightPanelTask();
-@@ -554,7 +579,23 @@
+@@ -554,7 +610,23 @@
              task->nextSubstate(task);
              break;
          case MENU_SELECT:
@@ -122,7 +168,7 @@
                  SOUND.playSound(SOUND_MENU_CONFIRM);
                  children->cursor->setState(children->cursor, TASK_DONE);
                  task->nextSubstate(task);
-@@ -562,11 +603,18 @@
+@@ -562,11 +634,18 @@
  #if VERSION_EU
                  LANGUAGE = CNTY_SEL_languages[task->selection];
  #endif

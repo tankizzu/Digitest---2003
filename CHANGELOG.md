@@ -35,6 +35,8 @@
   del gioco. Le immagini (160×120) si prendono dal campo mentre si cammina (ogni ~4 secondi) e subito a ogni
   autosalvataggio, e si scrivono accanto ai salvataggi (`auto_a/b.thumb`, `save_0..2.thumb`). I salvataggi fatti
   prima di questa versione non hanno immagine. In orizzontale nessuna modifica.
+- **Lingua a tutto schermo in verticale**: lo sfondo a riquadri del gioco su tutta l'altezza, pannelli e bandiere al
+  centro, la dissolvenza in uscita su tutta la tela. Verificato su Linux (aspetto, tocco su ITALIANO, uscita).
 - Strada di Asuka (inizio del prologo): verificato che non è in 4:3; la sua mappa è alta solo 384 pixel (3 riquadri)
   e in verticale si vede tutta, col nero dove finisce. Tre possibilità da scegliere (nessuna modifica fatta).
 - Salvando in verticale, "Nessun salvataggio in questo slot" e gli altri testi del gioco tornano dentro la cornice
