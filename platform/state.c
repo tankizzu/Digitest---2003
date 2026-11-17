@@ -194,6 +194,8 @@ static int state_fits(const char *path) {
 #define AUTOSAVE_EVERY (60 * 60 * 2) /* vsyncs: two minutes */
 uint8_t computeChecksum(void *data, int32_t size); /* main/memcard */
 void touch_saved(void);                           /* touch.c: the "saved" sign */
+void native_thumb_autosave(int game, int slot);   /* thumbs.c */
+void native_thumb_field(int mode);
 
 static int s_auto_last = -1, s_point_at = -1000, s_point[4];
 
@@ -255,6 +257,20 @@ int native_autosave_read(int game, void *buf) {
     return save_time(path, buf) != 0;
 }
 
+/* One of the game's two autosaves into `buf`: which 0 the newest, 1 the other (Continue's list of the two). Its slot
+   (0 auto_a, 1 auto_b), or -1 if that one isn't a good save */
+int native_autosave_read_slot(int game, int which, void *buf) {
+    int newest = game > 0 ? newest_autosave(game) : -1, slot;
+    char path[1200];
+
+    if (newest < 0) {
+        return -1;
+    }
+    slot = which == 0 ? newest : 1 - newest;
+    auto_path(game, slot, path, sizeof path);
+    return save_time(path, buf) != 0 ? slot : -1;
+}
+
 /* GAME as a save, with the field and place the player is at, into the slot not written last */
 static void autosave(void) {
     static uint8_t buf[GAME_SAVE_SIZE];
@@ -274,6 +290,7 @@ static void autosave(void) {
     snprintf(tmp, sizeof tmp, "%s.tmp", path);
     if ((f = fopen(tmp, "wb")) != NULL && fwrite(buf, GAME_SAVE_SIZE, 1, f) == 1 && fclose(f) == 0 && SDL_RenamePath(tmp, path)) {
         LOG("autosave: %s", path);
+        native_thumb_autosave(game, newest == 0 ? 1 : 0); /* its picture (thumbs.c) */
         touch_saved();
     } else {
         LOG("autosave: can't write %s", path);
@@ -302,6 +319,7 @@ void native_autosave_point(int mode, int x, int y, int dir) {
         watching = 1;
     }
     s_point[0] = mode, s_point[1] = x, s_point[2] = y, s_point[3] = dir;
+    native_thumb_field(mode); /* a picture of the field now and then, for a save's (thumbs.c) */
     if (s_auto_last < 0 || VSync(-1) - s_point_at > 30) {
         s_auto_last = VSync(-1); /* back in control after a while: the count starts again */
     }

@@ -68,6 +68,16 @@
   `nativeYesNoInput` / `nativeYesNoDone`, in verticale due riquadri a NATIVE_YN_Y (0xF8) sotto la cornice.
 - Il salvataggio del test di prova sta in `saves/game5` e `game9`: dopo una prova che salva, rimettere card.mcd e
   togliere name.txt (copia di riserva fuori dal repository).
+- **Immagini dei salvataggi** (`platform/thumbs.c`): 160×120, il 320×240 centrale dell'area mostrata (g_disp) a metà,
+  dopo `soft_read` (la VRAM software è aggiornata solo su richiesta). Presa da `native_autosave_point` ogni 240 vsync o
+  cambiando stanza, e subito in `autosave()`. File grezzi 15 bit con il bit 15 acceso (un texel 0 sarebbe
+  trasparente). Nella memory card: `native_thumb_show` le carica in VRAM a (512,768), (768,768), (512,888) — righe
+  usate solo dalla mappa del campo — e `nativeDrawThumb` le disegna con uno SPRT in pagina texture a 15 bit
+  (GetTPage(2, …)), sotto la cornice, nel riquadro sprite 29.
+- **Lista degli autosalvataggi**: `nativeAutoListStart` riempie `STGMCARD_funcs.infoBuf` (MemCardFile) con i due
+  autosalvataggi (`native_autosave_read_slot`, `nativeFillInfo` come STGMCARD_fillSave; zona e luogo da
+  FIELDSTG_areaNames come un salvataggio dal menu) e salta allo stato 30 (la scelta). Sì → `nativeLoadAutosave`;
+  nessun controllo della memory card in quella lista.
 - I test di caricamento cambiano `saves/prefs.txt` (`game = N`): rimetterlo a 9 prima del confronto con i
   riferimenti in orizzontale (altrimenti l'elenco parte da un'altra riga).
 - Partite: `saves/game<N>/card.mcd` + `auto_a.sav` / `auto_b.sav`; `prefs.txt` (language, auto_text, game).

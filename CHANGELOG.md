@@ -28,6 +28,13 @@
   scritto nel testo della formattazione (IT ed EN).
 - Verificati su Linux in verticale: Creare nuovo file → Sì, Vuoi salvare qui → Sì, salvataggio riuscito, di nuovo
   Sì → Sovrascrittura → NO → ritorno. In orizzontale: nome e "Creare nuovo file?" (aspetto).
+- **Liste con immagine e dati** (verticale): **Automatico** ora apre la schermata originale della scelta del
+  salvataggio con i **due autosalvataggi** (il più recente per primo) e i dati del gioco (nome, zona e luogo,
+  partner con livello, bit, tempo di gioco); Sì carica quello scelto. **Salvataggi** apre le tre memory card del
+  gioco come prima. In tutte e due, sotto la cornice, l'**immagine del campo** com'era al salvataggio, nel riquadro
+  del gioco. Le immagini (160×120) si prendono dal campo mentre si cammina (ogni ~4 secondi) e subito a ogni
+  autosalvataggio, e si scrivono accanto ai salvataggi (`auto_a/b.thumb`, `save_0..2.thumb`). I salvataggi fatti
+  prima di questa versione non hanno immagine. In orizzontale nessuna modifica.
 - Strada di Asuka (inizio del prologo): verificato che non è in 4:3; la sua mappa è alta solo 384 pixel (3 riquadri)
   e in verticale si vede tutta, col nero dove finisce. Tre possibilità da scegliere (nessuna modifica fatta).
 - Salvando in verticale, "Nessun salvataggio in questo slot" e gli altri testi del gioco tornano dentro la cornice

@@ -46,7 +46,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       le altre (`DW3_SETTINGS_LOOK`).
 - [x] Nome della memory card al primo salvataggio (tastiera del telefono, font del gioco). Da provare in orizzontale
       e sul telefono; manca un modo per rinominare (da chiedere all'utente se serve).
-- [ ] Salvataggi e Autosalvataggio: liste con immagine (screenshot al salvataggio) e dati.
+- [x] Salvataggi e Autosalvataggio: liste con immagine (screenshot al salvataggio) e dati. Da provare sul telefono
+      (costo della cattura ogni ~4 s: un fotogramma disegnato anche dal GPU software).
 - [x] Sì/No del gioco nelle schermate memory card originali (sovrascrittura, formattazione, nuovo file, "salvare
       qui") affiancati. Da provare sul telefono.
 - [ ] Eventuale orologio in sovraimpressione (l'utente: "nel caso").

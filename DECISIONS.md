@@ -90,8 +90,10 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - **Nome della memory card** (fatto, 17/11/2026): "MEMORY CARD N" è il nome generico; al primo salvataggio si
   sceglie un nome con la tastiera del telefono, mostrato col font del gioco in due riquadri affiancati (nome | OK);
   vuoto resta generico; non si richiede più (name.txt c'è anche se vuoto).
-- **Salvataggi / Autosalvataggio** (da fare): ognuno apre una lista con immagine e dati (i salvataggi manuali; i
-  due autosalvataggi alternati).
+- **Salvataggi / Autosalvataggio** (fatto, 17/11/2026): ognuno apre la schermata originale della scelta del
+  salvataggio (le tre memory card del gioco, con i suoi dati) — per Automatico riempita con i due autosalvataggi —
+  e sotto la cornice l'immagine del campo al momento del salvataggio. Scelta: riusare la schermata del gioco invece
+  di una lista nuova (coerenza grafica, gli stessi dati che il gioco mostra già).
 - **Barre di sistema nascoste** su Android, pulsanti nell'area sicura del telefono.
 - Continua → elenco delle partite (grafica del gioco) → "Automatico" o "Salvataggi". Nessuna finestra Android
   "vuoi riprendere".

@@ -1,6 +1,6 @@
 --- a/src/menus/memory_card/saves.c
 +++ b/src/menus/memory_card/saves.c
-@@ -2,12 +2,51 @@
+@@ -2,12 +2,61 @@
     errors */
  
  #include "menus/memory_card.h"
@@ -35,6 +35,16 @@
 +static char nativeName[NATIVE_NAME_MAX + 1];
 +static s32 nativeNameLen;
 +static u8 nativeNameText[64], nativeLabelText[64], nativePortText[64];
++/* The saves' pictures (platform/thumbs.c), upright under the frame while the save picker is open: the picked save's,
++   in the game's small box. In VRAM at x 512-1023, rows 768-1007, which only the field's map uses */
++#define NATIVE_THUMB_VX(i) ((i) == 1 ? 768 : 512)
++#define NATIVE_THUMB_VY(i) ((i) == 2 ? 888 : 768)
++#define NATIVE_THUMB_X 80
++#define NATIVE_THUMB_Y 0x134
++static s32 nativePickerOpen, nativeThumbSlot = -1, nativeThumbOk[3];
++/* Continue → Autosave upright: the picker lists the game's two autosaves (newest first) as the card's saves, with
++   the game's own details; nativeAutoSlot their files (0 auto_a, 1 auto_b, -1 none) */
++static s32 nativeAutoList, nativeAutoSlot[3] = {-1, -1, -1};
 +static void nativeShowRows(MemCardSaves *saves, MemCardSavesWindows *win);
 +#endif
  
@@ -52,7 +62,17 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +155,659 @@
+@@ -85,6 +134,9 @@
+ /* Starts the save list: titles it for saving or loading and creates the details
+    window */
+ static inline void STGMCARD_openSaves(MemCardSaves *saves, MemCardSavesWindows *win) {
++#ifdef NATIVE
++    nativeAutoList = nativePickerOpen = 0;
++#endif
+     win->title->setDepth(win->title, 1);
+     if (saves->screen->loading == 0) {
+         win->title->setString(win->title, FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 1);
+@@ -116,9 +168,797 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -122,6 +142,8 @@
 +   yes / no of a deletion (6) */
 +static void nativeShowRows(MemCardSaves *saves, MemCardSavesWindows *win) {
 +    s32 count = native_game_count();
++
++    nativeAutoList = 0;
 +
 +    if (NATIVE_UP) {
 +        win->cursor->setVisible(win->cursor, 0);
@@ -378,6 +400,141 @@
 +    win->windows[3]->setPos(win->windows[3], 207, 203);
 +}
 +
++/* The pictures of the picker's three saves into VRAM */
++static void nativeThumbsLoad(void) {
++    s32 i;
++
++    for (i = 0; i < 3; i++) {
++        if (nativeAutoList) {
++            nativeThumbOk[i] = nativeAutoSlot[i] >= 0 && native_thumb_show(1, nativeAutoSlot[i], NATIVE_THUMB_VX(i), NATIVE_THUMB_VY(i));
++        } else {
++            nativeThumbOk[i] = native_thumb_show(0, i, NATIVE_THUMB_VX(i), NATIVE_THUMB_VY(i));
++        }
++    }
++}
++
++/* An autosave's details as the card's info section has a save's (STGMCARD_fillSave), from its data: the area and
++   place the field's banner shows (as a menu save's, screen.c) */
++extern struct NativeAreaName {
++    u8 area;
++    u8 place;
++    s16 mode;
++} FIELDSTG_areaNames[];
++
++static void nativeFillInfo(MemCardSave *save, SaveData *data) {
++    s32 i, member;
++
++    strcpy((char *)save->name, data->game.name);
++    for (i = 0; FIELDSTG_areaNames[i].mode != 0; i++) {
++        if (FIELDSTG_areaNames[i].mode == data->game.fieldMode) {
++            save->area = FIELDSTG_areaNames[i].area;
++            save->place = 0x100 | FIELDSTG_areaNames[i].place;
++        }
++    }
++    save->money = data->game.money;
++    save->time = data->game.playTime;
++    for (i = 0; i < 3; i++) {
++        member = data->game.party[i];
++        if (member >= 0 && member < PARTNER_COUNT) {
++            save->levels[i] = data->game.partners[member].info.stats[STAT_LEVEL];
++            save->partners[i] = data->game.partners[member].unlocked;
++        } else {
++            save->partners[i] = 3; /* no partner there yet: the first one's picture, as no save of the game has it */
++        }
++    }
++}
++
++/* Continue → Autosave: the picker with the two autosaves */
++static void nativeAutoListStart(MemCardSaves *saves, MemCardSavesWindows *win) {
++    MemCardFile *file = STGMCARD_funcs.infoBuf;
++    s32 i;
++
++    HEAP.zero(file, sizeof(MemCardFile));
++    file->magic = MEMCARD_FILE_MAGIC;
++    file->version = MEMCARD_SAVE_VERSION;
++    for (i = 0; i < 3; i++) {
++        nativeAutoSlot[i] = i < 2 ? native_autosave_read_slot(nativeGame, i, STGMCARD_funcs.dataBuf) : -1;
++        if (nativeAutoSlot[i] >= 0) {
++            nativeFillInfo(&file->saves[i], STGMCARD_funcs.dataBuf);
++        }
++    }
++    saves->file = *file;
++    STGMCARD_funcs.lastSlot = 0;
++    nativeAutoList = 1;
++    saves->port = 0;
++    win->windows[1]->setVisible(win->windows[1], 0);
++    win->windows[2]->setVisible(win->windows[2], 0);
++    win->windows[3]->setVisible(win->windows[3], 0);
++    win->cursor->setVisible(win->cursor, 0);
++    if (win->panel == NULL) {
++        win->panel = STGMCARD_createPanel(0xCD, 0xC1, 0x62, 0xA);
++    }
++    win->panel->setTopColor(win->panel, 0x7F, 0x32, 0xF2);
++    win->panel->setBottomColor(win->panel, 0xD1, 0x2F, 0xDE);
++    saves->choosing = 0;
++    saves->substate = 30; /* the picker */
++}
++
++/* The game's autosave `which` (0 the newest) loaded as STGMCARD_loadSave loads a save, then its end (500): 1 if done */
++static s32 nativeLoadAutosave(MemCardSaves *saves, MemCardSavesWindows *win, s32 which) {
++    if (native_autosave_read_slot(nativeGame, which, STGMCARD_funcs.dataBuf) < 0) {
++        return 0;
++    }
++    SOUND.playSound(SOUND_SELECT);
++    GAME_SAVE = STGMCARD_funcs.dataBuf->save;
++    native_extra_loaded();
++    win->windows[2]->setVisible(win->windows[2], 0);
++    win->windows[3]->setVisible(win->windows[3], 0);
++    win->cursor->setVisible(win->cursor, 0);
++    win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x11);
++    if (win->panel == NULL) {
++        win->panel = STGMCARD_createPanel(0xCD, 0xC1, 0x62, 0xA);
++    }
++    win->panel->setTopColor(win->panel, 0x7F, 0x32, 0xF2);
++    win->panel->setBottomColor(win->panel, 0xD1, 0x2F, 0xDE);
++    saves->choosing = 0;
++    saves->backToPick = 0;
++    saves->substate = 7; /* the panel fills next frame: a new one resets itself first */
++    return 1;
++}
++
++/* Upright, under the frame: the picked save's picture in the game's small box */
++static void nativeDrawThumb(MemCardSaves *saves, SpriteDrawer *sprite) {
++    s32 i = nativeThumbSlot;
++    Layer *layer;
++    PrimPtr prim;
++    u_long *ot;
++    Vec2 scroll;
++
++    if (i < 0) {
++        return;
++    }
++    sprite->setLayerId(saves->layer, 1);
++    sprite->setScale(ONE * 176 / 117, ONE * 136 / 33, ONE);
++    sprite->setPivot(NATIVE_THUMB_X - 8, NATIVE_THUMB_Y - 8);
++    sprite->draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 29, NATIVE_THUMB_X - 8, NATIVE_THUMB_Y - 8);
++    sprite->setScale(ONE, ONE, ONE);
++    layer = GFX.funcs.getLayer(saves->layer);
++    layer->getScroll(layer, &scroll);
++    ot = layer->getOtEntry(layer, 0);
++    prim.any = GFX.funcs.getPrim();
++    SetSprt(prim.sprt);
++    prim.sprt->r0 = prim.sprt->g0 = prim.sprt->b0 = 0x80;
++    prim.sprt->x0 = NATIVE_THUMB_X - scroll.x;
++    prim.sprt->y0 = NATIVE_THUMB_Y - scroll.y;
++    prim.sprt->u0 = 0;
++    prim.sprt->v0 = NATIVE_THUMB_VY(i) - 768;
++    prim.sprt->w = 160;
++    prim.sprt->h = 120;
++    prim.sprt->clut = 0;
++    addPrim(ot, prim.any);
++    prim.sprt++;
++    SetDrawTPage(prim.tpage, 0, 1, GetTPage(2, 0, NATIVE_THUMB_VX(i), 768));
++    addPrim(ot, prim.any);
++    prim.tpage++;
++    GFX.funcs.setPrim(prim.any);
++}
++
 +/* 1 when answered (saves->choice the answer): a tap on one, or X */
 +static s32 nativeYesNoInput(MemCardSaves *saves, MemCardSavesWindows *win) {
 +    s32 tap = nativeYesNoTap(), answered = PAD_PRESSED(PAD_CROSS) != 0;
@@ -611,7 +768,8 @@
 +            nativeStartCheck(saves, win);
 +            return;
 +        }
-+        /* the autosave, as below */
++        nativeAutoListStart(saves, win); /* the two autosaves, in the picker */
++        return;
 +    }
 +
 +    if (NATIVE_UP || nativeListInput(&nativeSource, 2, NULL) == 1) { /* upright: the autosave was picked above */
@@ -713,7 +871,7 @@
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -135,7 +824,7 @@
+@@ -135,7 +975,7 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          SOUND.playSound(SOUND_CURSOR);
      }
@@ -722,7 +880,18 @@
          win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
          STGMCARD_showPort(saves, win, 1);
          win->windows[1]->setVisible(win->windows[1], 0);
-@@ -292,6 +981,13 @@
+@@ -252,6 +1092,10 @@
+ 
+ /* Hides the messages and shows the slot picker and the details window */
+ static inline void STGMCARD_openSlots(MemCardSaves *saves, MemCardSavesWindows *win) {
++#ifdef NATIVE
++    nativePickerOpen = 1;
++    nativeThumbsLoad();
++#endif
+     win->windows[0]->setVisible(win->windows[0], 0);
+     win->windows[4]->setVisible(win->windows[4], 0);
+     if (win->menu->slid != 5) {
+@@ -292,6 +1136,13 @@
          win->info->refresh(win->info);
          saves->nextSubstate(saves);
          win->menu->substate = 6;
@@ -736,7 +905,7 @@
      }
  }
  
-@@ -300,9 +996,22 @@
+@@ -300,9 +1151,35 @@
     error */
  static inline void STGMCARD_pickSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 status;
@@ -757,10 +926,23 @@
 +#else
 +        if (MC_CROSS()) {
 +#endif
++#ifdef NATIVE
++            if (nativeAutoList) { /* an autosave: loaded as Continue's Autosave did */
++                if (STGMCARD_funcs.slot > 1 || !nativeLoadAutosave(saves, win, STGMCARD_funcs.slot)) {
++                    SOUND.playSound(SOUND_MENU_CANCEL);
++                    nativeYesNoShow(win); /* still to choose */
++                    win->windows[2]->setVisible(win->windows[2], 1);
++                    win->windows[3]->setVisible(win->windows[3], 1);
++                } else {
++                    win->menu->substate = 0;
++                }
++                return;
++            }
++#endif
              SOUND.playSound(SOUND_MENU_CONFIRM);
              saves->substate = 400;
              win->menu->substate = 0;
-@@ -316,13 +1025,20 @@
+@@ -316,17 +1193,27 @@
                      win->cursor->setVisible(win->cursor, 1);
                      saves->choosing = 1;
                      win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
@@ -781,7 +963,24 @@
              SOUND.playSound(SOUND_MENU_CANCEL);
              win->menu->substate = 0;
              saves->substate = 90;
-@@ -359,6 +1075,12 @@
+             saves->step = 1;
++#ifdef NATIVE
++        } else if (nativeAutoList) { /* no card to check */
++#endif
+         } else {
+             status = MEMCARD_SYSTEM.funcs.check(saves->port);
+             if (status != 0) {
+@@ -341,6 +1228,9 @@
+ 
+ /* Slides the slots and header out, then goes on to saves->step */
+ static inline void STGMCARD_closeSlots(MemCardSaves *saves, MemCardSavesWindows *win) {
++#ifdef NATIVE
++    nativePickerOpen = 0;
++#endif
+     if (win->menu->substate == 0) {
+         switch (win->menu->slid) {
+         case 3:
+@@ -359,6 +1249,12 @@
  
  /* Slides the slots and header out before leaving the screen (601) */
  static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -794,7 +993,7 @@
      if (win->menu->substate == 0) {
          if (win->menu->slid == 2) {
              win->info->hide(win->info);
-@@ -403,6 +1125,9 @@
+@@ -403,6 +1299,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -804,7 +1003,18 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -564,7 +1289,7 @@
+@@ -543,6 +1442,10 @@
+ static inline void STGMCARD_showDone(MemCardSaves *saves, MemCardSavesWindows *win) {
+     if (win->panel->done != 0) {
+         if (saves->screen->loading == 0) {
++#ifdef NATIVE
++            native_thumb_save_slot(STGMCARD_funcs.slot); /* the field's last picture, beside the save */
++            nativeThumbsLoad();
++#endif
+             saves->file = *STGMCARD_funcs.infoBuf;
+             saves->refresh(saves);
+             win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 9);
+@@ -564,7 +1467,7 @@
  static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 check;
  
@@ -813,7 +1023,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -595,7 +1320,7 @@
+@@ -595,7 +1498,7 @@
  /* Waits for cross on the loaded message, then waits for the card (400) and leaves
     the screen (600) */
  static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -822,7 +1032,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -651,6 +1376,9 @@
+@@ -651,6 +1554,9 @@
              win->cursor->setVisible(win->cursor, 1);
              saves->choosing = 1;
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
@@ -832,7 +1042,7 @@
          }
      } else {
          saves->prompting = 1;
-@@ -676,7 +1404,11 @@
+@@ -676,7 +1582,11 @@
              SOUND.playSound(SOUND_CURSOR);
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
          }
@@ -845,7 +1055,7 @@
              SOUND.playSound(SOUND_SELECT);
              win->windows[0]->setVisible(win->windows[0], 0);
              win->windows[4]->setVisible(win->windows[4], 0);
-@@ -726,7 +1458,7 @@
+@@ -726,7 +1636,7 @@
                  STGMCARD_showError(saves, win);
              }
          }
@@ -854,7 +1064,22 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->substate = 400;
          saves->prompting = 0;
-@@ -872,8 +1604,27 @@
+@@ -863,6 +1773,14 @@
+ void STGMCARD_runSaves(MemCardSaves *saves, MemCardSavesWindows *win) {
+     s32 status;
+ 
++#ifdef NATIVE
++    nativeThumbSlot = -1;
++    if (NATIVE_UP && nativePickerOpen && STGMCARD_funcs.slot >= 0 && STGMCARD_funcs.slot < 3 &&
++        nativeThumbOk[STGMCARD_funcs.slot] && STGMCARD_funcs.infoBuf->saves[STGMCARD_funcs.slot].name[0] != 0) {
++        nativeThumbSlot = STGMCARD_funcs.slot;
++    }
++#endif
++
+     switch (saves->substate) {
+     case 0:
+     default:
+@@ -872,8 +1790,27 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -883,7 +1108,7 @@
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
-@@ -921,7 +1672,11 @@
+@@ -921,7 +1858,11 @@
          break;
      case 40:
          STGMCARD_moveChoiceCursor(saves, win);
@@ -896,7 +1121,7 @@
              STGMCARD_hideChoices(win);
              SOUND.playSound(SOUND_SELECT);
              /* match depends on the 400 going through status */
-@@ -1000,6 +1755,12 @@
+@@ -1000,6 +1941,12 @@
     waits for it, the list's frame and the box of the cursor's two choices */
  void STGMCARD_drawSaves(MemCardSaves *saves) {
      SpriteDrawer sprite;
@@ -909,7 +1134,7 @@
  
      initSpriteDrawer(&sprite);
      sprite.setLayerId(saves->layer, 2);
-@@ -1017,6 +1778,70 @@
+@@ -1017,6 +1964,72 @@
      }
      sprite.setTexture(0x280, 0);
      sprite.setClutRow(0);
@@ -920,6 +1145,8 @@
 +        /* upright: the frame as the game has it; under it the five slots in the game's small box (sprite 29) with the
 +           game's card (0x23, the picked one blinking); in the frame the two choices in the same boxes */
 +        sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 33, saves->origin[0] + saves->slide[0].value, saves->origin[1] + saves->slide[1].value);
++        nativeDrawThumb(saves, &sprite);
++        sprite.setLayerId(saves->layer, 2);
 +        if (saves->choosing == 0 && !(nativeYesNoOn && saves->substate == 33)) { /* nothing to choose (picking a save:
 +                                                                                    its Yes / No) */
 +            return;
