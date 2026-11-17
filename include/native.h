@@ -340,6 +340,10 @@ void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialog
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */
 #define NATIVE_RUN_PERCENT 58 /* the player's run on the stick, against the game's (actor_control.c) */
+void native_touch_list(int x, int y, int w, int h); /* a scrolling list this frame, in display pixels */
+int native_touch_list_event(int *y, int *dy);       /* 1 tap, 2 hold (at display row *y); *dy dragged since */
+int native_games_list_text(int top, int rows, unsigned char *out, int room); /* the games' rows, game-encoded */
+int native_game_delete(int game);                   /* games.c: the game's saves gone */
 int native_touch_stick_level(void); /* 0 the stick isn't pushed, 1 a little (walk), 2 most of the way (run) */
 void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */
 void native_autosave_point(int mode, int x, int y, int dir); /* there, where a load would bring them back (state.c) */

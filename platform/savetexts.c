@@ -18,7 +18,7 @@ long native_read_raw(int fid, uint8_t **out); /* files.c */
 #define FID_FIRST 120
 #define FID_LAST 126
 #define ORIGINAL_COUNT 41
-#define TEXT_COUNT 44
+#define TEXT_COUNT 45
 
 typedef struct {
     int id;
@@ -46,6 +46,7 @@ static const Text IT[] = {
     {0x29, "Da dove vuoi riprendere."},
     {0x2A, "Automatico"},
     {0x2B, "Salvataggi"},
+    {0x2C, "Eliminare MEMORY CARD #."},
     {0, NULL},
 };
 
@@ -70,11 +71,13 @@ static const Text EN[] = {
     {0x29, "Continue from where."},
     {0x2A, "Autosave"},
     {0x2B, "Saves"},
+    {0x2C, "Delete MEMORY CARD #."},
     {0, NULL},
 };
 
-/* Plain text to the game's bytes, with its 00: the length written */
-static int encode(const char *s, uint8_t *out, int room) {
+/* Plain text to the game's bytes, with its 00: the length written (games.c uses it too) */
+int native_text_encode(const char *s, uint8_t *out, int room);
+int native_text_encode(const char *s, uint8_t *out, int room) {
     int n = 0;
 
     for (; *s != 0 && n < room - 3; s++) {
@@ -133,7 +136,7 @@ static uint8_t *rebuild(const uint8_t *orig, long orig_size, const Text *texts, 
         off = (uint32_t)pos;
         SDL_memcpy(out + 4 + 4 * i, &off, 4);
         if (t->text != NULL) {
-            pos += encode(t->text, out + pos, (int)(orig_size + 4096 - pos));
+            pos += native_text_encode(t->text, out + pos, (int)(orig_size + 4096 - pos));
         } else if (i < ORIGINAL_COUNT) {
             uint32_t from;
             int len;
@@ -162,7 +165,7 @@ const uint8_t *savetexts_file(int fid, long *size) {
     if (s_made[i] == NULL) {
         uint8_t *orig = NULL;
         long n = native_read_raw(fid, &orig);
-        static const Text ADDED_ONLY[] = {{0x29, "Continue from where."}, {0x2A, "Autosave"}, {0x2B, "Saves"}, {0, NULL}};
+        static const Text ADDED_ONLY[] = {{0x29, "Continue from where."}, {0x2A, "Autosave"}, {0x2B, "Saves"}, {0x2C, "Delete MEMORY CARD #."}, {0, NULL}};
 
         if (n <= 0) {
             return NULL;

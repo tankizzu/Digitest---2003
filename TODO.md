@@ -5,12 +5,14 @@ Priorità: P1 subito, P2 dopo, P3 più avanti. Obiettivo attuale: **prologo perf
 
 ## P1 — prologo
 
-- [ ] Verificare sul telefono la 0.9: crash del kit risolto, pulsante OK del kit, Indietro in basso a sinistra,
+- [ ] Verificare sul telefono la 1.0 (anche elenco MEMORY CARD: trascinare, tenere premuto per eliminare; Sì/No)
+      e la 0.9: crash del kit risolto, pulsante OK del kit, Indietro in basso a sinistra,
       "MEMORY CARD N", porte automatiche, corsa più lenta, fumetto vicino ai personaggi.
 - [x] Fumetto dei personaggi: verificato su Linux (0.9).
 - [ ] Percorrere il prologo dal nuovo gioco fino alla battaglia tutorial e annotare ogni punto in cui serve un
       tasto o ci si blocca.
 - [ ] Rivedere con l'utente: scale, salti e minigiochi automatici come le porte?
+- [ ] Dialoghi automatici che si fermano con più dialoghi di fila: farsi dire il punto (su Linux non succede).
 
 ## P1 — verticale (serve approvazione del piano)
 
@@ -28,7 +30,6 @@ Priorità: P1 subito, P2 dopo, P3 più avanti. Obiettivo attuale: **prologo perf
 
 - [ ] Verificare sul telefono il salvataggio automatico quando l'app va in secondo piano.
 - [ ] Schermate del menu del campo (squadra, oggetti, tecniche, mappa), negozi, laboratorio.
-- [ ] Togliere `build-linux-gles/` dalla storia git (aspetta il sì dell'utente).
 
 ## P3
 

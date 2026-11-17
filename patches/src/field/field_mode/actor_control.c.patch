@@ -20,7 +20,7 @@
 +/* Touch: near a character the player can talk to, the balloon over the
 +   player's head (as on an exit's cell); a tap then talks to it, turned to it */
 +#define NATIVE_TALK_BALLOON 0x7A /* the balloon's task id */
-+#define NATIVE_TALK_ANIM 3       /* its FIELDSTG_triggerAnims row: the dots */
++#define NATIVE_TALK_ANIM 1       /* its FIELDSTG_triggerAnims row: the scribble the scenes show */
 +#define NATIVE_TALK_REACH 30     /* how near, in the map's tile units */
 +
 +/* The character nearest the player within reach that a talk can go to: not a

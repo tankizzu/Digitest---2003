@@ -28,6 +28,7 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   salti e minigiochi restano col fumetto da toccare (da rivedere con l'utente).
 - **Personaggi**: avvicinandosi compare il fumetto sopra la testa del giocatore (come per le porte); un tocco
   parla al personaggio più vicino, girandosi verso di lui.
+- Il fumetto dei personaggi ha l'animazione degli scarabocchi delle scene (richiesta del 17/11/2026).
 - Un tocco breve dove si cammina = l'azione (X).
 - Nessuna rotazione della telecamera (il gioco non ce l'ha).
 - Filmati: tenere premuto 2 secondi per saltare.
@@ -42,7 +43,8 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - **Dialoghi automatici**: la freccia arancione dei fumetti del gioco (lo sprite vero), ruotata a destra, in
   basso a sinistra sopra la banda nera, senza sfondo; accanto "x1/x2/x3"; animata quando attiva; ogni tocco
   cambia velocità (spento → x1 → x2 → x3 → spento). La velocità cambia sia l'attesa sia la scrittura; x3 è più
-  veloce che tenere premuto.
+  veloce che tenere premuto (1.0: scrittura x8, 0,2 s per pagina). La velocità si vede come 1, 2 o 3 frecce
+  piccole accanto (stesso sprite): la scritta "x1/x2/x3" era fuori stile (17/11/2026).
 
 ## Menu iniziali
 
@@ -52,6 +54,8 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   Invio conferma; toccare il nome riapre la tastiera; niente levetta.
 - **Scelta del kit**: le linguette A/B/C scelgono il kit, il pulsante **OK sotto le linguette** (lo sprite OK
   della schermata del nome, stesso pacchetto grafico) conferma. Toccare i Digimon non conferma più.
+- **Registrazione dell'account**: Sì e No in due riquadri affiancati, con la cornice della barra di
+  registrazione del gioco; un tocco risponde.
 - Da discutere con l'utente (in sospeso): titolo a tutto schermo, pulsante Impostazioni per la lingua,
   pulsanti più grandi — sempre con la grafica del gioco.
 
@@ -63,10 +67,17 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   alternate (auto_a / auto_b), ogni 2 minuti mentre si cammina e quando l'app va in secondo piano. Un piccolo
   segno in alto al centro quando salva. Scartato: lo stato della memoria (dipende dalla build, si perde a ogni
   aggiornamento).
+- Elenco grande: due partite alla volta nel riquadro principale, righe alte il doppio, giorno e ora di
+  creazione accanto (created.txt), trascinare per scorrere, tocco per scegliere, **tenere premuto per
+  eliminare** (con Sì/No).
 - Continua → elenco delle partite (grafica del gioco) → "Automatico" o "Salvataggi". Nessuna finestra Android
   "vuoi riprendere".
 
 ## Cronologia git
 
-- In sospeso (chiesto all'utente il 17/11/2026): riscrivere la storia per togliere `build-linux-gles/`
-  (eseguibile compilato) finito nel commit 05c507c. È già tolto dalla versione attuale e ignorato.
+- 17/11/2026, approvato dall'utente: storia riscritta (filter-branch) senza `build-linux-gles/`; push forzato.
+
+## Verticale
+
+- **Il verticale è la modalità principale** (ribadito il 17/11/2026, "fin dall'inizio"). Tutto schermo vero:
+  campo, menu e battaglie riempiono il telefono. L'orizzontale è un di più.

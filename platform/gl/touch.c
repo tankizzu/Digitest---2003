@@ -43,17 +43,7 @@ static const char *TOUCH_FS =
     "        return;\n"
     "    }\n"
     "    if (kind == 13) { discard; }\n" /* the arrow itself: the sprite pass below */
-    "    if (kind == 14) {\n" /* the speed: x1, x2, x3 */
-    "        float sp = floor(value + 0.5), g = min(seg(p, vec2(-0.95, -0.3), vec2(-0.4, 0.35)), seg(p, vec2(-0.95, 0.35), vec2(-0.4, -0.3)));\n"
-    "        if (sp == 1.0) { g = min(g, min(seg(p, vec2(0.4, -0.65), vec2(0.4, 0.65)), seg(p, vec2(0.12, -0.38), vec2(0.4, -0.65)))); }\n"
-    "        if (sp == 2.0) { g = min(g, min(min(seg(p, vec2(0.05, -0.4), vec2(0.25, -0.65)), seg(p, vec2(0.25, -0.65), vec2(0.6, -0.65))),\n"
-    "                              min(min(seg(p, vec2(0.6, -0.65), vec2(0.75, -0.35)), seg(p, vec2(0.75, -0.35), vec2(0.05, 0.65))), seg(p, vec2(0.05, 0.65), vec2(0.75, 0.65))))); }\n"
-    "        if (sp == 3.0) { g = min(g, min(min(seg(p, vec2(0.05, -0.65), vec2(0.72, -0.65)), seg(p, vec2(0.72, -0.65), vec2(0.35, -0.05))),\n"
-    "                              min(min(seg(p, vec2(0.35, -0.05), vec2(0.75, 0.25)), seg(p, vec2(0.75, 0.25), vec2(0.5, 0.65))), seg(p, vec2(0.5, 0.65), vec2(0.05, 0.6))))); }\n"
-    "        float ink = 1.0 - smoothstep(0.1, 0.1 + aa, g), rim = (1.0 - smoothstep(0.2, 0.2 + aa, g)) - ink;\n"
-    "        frag = vec4(mix(vec3(0.12, 0.05, 0.0), vec3(1.0, 0.6, 0.15), ink), a * max(ink, rim * 0.8));\n"
-    "        return;\n"
-    "    }\n"
+    "    if (kind == 14) { discard; }\n" /* the speed: small copies of the arrow, the sprite pass below */
     "    float g = 1e3; vec3 c = vec3(1.0);\n"
     "    if (kind == 2) { g = min(seg(p, vec2(-0.38, -0.38), vec2(0.38, 0.38)), seg(p, vec2(-0.38, 0.38), vec2(0.38, -0.38))); c = vec3(0.55, 0.7, 1.0); }\n"
     "    if (kind == 3) { g = abs(d - 0.4); c = vec3(1.0, 0.45, 0.45); }\n"
@@ -212,7 +202,7 @@ void gl_touch_draw(int w, int h) {
     GL(glVertexAttribPointer)(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
     GL(glDrawArrays)(GL_TRIANGLES, 0, k);
     for (int i = 0; i < n; i++) {
-        if (shapes[i].kind == TOUCH_AUTO) {
+        if (shapes[i].kind == TOUCH_AUTO || shapes[i].kind == TOUCH_LABEL) {
             draw_arrow(&shapes[i], w, h);
         }
     }

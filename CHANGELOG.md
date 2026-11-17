@@ -2,6 +2,24 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.0
+
+- **Elenco MEMORY CARD più grande**: le partite stanno nel riquadro grande dello schermo, due alla volta, ogni
+  riga alta il doppio, con giorno e ora di creazione accanto ("MEMORY CARD 8   17.11.2026  07:46"). Trascinando
+  si scorre, un tocco sceglie, **tenendo premuto su una riga si elimina** (domanda Sì/No, "No" già scelto).
+  "Automatico / Salvataggi" nello stesso formato. Verificati su Linux: aspetto, scelta, caricamento.
+  Eliminazione e trascinamento non verificati (servono dita vere).
+- **Sì / No della registrazione in due riquadri affiancati**, con la cornice della barra di registrazione del
+  gioco; un tocco risponde. Verificato su Linux.
+- **Fumetto dei personaggi con gli scarabocchi** delle scene (riga 1 delle animazioni dei fumetti). Verificato
+  su Linux.
+- **Dialoghi x3 più veloci**: scrittura 8 volte più veloce, 0,2 s di attesa per pagina.
+- **Velocità dei dialoghi automatici**: al posto di "x1/x2/x3" una, due o tre frecce piccole (lo sprite del
+  gioco) accanto alla freccia grande.
+- Storia di GitHub riscritta senza `build-linux-gles/`.
+- Dialoghi automatici in sequenza: su Linux (x2, nessun tocco) il prologo va avanti da solo fino alla scelta del
+  kit dall'impiegato; il blocco segnalato non si riproduce, da capire dove succede.
+
 ### 0.9
 
 - **Fumetto vicino ai personaggi corretto**: nella 0.8 veniva creato ma non compariva mai (un task del gioco

@@ -1,6 +1,6 @@
 --- a/src/menus/memory_card/saves.c
 +++ b/src/menus/memory_card/saves.c
-@@ -2,12 +2,23 @@
+@@ -2,12 +2,25 @@
     errors */
  
  #include "menus/memory_card.h"
@@ -9,6 +9,8 @@
 +/* touch: a tap anywhere is X for the screen's messages (its rows take their own taps first) */
 +#define MC_CROSS() (PAD_PRESSED(PAD_CROSS) || native_touch_text_tap())
 +static s32 nativeTop, nativeSel, nativeSource; /* the games' rows (below) */
++static s32 nativeScroll, nativeDelete;          /* the list's drag not yet a row; the game asked to delete */
++static u8 nativeListText[512];
 +static void nativeShowRows(MemCardSaves *saves, MemCardSavesWindows *win);
 +#endif
  
@@ -24,7 +26,7 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +127,194 @@
+@@ -116,9 +129,311 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -45,35 +47,119 @@
 +#ifdef NATIVE
 +/* The games (platform/games.c) instead of the ports: the rows list them two at a time, from nativeTop; the pick is
 +   nativeSel. Loading a game with an autosave asks first where from (substate 5) */
-+/* The rows: games nativeTop and nativeTop + 1 (their numbers), or the autosave / saves choice */
++/* The rows are in the screen's big text area (windows[0]): two at a time, each two lines high for a finger, the
++   cursor beside the picked one; the little rows' box at the bottom right stays empty */
++#define NATIVE_LIST_X 0x0A
++#define NATIVE_LIST_Y 0x81 /* windows[0]'s first line: origin 89 + 40 */
++#define NATIVE_LIST_PITCH 28
++#define NATIVE_LIST_ROWS 2
++
++/* Strings of the MEMCRD file, one row each (a blank line between), into nativeListText */
++static void nativeListStrings(const s32 *ids, s32 n) {
++    u8 *file = (u8 *)FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD));
++    s32 pos = 0, i;
++
++    for (i = 0; i < n; i++) {
++        u8 *src = file + ((s32 *)file)[1 + ids[i]];
++
++        if (i > 0) {
++            nativeListText[pos++] = 2, nativeListText[pos++] = 1, nativeListText[pos++] = 2, nativeListText[pos++] = 1;
++        }
++        while (*src != 0 && pos < (s32)sizeof nativeListText - 8) {
++            nativeListText[pos++] = *src++;
++        }
++    }
++    nativeListText[pos] = 0;
++}
++
++static void nativeListCursor(MemCardSavesWindows *win, s32 row) {
++    win->cursor->setVisible(win->cursor, 1);
++    win->cursor->setPos(win->cursor, NATIVE_LIST_X, NATIVE_LIST_Y + row * NATIVE_LIST_PITCH);
++}
++
++/* The rows: the games from nativeTop (number, day and time made), the autosave / saves choice (substate 5) or the
++   yes / no of a deletion (6) */
 +static void nativeShowRows(MemCardSaves *saves, MemCardSavesWindows *win) {
 +    s32 count = native_game_count();
 +
-+    if (saves->substate == 5) {
-+        win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x29);
-+        win->windows[2]->setString(win->windows[2], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x2A);
-+        win->windows[3]->setString(win->windows[3], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x2B);
-+        win->cursor->setPos(win->cursor, 0xC2, nativeSource * 14 + 0xBD);
++    win->windows[2]->setVisible(win->windows[2], 0);
++    win->windows[3]->setVisible(win->windows[3], 0);
++    if (saves->substate == 5 || saves->substate == 6) {
++        static const s32 SOURCE[2] = {0x2A, 0x2B}, YES_NO[2] = {0x16, 0x17};
++
++        if (saves->substate == 5) {
++            win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x29);
++        } else {
++            win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x2C);
++            win->windows[1]->setNumber(win->windows[1], 1, native_game_number(nativeDelete));
++        }
++        nativeListStrings(saves->substate == 5 ? SOURCE : YES_NO, 2);
++        win->windows[0]->setString(win->windows[0], nativeListText, -1); /* -1: the text itself, 1-byte */
++        nativeListCursor(win, nativeSource);
 +        return;
 +    }
 +    if (count == 0) {
 +        win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x0A);
-+        win->windows[2]->setVisible(win->windows[2], 0);
-+        win->windows[3]->setVisible(win->windows[3], 0);
++        nativeListText[0] = 0;
++        win->windows[0]->setString(win->windows[0], nativeListText, -1); /* -1: the text itself, 1-byte */
 +        win->cursor->setVisible(win->cursor, 0);
 +        return;
 +    }
 +    win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x1D);
-+    win->windows[2]->setString(win->windows[2], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 3);
-+    win->windows[2]->setNumber(win->windows[2], 1, native_game_number(nativeTop));
-+    if (nativeTop + 1 < count) {
-+        win->windows[3]->setString(win->windows[3], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 3);
-+        win->windows[3]->setNumber(win->windows[3], 1, native_game_number(nativeTop + 1));
-+    } else {
-+        win->windows[3]->setVisible(win->windows[3], 0);
++    native_games_list_text(nativeTop, NATIVE_LIST_ROWS, nativeListText, sizeof nativeListText);
++    win->windows[0]->setString(win->windows[0], nativeListText, -1); /* -1: the text itself, 1-byte */
++    nativeListCursor(win, nativeSel - nativeTop);
++}
++
++/* The list's input: a finger dragged on it scrolls it (top, when it scrolls), a tap picks a row (1), a finger held
++   on a row asks for its own choice (2); up, down and X as on the pad. The row in *sel */
++static s32 nativeListInput(s32 *sel, s32 count, s32 *top) {
++    s32 ev, ty, dy, row, prev = *sel, base;
++
++    native_touch_list(NATIVE_LIST_X, NATIVE_LIST_Y - 6, 0x128, NATIVE_LIST_ROWS * NATIVE_LIST_PITCH);
++    native_touch_in_menu();
++    ev = native_touch_list_event(&ty, &dy);
++    if (top != NULL) {
++        nativeScroll += dy;
++        while (nativeScroll <= -NATIVE_LIST_PITCH / 2 && *top + NATIVE_LIST_ROWS < count) {
++            (*top)++, nativeScroll += NATIVE_LIST_PITCH;
++        }
++        while (nativeScroll >= NATIVE_LIST_PITCH / 2 && *top > 0) {
++            (*top)--, nativeScroll -= NATIVE_LIST_PITCH;
++        }
++        if (*top == 0 || *top + NATIVE_LIST_ROWS >= count) {
++            nativeScroll = 0;
++        }
++        if (*sel < *top) {
++            *sel = *top;
++        } else if (*sel > *top + NATIVE_LIST_ROWS - 1) {
++            *sel = *top + NATIVE_LIST_ROWS - 1;
++        }
 +    }
-+    win->cursor->setVisible(win->cursor, 1);
-+    win->cursor->setPos(win->cursor, 0xC2, (nativeSel - nativeTop) * 14 + 0xBD);
++    base = top != NULL ? *top : 0;
++    if (ev != 0) {
++        row = (ty - (NATIVE_LIST_Y - 6)) / NATIVE_LIST_PITCH;
++        if (row >= 0 && row < NATIVE_LIST_ROWS && base + row < count) {
++            *sel = base + row;
++            return ev;
++        }
++    }
++    if ((PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) && *sel > 0) {
++        (*sel)--;
++    } else if ((PAD_PRESSED(PAD_DOWN) || PAD_REPEATED(PAD_DOWN)) && *sel < count - 1) {
++        (*sel)++;
++    }
++    if (top != NULL) {
++        if (*sel < *top) {
++            *top = *sel;
++        } else if (*sel > *top + NATIVE_LIST_ROWS - 1) {
++            *top = *sel - NATIVE_LIST_ROWS + 1;
++        }
++    }
++    if (prev != *sel) {
++        SOUND.playSound(SOUND_CURSOR);
++    }
++    return (PAD.getPressed(0) & (1 << PAD_CROSS)) != 0;
 +}
 +
 +/* Up, down and a tap on a row: 1 when a row is picked (by X or the tap), the row's index in *row */
@@ -152,7 +238,17 @@
 +        }
 +        return;
 +    }
-+    if (nativeRowInput(&nativeSel, count, &nativeTop)) {
++    switch (nativeListInput(&nativeSel, count, &nativeTop)) {
++    case 0:
++        break;
++    case 2: /* held: delete it? */
++        SOUND.playSound(SOUND_SELECT);
++        nativeDelete = nativeSel;
++        nativeSource = 1; /* no, to start with */
++        saves->substate = 6;
++        nativeShowRows(saves, win);
++        return;
++    default:
 +        game = native_game_number(nativeSel);
 +        native_game_select(game);
 +        if (native_autosave_exists(game)) {
@@ -178,8 +274,10 @@
 +static void nativePickSource(MemCardSaves *saves, MemCardSavesWindows *win) {
 +    s32 prev = nativeSource;
 +
-+    if (nativeRowInput(&nativeSource, 2, NULL)) {
++    if (nativeListInput(&nativeSource, 2, NULL) == 1) {
 +        if (nativeSource == 0) {
++            nativeListText[0] = 0;
++            win->windows[0]->setString(win->windows[0], nativeListText, -1); /* -1: the text itself, 1-byte */
 +            if (native_autosave_read(native_game_number(nativeSel), STGMCARD_funcs.dataBuf)) {
 +                /* the autosave, a save as the card has it: loaded as STGMCARD_loadSave does, then its end (500) */
 +                SOUND.playSound(SOUND_SELECT);
@@ -212,14 +310,35 @@
 +        return;
 +    }
 +    if (prev != nativeSource) {
-+        win->cursor->setPos(win->cursor, 0xC2, nativeSource * 14 + 0xBD);
++        nativeListCursor(win, nativeSource);
++    }
++}
++
++/* Deleting a game (held in the list): yes deletes its saves, no or triangle goes back to the list */
++static void nativePickDelete(MemCardSaves *saves, MemCardSavesWindows *win) {
++    s32 prev = nativeSource;
++
++    if (nativeListInput(&nativeSource, 2, NULL) == 1 || PAD_PRESSED(PAD_TRIANGLE)) {
++        if (nativeSource == 0 && !PAD_PRESSED(PAD_TRIANGLE)) {
++            SOUND.playSound(SOUND_SELECT);
++            native_game_delete(native_game_number(nativeDelete));
++            nativeSel = nativeTop = 0;
++        } else {
++            SOUND.playSound(SOUND_MENU_CANCEL);
++        }
++        saves->substate = 2;
++        nativeShowRows(saves, win);
++        return;
++    }
++    if (prev != nativeSource) {
++        nativeListCursor(win, nativeSource);
 +    }
 +}
 +#endif
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -135,7 +331,7 @@
+@@ -135,7 +450,7 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          SOUND.playSound(SOUND_CURSOR);
      }
@@ -228,7 +347,7 @@
          win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
          STGMCARD_showPort(saves, win, 1);
          win->windows[1]->setVisible(win->windows[1], 0);
-@@ -302,7 +498,7 @@
+@@ -302,7 +617,7 @@
      s32 status;
  
      if (win->menu->substate == 6) {
@@ -237,7 +356,7 @@
              SOUND.playSound(SOUND_MENU_CONFIRM);
              saves->substate = 400;
              win->menu->substate = 0;
-@@ -359,6 +555,12 @@
+@@ -359,6 +674,12 @@
  
  /* Slides the slots and header out before leaving the screen (601) */
  static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -250,7 +369,7 @@
      if (win->menu->substate == 0) {
          if (win->menu->slid == 2) {
              win->info->hide(win->info);
-@@ -403,6 +605,9 @@
+@@ -403,6 +724,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -260,7 +379,7 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -564,7 +769,7 @@
+@@ -564,7 +888,7 @@
  static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 check;
  
@@ -269,7 +388,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -595,7 +800,7 @@
+@@ -595,7 +919,7 @@
  /* Waits for cross on the loaded message, then waits for the card (400) and leaves
     the screen (600) */
  static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -278,7 +397,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -676,7 +881,7 @@
+@@ -676,7 +1000,7 @@
              SOUND.playSound(SOUND_CURSOR);
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
          }
@@ -287,7 +406,7 @@
              SOUND.playSound(SOUND_SELECT);
              win->windows[0]->setVisible(win->windows[0], 0);
              win->windows[4]->setVisible(win->windows[4], 0);
-@@ -726,7 +931,7 @@
+@@ -726,7 +1050,7 @@
                  STGMCARD_showError(saves, win);
              }
          }
@@ -296,7 +415,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->substate = 400;
          saves->prompting = 0;
-@@ -872,8 +1077,23 @@
+@@ -872,8 +1196,24 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -312,6 +431,7 @@
 +        nativePickSource(saves, win);
 +        break;
 +    case 6:
++        nativePickDelete(saves, win);
 +        break;
 +    case 7:
 +        win->panel->start(win->panel, 2, 0x14);
@@ -321,7 +441,7 @@
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
-@@ -921,7 +1141,7 @@
+@@ -921,7 +1261,7 @@
          break;
      case 40:
          STGMCARD_moveChoiceCursor(saves, win);

@@ -1,6 +1,20 @@
 --- a/src/menus/player_name/confirm.c
 +++ b/src/menus/player_name/confirm.c
-@@ -37,6 +37,11 @@
+@@ -2,6 +2,13 @@
+    the progress */
+ 
+ #include "menus/player_name.h"
++
++#ifdef NATIVE
++#define NATIVE_YES_X 0x4E /* the answers' boxes, side by side in the question's panel: the bar's frame at half width */
++#define NATIVE_NO_X 0xA2
++#define NATIVE_BOX_W 0x4F
++#define NATIVE_BOX_Y 0xBA
++#endif
+ 
+ /* Creates the confirmation's windows: the title, the name, the partners'
+    name, the message, yes and no with their cursor, and the progress */
+@@ -37,12 +44,24 @@
          for (i = 0; name[i] == SJIS_SPACE; i++) {
          }
          windows->name->setText(windows->name, &name[i]);
@@ -12,7 +26,20 @@
          windows->pack->setString(windows->pack, FILE_CACHE.load(TEXT_FILE(TEXT_ONLINE)), task->choice + 10);
          windows->message->setString(windows->message, FILE_CACHE.load(TEXT_FILE(TEXT_ONLINE)), 0x16);
          windows->yes->setString(windows->yes, FILE_CACHE.load(TEXT_FILE(TEXT_ONLINE)), 0x17);
-@@ -70,7 +75,11 @@
+         windows->no->setString(windows->no, FILE_CACHE.load(TEXT_FILE(TEXT_ONLINE)), 0x18);
++#ifdef NATIVE
++        /* touch: yes and no in two boxes side by side (NATIVE_YES_X...), no cursor: a tap answers */
++        windows->yes->setPos(windows->yes, NATIVE_YES_X + 0x1A, NATIVE_BOX_Y + 3);
++        windows->no->setPos(windows->no, NATIVE_NO_X + 0x1C, NATIVE_BOX_Y + 3);
++        windows->cursor->setVisible(windows->cursor, 0);
++#else
+         windows->cursor->setPos(windows->cursor, 0x5A, task->cursor * 14 + 0xB9);
+         windows->cursor->setVisible(windows->cursor, 1);
++#endif
+     } else {
+         windows->title->setVisible(windows->title, 0);
+         windows->name->setVisible(windows->name, 0);
+@@ -70,7 +89,11 @@
      s32 i;
      s32 j;
  
@@ -24,7 +51,26 @@
      initSpriteDrawer(&sprite);
      sprite.setTexture(0x280, 0x100);
      if (GFX.funcs.getTime() - task->clutTime > 4) {
-@@ -162,6 +171,10 @@
+@@ -124,6 +147,18 @@
+         }
+         sprite.draw(FILE_CACHE.getEntry(PLNMET_MENU), 1, 0, 0xA2);
+     }
++#ifdef NATIVE
++    if (task->substate == 0 && task->tweenB.level == ONE) {
++        /* the two answers' boxes: the frame the progress bar has */
++        sprite.setLayerId(task->layer, task->depth - 1);
++        sprite.setScale(ONE / 2, ONE, ONE);
++        sprite.setPivot(NATIVE_YES_X, NATIVE_BOX_Y);
++        sprite.draw(FILE_CACHE.getEntry(PLNMET_MENU), 0x37, NATIVE_YES_X, NATIVE_BOX_Y);
++        sprite.setPivot(NATIVE_NO_X, NATIVE_BOX_Y);
++        sprite.draw(FILE_CACHE.getEntry(PLNMET_MENU), 0x37, NATIVE_NO_X, NATIVE_BOX_Y);
++        sprite.setScale(ONE, ONE, ONE);
++    }
++#endif
+     if (task->substate == 1 || task->substate == 2) {
+         sprite.setLayerId(task->layer, task->depth - 1);
+         sprite.draw(FILE_CACHE.getEntry(PLNMET_MENU), 0x37, 0x51, 0xBF);
+@@ -162,6 +197,10 @@
  /* The confirmation's states: yes or no (substate 200 for no or triangle); yes
     counts the progress up to 100, then waits 120 frames before substate 100.
     Once closing, closes the panels and ends */
@@ -35,7 +81,7 @@
  void STPLNMET_runConfirm(NameConfirm *task, NameConfirmWindows *windows) {
      s32 old;
  
-@@ -169,6 +182,20 @@
+@@ -169,6 +208,20 @@
      case 0:
      default:
          old = task->cursor;
@@ -44,8 +90,8 @@
 +            /* touch: yes and no, tapped, answer at once */
 +            s32 tapped;
 +
-+            native_touch_target(0, 0x50, 0xB7, 0x70, 14);
-+            native_touch_target(1, 0x50, 0xB7 + 14, 0x70, 14);
++            native_touch_target(0, NATIVE_YES_X - 0x30, NATIVE_BOX_Y - 0x10, NATIVE_BOX_W + 0x32, 0x30);
++            native_touch_target(1, NATIVE_NO_X, NATIVE_BOX_Y - 0x10, NATIVE_BOX_W + 0x32, 0x30);
 +            tapped = native_touch_tap();
 +            touchYesNo = tapped >= 0;
 +            if (tapped >= 0) {
@@ -56,7 +102,7 @@
          if (PAD_PRESSED(PAD_UP)) {
              task->cursor = 0;
          } else if (PAD_PRESSED(PAD_DOWN)) {
-@@ -178,7 +205,11 @@
+@@ -178,7 +231,11 @@
              SOUND.playSound(SOUND_CURSOR);
              windows->cursor->setPos(windows->cursor, 0x5A, task->cursor * 14 + 0xB9);
          }

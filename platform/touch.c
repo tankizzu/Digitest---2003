@@ -123,7 +123,7 @@ int native_touch_tap_id(int id) {
 }
 
 int native_auto_text(void); /* prefs.c */
-static const int AUTO_TEXT_WAIT[4] = {0, 180, 90, 30}; /* vsyncs a page waits at each speed: 3 s, 1.5 s, 0.5 s */
+static const int AUTO_TEXT_WAIT[4] = {0, 180, 90, 12}; /* vsyncs a page waits at each speed: 3 s, 1.5 s, 0.2 s */
 
 /* Automatic dialogues: 1 once the text window `who` has waited AUTO_TEXT_WAIT for the player (text_window.c asks
    each frame it waits; a break of a few vsyncs starts the count again) */
@@ -449,6 +449,35 @@ static int back_shown(void) {
 
 static int dialog_shown(void);
 
+/* A scrolling list (the memory card screen's games), in display pixels: a finger dragged on it scrolls it, a tap
+   without moving picks the row under it, a finger held still for LIST_HOLD_MS asks for the row's own choice */
+#define LIST_HOLD_MS 600
+static float s_list[4], s_list_y0, s_list_ylast, s_list_dy;
+static Uint64 s_list_until, s_list_from;
+static SDL_FingerID s_list_id;
+static int s_list_on, s_list_moved, s_list_held, s_list_event, s_list_event_y;
+
+void native_touch_list(int x, int y, int w, int h) {
+    s_list[0] = (float)x, s_list[1] = (float)y, s_list[2] = (float)w, s_list[3] = (float)h;
+    s_list_until = SDL_GetTicks() + 150;
+}
+
+static int list_shown(void) {
+    return SDL_GetTicks() < s_list_until;
+}
+
+/* What the list's finger did since the last call: 0 nothing, 1 a tap, 2 a hold, with the display row it was at in
+   *y; *dy the display pixels it dragged the list by (up negative) */
+int native_touch_list_event(int *y, int *dy) {
+    int ev = s_list_event;
+
+    *dy = (int)s_list_dy;
+    s_list_dy -= (float)*dy;
+    *y = s_list_event_y;
+    s_list_event = 0;
+    return ev;
+}
+
 /* The corner buttons, in pixels: the menu at the top right; back at the bottom left, where a thumb reaches it with
    the phone in one hand (over the automatic dialogues button when that one is there too) */
 static void corner(int right, float *x, float *y, float *r) {
@@ -571,7 +600,7 @@ static void test_stick(void) {
 }
 
 void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
-    int ndev = 0, seen_stick = 0, seen_skip = 0, text_held = 0;
+    int ndev = 0, seen_stick = 0, seen_skip = 0, seen_list = 0, text_held = 0;
     SDL_TouchID *devs;
 
     text_input_idle();
@@ -645,6 +674,29 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                     s_back_down = 1;
                     continue;
                 }
+                if (list_shown() || (s_list_on && fingers[i]->id == s_list_id)) {
+                    float px = (x - s_pic[0]) / s_pic[2] * s_disp[0], py = (y - s_pic[1]) / s_pic[3] * s_disp[1];
+
+                    if (s_list_on && fingers[i]->id == s_list_id) {
+                        if (!s_list_moved && SDL_fabsf(py - s_list_y0) > 4) {
+                            s_list_moved = 1;
+                        }
+                        if (s_list_moved) {
+                            s_list_dy += py - s_list_ylast;
+                        }
+                        s_list_ylast = py;
+                        seen_list = 1;
+                        continue;
+                    }
+                    if (!was && !s_list_on && px >= s_list[0] && px < s_list[0] + s_list[2] && py >= s_list[1]
+                        && py < s_list[1] + s_list[3]) {
+                        s_list_on = 1, s_list_id = fingers[i]->id;
+                        s_list_y0 = s_list_ylast = py, s_list_from = SDL_GetTicks();
+                        s_list_moved = s_list_held = 0;
+                        seen_list = 1;
+                        continue;
+                    }
+                }
                 if (!was && (id = target_at((x - s_pic[0]) / s_pic[2] * s_disp[0], (y - s_pic[1]) / s_pic[3] * s_disp[1])) >= 0) {
                     s_tap = id;
                     hold_target(fingers[i]->id);
@@ -684,6 +736,15 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
         SDL_free(fingers);
     }
     SDL_free(devs);
+    if (s_list_on && !seen_list) { /* lifted: a tap if it neither moved nor was held */
+        if (!s_list_moved && !s_list_held) {
+            s_list_event = 1, s_list_event_y = (int)s_list_y0;
+        }
+        s_list_on = 0;
+    } else if (s_list_on && !s_list_moved && !s_list_held && SDL_GetTicks() - s_list_from >= LIST_HOLD_MS) {
+        s_list_held = 1;
+        s_list_event = 2, s_list_event_y = (int)s_list_y0;
+    }
     s_text_held = text_held;
     if (s_text_tap > 0 && s_text_tap_frame < 0) { /* not read in time: dropped */
         s_text_tap--;
@@ -780,8 +841,9 @@ int touch_shapes(TouchShape *out, int max) {
         auto_button(&x, &y, &r);
         /* value: the arrows (the speed, one dim when off) and the animation's phase, while on */
         out[n++] = (TouchShape){x, y, r, TOUCH_AUTO, speed ? 1.0f : (s_auto_down ? 0.9f : 0.6f), (float)speed};
-        if (speed > 0 && n < max) { /* the speed, written beside it */
-            out[n++] = (TouchShape){x + r * 1.3f, y, r * 0.45f, TOUCH_LABEL, 1.0f, (float)speed};
+        for (int i = 0; i < speed && n < max; i++) { /* the speed: one small copy of the arrow for each step */
+            /* each half the button's arrow (1.9 radii long once turned), side by side after it */
+            out[n++] = (TouchShape){x + r * (1.4f + 1.1f * (float)i), y, r * 0.5f, TOUCH_LABEL, 1.0f, (float)speed};
         }
     }
     if (menu_shown() && n < max) {

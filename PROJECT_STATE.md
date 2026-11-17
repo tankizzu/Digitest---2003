@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Ultimo aggiornamento: 17/11/2026 — versione **0.9** (versionCode 12) consegnata all'utente.
+Ultimo aggiornamento: 17/11/2026 — versione **1.0** (versionCode 13) consegnata all'utente.
 
 ## Obiettivo attuale
 
@@ -18,13 +18,15 @@ battaglia. In parallelo: piano per il verticale come modalità principale (da ap
 | Scelta del kit: linguette A/B/C + OK; crash risolto (0.8) | sì | no |
 | Conferma "Registri l'account?" con Sì/No toccabili | sì | — |
 | Più partite, "MEMORY CARD N", Continua → Automatico/Salvataggi | sì | no |
+| Elenco MEMORY CARD grande con data/ora, trascinamento, tenere premuto per eliminare (1.0) | aspetto e scelta sì; trascinamento ed eliminazione no | no |
+| Sì/No della registrazione in due riquadri (1.0) | sì | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
 | Salvataggio quando l'app va in secondo piano | no (solo su telefono) | no |
 | Dialoghi: tocco, tenere premuto, automatici x1/x2/x3 con la freccia del gioco | sì | parziale |
 | Levetta mobile solo dove si cammina; spinta leggera cammina | sì | no |
 | Corsa al 58% | compilato | no |
 | Porte automatiche con la levetta | sì | no |
-| Fumetto vicino ai personaggi, tocco per parlare (corretto nella 0.9) | sì | no |
+| Fumetto vicino ai personaggi (scarabocchi, 1.0), tocco per parlare | sì | no |
 | Indietro in basso a sinistra | compilato | no |
 | Battaglia: comandi, tecniche, oggetti, messaggi, risultati toccabili | sì (vecchie versioni) | parziale |
 
@@ -37,10 +39,13 @@ battaglia. In parallelo: piano per il verticale come modalità principale (da ap
   storia aspetta il sì dell'utente.
 - Il repository su GitHub è stato rinominato `tankizzu/Digitest---2003` (il vecchio indirizzo reindirizza).
 
+- Dialoghi automatici che si fermano con più dialoghi di fila: non riprodotto su Linux (il prologo va avanti da
+  solo con x2); chiedere all'utente il punto esatto.
+
 ## Da dove ripartire
 
-1. Raccogliere il riscontro dell'utente sulla 0.9 (corsa, porte, fumetto, kit, Indietro).
-2. Preparare il piano del verticale (TODO P1) e presentarlo per l'approvazione.
+1. Raccogliere il riscontro dell'utente sulla 1.0.
+2. **Verticale a tutto schermo** (approvato come direzione il 17/11/2026): prima fase descritta in TODO P1.
 3. Percorrere il prologo fino alla battaglia tutorial e segnare ogni punto senza touch.
 4. Test: la partita "MEMORY CARD 9" dell'ambiente di prova ha un salvataggio automatico nella stanza della
    Sala della Matrice, con un personaggio vicino (vedi TECHNICAL_NOTES, "Test su Linux").

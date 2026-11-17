@@ -97,9 +97,35 @@ void native_game_select(int game) {
     scan();
 }
 
-/* A new game from the title: the next number, an empty card */
+/* When a game was made: the time in its created.txt (seconds), else its card's last write, else 0 */
+static SDL_Time created(int game) {
+    char path[1250];
+    SDL_PathInfo info;
+    size_t len = 0;
+    char *text;
+    SDL_Time t = 0;
+
+    native_game_dir(game, path, sizeof path);
+    SDL_strlcat(path, "/created.txt", sizeof path);
+    text = SDL_LoadFile(path, &len);
+    if (text != NULL) {
+        t = (SDL_Time)SDL_strtoll(text, NULL, 10) * SDL_NS_PER_SECOND;
+        SDL_free(text);
+        return t;
+    }
+    native_game_dir(game, path, sizeof path);
+    SDL_strlcat(path, "/card.mcd", sizeof path);
+    if (SDL_GetPathInfo(path, &info)) {
+        return info.modify_time;
+    }
+    return 0;
+}
+
+/* A new game from the title: the next number, an empty card, the time it was made */
 void native_game_new(void) {
     int next;
+    char path[1250], text[32];
+    SDL_Time now = 0;
 
     ready();
     next = s_count > 0 ? s_games[s_count - 1] + 1 : 1;
@@ -107,6 +133,62 @@ void native_game_new(void) {
         next = MAX_GAMES; /* ponytail: the last one is used again; no player makes a hundred games */
     }
     native_game_select(next);
+    native_game_dir(next, path, sizeof path);
+    SDL_strlcat(path, "/created.txt", sizeof path);
+    SDL_GetCurrentTime(&now);
+    SDL_snprintf(text, sizeof text, "%lld\n", (long long)(now / SDL_NS_PER_SECOND));
+    SDL_SaveFile(path, text, SDL_strlen(text));
+}
+
+/* Deletes a game: its card, autosaves and the rest of its folder; the game played becomes none if it was this one.
+   1 if it is gone */
+static SDL_EnumerationResult remove_entry(void *userdata, const char *dirname, const char *fname) {
+    char path[1300];
+
+    (void)userdata;
+    SDL_snprintf(path, sizeof path, "%s%s", dirname, fname);
+    SDL_RemovePath(path);
+    return SDL_ENUM_CONTINUE;
+}
+
+int native_game_delete(int game) {
+    char dir[1200];
+
+    ready();
+    native_game_dir(game, dir, sizeof dir);
+    SDL_EnumerateDirectory(dir, remove_entry, NULL);
+    SDL_RemovePath(dir);
+    if (pref_get("game", 0) == game) {
+        pref_set("game", 0);
+    }
+    scan();
+    return !SDL_GetPathInfo(dir, NULL);
+}
+
+int native_text_encode(const char *s, unsigned char *out, int room); /* savetexts.c */
+
+/* The memory card screen's list (STGMCARD's patches): `rows` games from the `top`-th, each "MEMORY CARD N" with the
+   day and time it was made, a blank line between them so that each row is two lines high for a finger. In the
+   game's encoding, its 00 at the end; the length written */
+int native_games_list_text(int top, int rows, unsigned char *out, int room) {
+    int n = 0;
+
+    ready();
+    for (int i = top; i < top + rows && i < s_count && n < room - 64; i++) {
+        char line[96]; /* |01|05 the game's full stop, |01|07 its colon */
+        SDL_DateTime dt;
+        SDL_Time t = created(s_games[i]);
+
+        if (t != 0 && SDL_TimeToDateTime(t, &dt, true)) {
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d   %02d|01|05%02d|01|05%04d  %02d|01|07%02d", i > top ? "\n\n" : "",
+                         s_games[i], dt.day, dt.month, dt.year, dt.hour, dt.minute);
+        } else {
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d", i > top ? "\n\n" : "", s_games[i]);
+        }
+        n += native_text_encode(line, out + n, room - n) - 1; /* without its 00: the next goes on */
+    }
+    out[n++] = 0;
+    return n;
 }
 
 /* The memory card at the start: the current game's, else none yet (a blank card that isn't written) */

@@ -41,6 +41,12 @@
 
 ## Salvataggi
 
+- Elenco delle partite (saves.c, NATIVE): testo costruito da `native_games_list_text` (games.c) nel
+  `windows[0]` della schermata, 2 righe visibili a passo 28 px da y 0x81; `native_touch_list` /
+  `native_touch_list_event` (touch.c) danno tocco, pressione lunga (600 ms) e trascinamento. Substate 6 =
+  conferma dell'eliminazione (`native_game_delete`). Data di creazione: `saves/game<N>/created.txt` (secondi),
+  altrimenti l'ultima scrittura di card.mcd.
+
 - Partite: `saves/game<N>/card.mcd` + `auto_a.sav` / `auto_b.sav`; `prefs.txt` (language, auto_text, game).
 - GAME_SAVE = primi 0x26C4 byte di GAME; checksum al byte 0 = computeChecksum(buf+4, size-4); versione byte 2 =
   4; fieldMode a 0x34, posizione 0x38/0x3C, direzione 0x40.
@@ -49,6 +55,9 @@
 
 ## Testi del gioco
 
+- **Punteggiatura a 2 byte**: `01 05` è il punto, `01 07` i due punti, `01 6F` la Ì; `E6` da solo è il "?".
+  Un testo costruito a mano si passa con `setString(window, testo, -1)` (1 byte); `setText` lo tratta come
+  Shift-JIS e lo mostra illeggibile.
 - Codifica europea a 1 byte: maiuscole −0x33, minuscole −0x39, cifre −0x2C, `01 01` spazio, `02 01` a capo,
   `02 05 01` il numero della finestra, E6 punto. `tools/unix/gametext.py dump FILE`.
 - File di testo: u32 conteggio, u32 offset, stringhe.
@@ -62,6 +71,9 @@
   stato rapido (solo stessa build).
 - `DW3_TOUCH=1` attiva il touch (indispensabile per tocchi e levetta). `DW3_STICK="da:a:x:y,..."` simula la
   levetta. `DW3_TYPE="<<<<<<Marco"` scrive col "telefono" (`<` cancella, `|` Invio).
+- I tocchi `tXyY` di DW3_PRESS passano solo dai bersagli (`native_touch_target`), non dall'elenco scorrevole:
+  per l'elenco usare `down`/`up`/`cross`.
+- `DW3_SHOT_TOUCH=1` mette i pulsanti del touch negli screenshot.
 - `DW3_AUTOSAVE_VSYNCS=600` salvataggio automatico più frequente. `DW3_LOG=1` stampa i log. `--field 1280`
   parte dalla schermata del nome.
 
