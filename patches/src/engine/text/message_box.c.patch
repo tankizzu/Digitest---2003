@@ -1,21 +1,29 @@
 --- a/src/engine/text/message_box.c
 +++ b/src/engine/text/message_box.c
-@@ -93,6 +93,14 @@
+@@ -93,6 +93,22 @@
  }
  
  /* The message box task: shows the text once the frame is open, closes when the text ends */
 +#ifdef NATIVE
 +/* touch: while a dialogue is open, the automatic dialogues button shows at the screen's bottom left (platform/touch.c) */
 +static void nativeAutoButton(s32 layerId) {
++    static s32 frame, time;
++
 +    (void)layerId;
 +    native_touch_dialog_open();
++    /* its picture: the balloons' own arrow (menu sprite 7), its colours cycling as the balloons' do while it is on */
++    if (native_auto_text() && GFX.funcs.getTime() - time >= 6) {
++        time = GFX.funcs.getTime();
++        frame = (frame + 1) & 3;
++    }
++    native_touch_auto_sprite(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x140, 0, native_auto_text() ? frame : 0);
 +}
 +#endif
 +
  void updateMessageBox(Task *task, MessageBox *data) {
      switch (task->state) {
      case 0:
-@@ -109,6 +117,9 @@
+@@ -109,6 +125,9 @@
              }
              break;
          case 1:
@@ -25,7 +33,7 @@
              if (data->window->isFinished(data->window) != 0) {
                  data->frame->substate = 2;
                  data->window->setVisible(data->window, 0);
-@@ -116,7 +127,11 @@
+@@ -116,7 +135,11 @@
                  SOUND.playSound(SOUND_MENU_CLOSE);
                  break;
              }

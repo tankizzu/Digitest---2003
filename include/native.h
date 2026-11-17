@@ -336,6 +336,8 @@ int native_touch_anywhere(void);
 int native_touch_tap_id(int id); /* a tap on the port's own target id (0x7A00 on), once */
 int native_auto_text(void);      /* automatic dialogues: 0 off, else the speed 1-3 (platform/prefs.c) */
 void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialogues button shows (touch.c) */
+/* The balloons' arrow for that button: the menu sprites' sheet, its texture's place and the CLUT row to show */
+void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */
 void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */
 void native_autosave_point(int mode, int x, int y, int dir); /* there, where a load would bring them back (state.c) */

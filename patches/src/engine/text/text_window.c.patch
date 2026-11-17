@@ -59,7 +59,18 @@
              if (obj->fixedSpacing != 0) {
                  obj->cursorX += obj->spacingX;
              } else {
-@@ -811,7 +841,11 @@
+@@ -789,6 +819,10 @@
+     case 1:
+         if (obj->visible != 0) {
+             if (obj->typeDelay > 0 && obj->finished == 0) {
++#ifdef NATIVE
++                /* automatic dialogues x2 and x3 type twice and four times as fast */
++                obj->typeTimer += native_auto_text() == 3 ? 3 : native_auto_text() == 2 ? 1 : 0;
++#endif
+                 if (++obj->typeTimer > obj->typeDelay) {
+                     obj->typeTimer = 0;
+                     obj->visibleEnd++;
+@@ -811,7 +845,11 @@
              }
              break;
          case 1:
@@ -71,7 +82,7 @@
                  obj->text[0].data[obj->counter] = 5;
                  obj->typeTimer = obj->typeDelay;
                  obj->setState(obj, TASK_RUN);
-@@ -873,6 +907,9 @@
+@@ -873,6 +911,9 @@
      ret->lines = 1;
      ret->blend = ret->style->blend;
      ret->scale.vx = ret->scale.vy = ret->scale.vz = ONE;

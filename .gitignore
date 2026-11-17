@@ -13,6 +13,8 @@ build-o2/
 TODO.md
 tools/todo_summary.py
 build-linux/
+build-linux-gles/
+build-linux-*/
 build-android/
 android/app/src/main/jniLibs/
 android/.gradle/

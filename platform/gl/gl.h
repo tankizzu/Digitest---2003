@@ -38,7 +38,7 @@ GFX_DECLARE(gl) /* renderer.h's, gl_* (gfx.c calls them through GFX_GL) */
     X(glBlendColor) X(glCreateShader) X(glShaderSource) X(glCompileShader) X(glGetShaderiv) X(glGetShaderInfoLog)  \
     X(glCreateProgram) X(glAttachShader) X(glLinkProgram) X(glGetProgramiv) X(glGetProgramInfoLog) X(glUseProgram) \
     X(glGetUniformLocation) X(glUniform1i) X(glUniform1f) X(glUniform2f) X(glUniform4f) X(glUniform2i) X(glGenVertexArrays) X(glBindVertexArray)  \
-    X(glGenBuffers) X(glBindBuffer) X(glBufferData) X(glEnableVertexAttribArray) X(glVertexAttribPointer)           \
+    X(glGenBuffers) X(glBindBuffer) X(glBufferData) X(glEnableVertexAttribArray) X(glDisableVertexAttribArray) X(glVertexAttribPointer)           \
     X(glVertexAttribIPointer) X(glGenFramebuffers) X(glDeleteFramebuffers) X(glBindFramebuffer)                     \
     X(glFramebufferTexture2D) X(glCheckFramebufferStatus) X(glBlitFramebuffer)                                  \
     X(glGenRenderbuffers) X(glDeleteRenderbuffers) X(glBindRenderbuffer) X(glRenderbufferStorage)                \

@@ -123,7 +123,7 @@ int native_touch_tap_id(int id) {
 }
 
 int native_auto_text(void); /* prefs.c */
-static const int AUTO_TEXT_WAIT[4] = {0, 150, 75, 38}; /* vsyncs a page waits at each speed: 2.5 s, 1.25 s, 0.6 s */
+static const int AUTO_TEXT_WAIT[4] = {0, 180, 90, 30}; /* vsyncs a page waits at each speed: 3 s, 1.5 s, 0.5 s */
 
 /* Automatic dialogues: 1 once the text window `who` has waited AUTO_TEXT_WAIT for the player (text_window.c asks
    each frame it waits; a break of a few vsyncs starts the count again) */
@@ -325,6 +325,84 @@ void native_touch_no_stick(void) {
 
 static int dialog_shown(void) {
     return SDL_GetTicks() < s_dialog_until;
+}
+
+/* The balloons' arrow (the menu sprites' frame 7), read from VRAM as the game draws it: its parts' texels through
+   their CLUT, the CLUT row cycling while automatic dialogues are on. talk_box.c / message_box.c pass the sheet */
+#define ARROW_MAX 24
+extern uint16_t *g_vram; /* gpu.c: 1024 x 512 */
+static uint32_t s_arrow[ARROW_MAX * ARROW_MAX];
+static int s_arrow_w, s_arrow_h, s_arrow_ok;
+
+void native_touch_auto_sprite(const void *sheet_ptr, int tex_x, int tex_y, int clut_row) {
+    const int32_t *sheet = (const int32_t *)sheet_ptr;
+    const uint8_t *ids;
+    const int16_t *parts, *p;
+    int i, count, row, minx = 1000, miny = 1000, maxx = -1000, maxy = -1000;
+
+    if (sheet == NULL || g_vram == NULL) {
+        return;
+    }
+    ids = (const uint8_t *)sheet + sheet[1];
+    parts = (const int16_t *)((const uint8_t *)sheet + sheet[0]);
+    for (i = 0; i < 64 && ids[i] != 7; i++) {
+    }
+    if (i == 64) {
+        return;
+    }
+    p = (const int16_t *)((const uint8_t *)sheet + sheet[i + 2]);
+    count = p[0], row = p[1];
+    p += 3;
+    for (i = 0; i < count; i++) { /* the frame's bounds */
+        const int16_t *part = parts + p[i * 3] * 7;
+        minx = SDL_min(minx, p[i * 3 + 1]), miny = SDL_min(miny, p[i * 3 + 2]);
+        maxx = SDL_max(maxx, p[i * 3 + 1] + part[2]), maxy = SDL_max(maxy, p[i * 3 + 2] + part[3]);
+    }
+    if (maxx - minx > ARROW_MAX || maxy - miny > ARROW_MAX || maxx <= minx) {
+        return;
+    }
+    s_arrow_w = maxx - minx, s_arrow_h = maxy - miny;
+    SDL_memset(s_arrow, 0, sizeof s_arrow);
+    for (i = count - 1; i >= 0; i--) { /* drawn as the game does: the last part first */
+        const int16_t *part = parts + p[i * 3] * 7; /* u, v, w, h, clutX, clutY, mode */
+        int cx = tex_x + part[4], cy = tex_y + part[5] + row + clut_row;
+        for (int y = 0; y < part[3]; y++) {
+            for (int x = 0; x < part[2]; x++) {
+                int u = part[0] + x, v = tex_y + part[1] + y, index;
+                uint16_t c;
+                if (part[6] == 0) {
+                    index = g_vram[(v & 511) * 1024 + ((tex_x + u / 4) & 1023)] >> (u % 4 * 4) & 15;
+                } else {
+                    index = g_vram[(v & 511) * 1024 + ((tex_x + u / 2) & 1023)] >> (u % 2 * 8) & 255;
+                }
+                c = g_vram[(cy & 511) * 1024 + ((cx + index) & 1023)];
+                if (c != 0) {
+                    uint32_t r = (c & 31) << 3, g = (c >> 5 & 31) << 3, b = (c >> 10 & 31) << 3;
+                    s_arrow[(p[i * 3 + 2] - miny + y) * ARROW_MAX + (p[i * 3 + 1] - minx + x)] = r | g << 8 | b << 16 | 0xFF000000u;
+                }
+            }
+        }
+    }
+    s_arrow_ok = 1;
+    if (SDL_getenv("DW3_ARROW_DUMP") != NULL) { /* tests: the arrow as read, a PPM */
+        FILE *f = fopen("arrow.ppm", "wb");
+        if (f != NULL) {
+            fprintf(f, "P6 %d %d 255\n", s_arrow_w, s_arrow_h);
+            for (int y = 0; y < s_arrow_h; y++) {
+                for (int x = 0; x < s_arrow_w; x++) {
+                    uint32_t c = s_arrow[y * ARROW_MAX + x];
+                    fputc(c & 255, f), fputc(c >> 8 & 255, f), fputc(c >> 16 & 255, f);
+                }
+            }
+            fclose(f);
+        }
+    }
+}
+
+/* For gl/touch.c: the arrow's pixels (ARROW_MAX wide rows), its size; 0 if not read yet */
+int touch_arrow(const uint32_t **pixels, int *w, int *h) {
+    *pixels = s_arrow, *w = s_arrow_w, *h = s_arrow_h;
+    return s_arrow_ok;
 }
 
 /* The automatic dialogues button: the bottom left corner of the window, over the black band */
@@ -650,8 +728,10 @@ int touch_shapes(TouchShape *out, int max) {
         int speed = native_auto_text();
         auto_button(&x, &y, &r);
         /* value: the arrows (the speed, one dim when off) and the animation's phase, while on */
-        out[n++] = (TouchShape){x, y, r, TOUCH_AUTO, speed ? 1.0f : (s_auto_down ? 0.9f : 0.55f),
-                                (float)SDL_max(speed, 1) + (speed ? (float)(SDL_GetTicks() % 1000) / 1001.0f : 0.0f)};
+        out[n++] = (TouchShape){x, y, r, TOUCH_AUTO, speed ? 1.0f : (s_auto_down ? 0.9f : 0.6f), (float)speed};
+        if (speed > 0 && n < max) { /* the speed, written beside it */
+            out[n++] = (TouchShape){x + r * 1.3f, y, r * 0.45f, TOUCH_LABEL, 1.0f, (float)speed};
+        }
     }
     if (menu_shown() && n < max) {
         float x, y, r;

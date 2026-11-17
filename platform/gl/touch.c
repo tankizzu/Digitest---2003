@@ -42,21 +42,16 @@ static const char *TOUCH_FS =
     "        frag = vec4(1.0, 0.82, 0.48, a * band * lit + 0.35 * a * disc * (1.0 - band));\n"
     "        return;\n"
     "    }\n"
-    "    if (kind == 13) {\n" /* the balloons' orange arrow turned to the right, one to three of them, no backing */
-    "        float n = floor(value), ph = fract(value), best = 1e3;\n"
-    "        for (int i = 0; i < 3; i++) {\n"
-    "            if (float(i) >= n) break;\n"
-    "            vec2 q = (p - vec2((float(i) - (n - 1.0) * 0.5) * 0.52, 0.0)) * (n > 2.0 ? 1.25 : 1.0);\n"
-    "            vec2 st = abs(q - vec2(-0.14, 0.0)) - vec2(0.18, 0.085);\n"
-    "            float stem = max(st.x, st.y);\n"
-    "            float tip = max(max(-(q.x - 0.02), (q.x - 0.36) + abs(q.y) * 1.1), abs(q.y) - 0.32);\n"
-    "            best = min(best, min(stem, tip));\n"
-    "        }\n"
-    "        float on = ph > 0.0 ? 1.0 : 0.0;\n"
-    "        vec3 orange = mix(vec3(1.0, 0.52, 0.1), vec3(1.0, 0.85, 0.3), on * (0.5 + 0.5 * sin(ph * 6.2831853)));\n"
-    "        float shape = 1.0 - smoothstep(0.0, aa, best);\n"
-    "        float rim = (1.0 - smoothstep(0.035, 0.035 + aa, best)) - shape;\n" /* a dark rim, for light backgrounds */
-    "        frag = vec4(mix(vec3(0.15, 0.06, 0.0), orange, shape), a * max(shape, rim * 0.8));\n"
+    "    if (kind == 13) { discard; }\n" /* the arrow itself: the sprite pass below */
+    "    if (kind == 14) {\n" /* the speed: x1, x2, x3 */
+    "        float sp = floor(value + 0.5), g = min(seg(p, vec2(-0.95, -0.3), vec2(-0.4, 0.35)), seg(p, vec2(-0.95, 0.35), vec2(-0.4, -0.3)));\n"
+    "        if (sp == 1.0) { g = min(g, min(seg(p, vec2(0.4, -0.65), vec2(0.4, 0.65)), seg(p, vec2(0.12, -0.38), vec2(0.4, -0.65)))); }\n"
+    "        if (sp == 2.0) { g = min(g, min(min(seg(p, vec2(0.05, -0.4), vec2(0.25, -0.65)), seg(p, vec2(0.25, -0.65), vec2(0.6, -0.65))),\n"
+    "                              min(min(seg(p, vec2(0.6, -0.65), vec2(0.75, -0.35)), seg(p, vec2(0.75, -0.35), vec2(0.05, 0.65))), seg(p, vec2(0.05, 0.65), vec2(0.75, 0.65))))); }\n"
+    "        if (sp == 3.0) { g = min(g, min(min(seg(p, vec2(0.05, -0.65), vec2(0.72, -0.65)), seg(p, vec2(0.72, -0.65), vec2(0.35, -0.05))),\n"
+    "                              min(min(seg(p, vec2(0.35, -0.05), vec2(0.75, 0.25)), seg(p, vec2(0.75, 0.25), vec2(0.5, 0.65))), seg(p, vec2(0.5, 0.65), vec2(0.05, 0.6))))); }\n"
+    "        float ink = 1.0 - smoothstep(0.1, 0.1 + aa, g), rim = (1.0 - smoothstep(0.2, 0.2 + aa, g)) - ink;\n"
+    "        frag = vec4(mix(vec3(0.12, 0.05, 0.0), vec3(1.0, 0.6, 0.15), ink), a * max(ink, rim * 0.8));\n"
     "        return;\n"
     "    }\n"
     "    float g = 1e3; vec3 c = vec3(1.0);\n"
@@ -78,6 +73,92 @@ static const char *TOUCH_FS =
 
 static GLuint s_prog, s_vao, s_vbo;
 static GLint s_screen;
+
+/* The balloons' arrow (touch_arrow): a textured quad, its texels as the game's, turned to point right */
+static const char *ARROW_VS =
+    "#version 330 core\n"
+    "layout(location = 0) in vec2 pos;\n"
+    "layout(location = 1) in vec2 uv_in;\n"
+    "uniform vec2 screen;\n"
+    "out vec2 uv;\n"
+    "void main() {\n"
+    "    uv = uv_in;\n"
+    "    vec2 ndc = pos / screen * 2.0 - 1.0;\n"
+    "    gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);\n"
+    "}\n";
+static const char *ARROW_FS =
+    "#version 330 core\n"
+    "in vec2 uv;\n"
+    "uniform sampler2D tex;\n"
+    "uniform vec4 tint;\n" /* the shadow pass: black; the arrow: white, its alpha */
+    "out vec4 frag;\n"
+    "void main() {\n"
+    "    vec4 c = texture(tex, uv);\n"
+    "    frag = vec4(c.rgb * tint.rgb, c.a * tint.a);\n"
+    "}\n";
+static GLuint s_arrow_prog, s_arrow_tex;
+static GLint s_arrow_screen, s_arrow_tint;
+
+#define ARROW_MAX 24 /* touch.c's */
+
+static void draw_arrow(const TouchShape *b, int w, int h) {
+    const uint32_t *px;
+    int aw, ah;
+    float k, qw, qh, x0, y0, v[4 * 6];
+
+    if (!touch_arrow(&px, &aw, &ah) || aw == 0) {
+        return;
+    }
+    if (s_arrow_prog == 0) {
+        if ((s_arrow_prog = gl_program(ARROW_VS, ARROW_FS)) == 0) {
+            return;
+        }
+        s_arrow_screen = GL(glGetUniformLocation)(s_arrow_prog, "screen");
+        s_arrow_tint = GL(glGetUniformLocation)(s_arrow_prog, "tint");
+        GL(glGenTextures)(1, &s_arrow_tex);
+    }
+    GL(glActiveTexture)(GL_TEXTURE0);
+    GL(glBindTexture)(GL_TEXTURE_2D, s_arrow_tex);
+    GL(glPixelStorei)(GL_UNPACK_ALIGNMENT, 4);
+    GL(glTexImage2D)(GL_TEXTURE_2D, 0, GL_RGBA8, ARROW_MAX, ARROW_MAX, 0, GL_RGBA, GL_UNSIGNED_BYTE, px);
+    GL(glTexParameteri)(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    GL(glTexParameteri)(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    GL(glTexParameteri)(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    GL(glTexParameteri)(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    /* turned a quarter to the left: the image's down (where the arrow points) is the screen's right */
+    k = b->r * 1.9f / (float)SDL_max(aw, ah); /* its long side, once turned, 1.9 radii across */
+    qw = (float)ah * k, qh = (float)aw * k;
+    x0 = b->x - b->r * 1.05f, y0 = b->y - qh * 0.5f;
+    {
+        float us = (float)aw / ARROW_MAX, vs = (float)ah / ARROW_MAX;
+        /* corners: screen (x, y) and texture (u, v) with u = 1 - screen y, v = screen x */
+        float c[6][4] = {{x0, y0, us, 0}, {x0 + qw, y0, us, vs}, {x0 + qw, y0 + qh, 0, vs},
+                         {x0, y0, us, 0}, {x0 + qw, y0 + qh, 0, vs}, {x0, y0 + qh, 0, 0}};
+        SDL_memcpy(v, c, sizeof c);
+    }
+    GL(glUseProgram)(s_arrow_prog);
+    GL(glUniform2f)(s_arrow_screen, (float)w, (float)h);
+    GL(glUniform1i)(GL(glGetUniformLocation)(s_arrow_prog, "tex"), 0);
+    GL(glBindVertexArray)(s_vao);
+    GL(glBindBuffer)(GL_ARRAY_BUFFER, s_vbo);
+    GL(glDisableVertexAttribArray)(2);
+    GL(glEnableVertexAttribArray)(0);
+    GL(glVertexAttribPointer)(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)0);
+    GL(glEnableVertexAttribArray)(1);
+    GL(glVertexAttribPointer)(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void *)(2 * sizeof(float)));
+    for (int pass = 0; pass < 2; pass++) { /* a shadow a little down and right, then the arrow */
+        float d = pass == 0 ? k * 0.8f : 0.0f;
+        float shifted[4 * 6];
+        for (int i = 0; i < 6; i++) {
+            shifted[i * 4] = v[i * 4] + d, shifted[i * 4 + 1] = v[i * 4 + 1] + d;
+            shifted[i * 4 + 2] = v[i * 4 + 2], shifted[i * 4 + 3] = v[i * 4 + 3];
+        }
+        GL(glBufferData)(GL_ARRAY_BUFFER, sizeof shifted, shifted, GL_STREAM_DRAW);
+        GL(glUniform4f)(s_arrow_tint, pass == 0 ? 0.0f : 1.0f, pass == 0 ? 0.0f : 1.0f, pass == 0 ? 0.0f : 1.0f,
+                        pass == 0 ? b->alpha * 0.55f : b->alpha);
+        GL(glDrawArrays)(GL_TRIANGLES, 0, 6);
+    }
+}
 
 void gl_touch_draw(int w, int h) {
     TouchShape shapes[16];
@@ -130,6 +211,11 @@ void gl_touch_draw(int w, int h) {
     GL(glEnableVertexAttribArray)(2);
     GL(glVertexAttribPointer)(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
     GL(glDrawArrays)(GL_TRIANGLES, 0, k);
+    for (int i = 0; i < n; i++) {
+        if (shapes[i].kind == TOUCH_AUTO) {
+            draw_arrow(&shapes[i], w, h);
+        }
+    }
     GL(glDisable)(GL_BLEND);
     GL(glUseProgram)((GLuint)prog);
     GL(glBindVertexArray)((GLuint)vao);

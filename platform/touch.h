@@ -3,7 +3,7 @@
 #define TOUCH_H
 #include <stdint.h>
 
-enum { TOUCH_RING, TOUCH_KNOB, TOUCH_CROSS, TOUCH_CIRCLE, TOUCH_TRIANGLE, TOUCH_SQUARE, TOUCH_START, TOUCH_SELECT, TOUCH_L1, TOUCH_R1, TOUCH_PROGRESS, TOUCH_MENU, TOUCH_BACK, TOUCH_AUTO };
+enum { TOUCH_RING, TOUCH_KNOB, TOUCH_CROSS, TOUCH_CIRCLE, TOUCH_TRIANGLE, TOUCH_SQUARE, TOUCH_START, TOUCH_SELECT, TOUCH_L1, TOUCH_R1, TOUCH_PROGRESS, TOUCH_MENU, TOUCH_BACK, TOUCH_AUTO, TOUCH_LABEL };
 
 typedef struct TouchShape {
     float x, y, r; /* the window's pixels, from the top left */
@@ -18,6 +18,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick);
 int touch_shapes(TouchShape *out, int max);
 void gl_touch_draw(int w, int h); /* gl/touch.c */
 /* Where the game's picture is in the window (x, y, w, h, top left) and the PSX display it shows (gl/post.c) */
+int touch_arrow(const uint32_t **pixels, int *w, int *h); /* the balloons' arrow read from VRAM (touch.c) */
 void touch_set_picture(int x, int y, int w, int h, int disp_w, int disp_h);
 void touch_script_tap(int px, int py); /* DW3_PRESS's "t<x>y<y>": a tap at the PSX display's pixel, for tests */
 void native_touch_target(int id, int x, int y, int w, int h);
