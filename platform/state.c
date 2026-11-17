@@ -14,6 +14,7 @@
 #include <SDL3/SDL.h>
 #include <string.h>
 #include "platform.h"
+#include "touch.h"
 #include "../include/native.h"
 
 extern uint8_t game_vars_begin[], ovl_sub_end[];
@@ -79,6 +80,12 @@ static void state_path(char *path, size_t n) {
     snprintf(path, n, "%s/../saves/quick.state", data_dir());
 }
 
+/* The autosave (Android): saves/auto.state, written when the app goes to the background and every few minutes of
+   play, offered back at the title */
+static void auto_path(char *path, size_t n) {
+    snprintf(path, n, "%s/../saves/auto.state", data_dir());
+}
+
 static Header header(void) {
     Header h = {{'D', 'W', '3', 'S'}, (uint32_t)(uintptr_t)game_vars_begin,
                 (uint32_t)(ovl_sub_end - game_vars_begin), NATIVE_HEAP_SIZE};
@@ -86,8 +93,8 @@ static Header header(void) {
     return h;
 }
 
-static void save_state(void) {
-    char path[1200], tmp[1210];
+static void save_state_to(const char *path) {
+    char tmp[1210];
     Header h = header();
     Part list[5];
     int i, n = parts(list);
@@ -95,7 +102,6 @@ static void save_state(void) {
     int ok;
 
     soft_all();
-    state_path(path, sizeof path);
     snprintf(tmp, sizeof tmp, "%s.tmp", path);
     if ((f = fopen(tmp, "wb")) == NULL) {
         LOG("state: can't write %s", tmp);
@@ -114,8 +120,9 @@ static void save_state(void) {
     }
 }
 
-static void load_state(void) {
-    char path[1200];
+static int state_fits(const char *path);
+
+static void load_state_from(const char *path) {
     Header h, want = header();
     Part list[5];
     int i, n = parts(list);
@@ -125,7 +132,6 @@ static void load_state(void) {
     for (i = 0; i < n; i++) {
         size += (long)list[i].n;
     }
-    state_path(path, sizeof path);
     if ((f = fopen(path, "rb")) == NULL) {
         LOG("state: no %s (F5 saves one)", path);
         return;
@@ -149,6 +155,94 @@ static void load_state(void) {
     LOG("state: loaded %s", path);
 }
 
+static void save_state(void) {
+    char path[1200];
+    state_path(path, sizeof path);
+    save_state_to(path);
+}
+
+static void load_state(void) {
+    char path[1200];
+    state_path(path, sizeof path);
+    load_state_from(path);
+}
+
+/* A state file this build wrote (its size and fingerprint) */
+static int state_fits(const char *path) {
+    Header h, want = header();
+    Part list[5];
+    int i, n = parts(list), ok;
+    long size = sizeof h;
+    FILE *f = fopen(path, "rb");
+
+    for (i = 0; i < n; i++) {
+        size += (long)list[i].n;
+    }
+    if (f == NULL) {
+        return 0;
+    }
+    fseek(f, 0, SEEK_END);
+    ok = ftell(f) == size && fseek(f, 0, SEEK_SET) == 0 && fread(&h, sizeof h, 1, f) == 1 && memcmp(&h, &want, sizeof h) == 0;
+    fclose(f);
+    return ok;
+}
+
+#define AUTOSAVE_EVERY (60 * 60 * 3) /* vsyncs: three minutes */
+static int s_auto_last, s_auto_asked;
+
+/* The app is about to go to the background: called from SDL's event pump, on the game's thread at a frame's end */
+static bool SDLCALL on_lifecycle(void *data, SDL_Event *e) {
+    (void)data;
+    if (e->type == SDL_EVENT_WILL_ENTER_BACKGROUND && touch_enabled() && !movie_playing() && getMode() >> 8 != MODE_TITLE >> 8 &&
+        getMode() >> 8 != MODE_LANGUAGE >> 8) {
+        char path[1200];
+        auto_path(path, sizeof path);
+        save_state_to(path);
+        s_auto_last = VSync(-1);
+    }
+    return true;
+}
+
+/* Once a frame (Android only, where touch is on): the offer at the title, then a save every few minutes of play */
+static void autosave_frame(void) {
+    static int watching;
+    char path[1200];
+    int mode = getMode() >> 8;
+
+    if (!touch_enabled()) {
+        return;
+    }
+    if (!watching) {
+        SDL_AddEventWatch(on_lifecycle, NULL);
+        watching = 1;
+        s_auto_last = VSync(-1);
+    }
+    auto_path(path, sizeof path);
+    if (!s_auto_asked && mode == MODE_TITLE >> 8 && !movie_playing()) {
+        s_auto_asked = 1;
+        if (state_fits(path)) {
+            static const SDL_MessageBoxButtonData BUTTONS[] = {
+                {SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Riprendi"},
+                {SDL_MESSAGEBOX_BUTTON_ESCAPEKEY_DEFAULT, 0, "Dal titolo"},
+            };
+            SDL_MessageBoxData box = {SDL_MESSAGEBOX_INFORMATION, NULL, "Digimon World 2003",
+                                      "Vuoi riprendere da dove eri rimasto?", 2, BUTTONS, NULL};
+            int which = 0;
+
+            if (SDL_ShowMessageBox(&box, &which) && which == 1) {
+                load_state_from(path);
+            }
+        }
+        s_auto_last = VSync(-1);
+        return;
+    }
+    if (mode != MODE_TITLE >> 8 && mode != MODE_LANGUAGE >> 8 && !movie_playing() &&
+        VSync(-1) - s_auto_last >= (SDL_getenv("DW3_AUTOSAVE_VSYNCS") ? SDL_atoi(SDL_getenv("DW3_AUTOSAVE_VSYNCS")) : AUTOSAVE_EVERY)) {
+        save_state_to(path);
+        s_auto_last = VSync(-1);
+    }
+}
+
 static void dump_game(void) {
     char path[64];
     FILE *f;
@@ -168,6 +262,7 @@ void state_frame(void) {
     int key = s_key;
 
     s_key = 0;
+    autosave_frame();
     if (g_field_mode != 0 && (getMode() >> 8 == MODE_TITLE >> 8 || getMode() >> 8 == MODE_LANGUAGE >> 8)) {
         int title = MODE_TITLE;
 
