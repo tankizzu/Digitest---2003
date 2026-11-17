@@ -2,7 +2,15 @@
 
 ## Android (Digimon World 2003 per Android)
 
-### 0.8 (in preparazione)
+### 0.9
+
+- **Fumetto vicino ai personaggi corretto**: nella 0.8 veniva creato ma non compariva mai (un task del gioco
+  gira solo se è figlio di un altro). Ora è figlio del giocatore. Verificato su Linux: compare vicino alla
+  ragazza della Sala della Matrice e il tocco fa partire il dialogo.
+- Tutti i personaggi sono considerati, non solo una parte.
+- PROJECT_STATE.md.
+
+### 0.8
 
 - **Crash alla scelta del kit risolto** (choice.c): toccando le linguette B/C il nuovo kit leggeva un
   fotogramma d'animazione inesistente. Verificato su Linux.
@@ -13,7 +21,8 @@
 - **Porte automatiche** con la levetta (trigger.c). Verificato su Linux (Tempio della giungla → Giungla
   eterea).
 - **Corsa al 58%** con la levetta, camminata con la spinta leggera (actor_control.c).
-- **Fumetto vicino ai personaggi**, tocco per parlare girandosi verso di loro (actor_control.c).
+- **Fumetto vicino ai personaggi**, tocco per parlare girandosi verso di loro (actor_control.c). Non
+  compariva: corretto nella 0.9.
 - Test: `DW3_STICK` simula la levetta su Linux.
 - Documenti di progetto: CLAUDE.md, PROJECT_STATE.md, DECISIONS.md, TODO.md, TECHNICAL_NOTES.md.
 - `build-linux-gles/` tolto dal repository e ignorato.

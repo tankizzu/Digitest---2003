@@ -27,9 +27,13 @@
 ## Campo
 
 - `FIELDSTG_controlPlayer` (actor_control.c): con NATIVE cerca il personaggio parlabile più vicino entro 30
-  unità di mappa (escludendo i partner, che hanno `trail`, e i key1 0x180–0x182), mostra il fumetto (task id
-  0x7A, riga 3 di FIELDSTG_triggerAnims) se non c'è già quello di un'uscita (id 6); il tocco (X) gira il
-  giocatore verso di lui (direzione da FIELDSTG_dirSteps) e chiama `FIELDSTG_talkToActorAt`.
+  unità di mappa (tutti gli attori: `find(FIELD_TASK_ACTOR, -1, -1)`; escludendo i partner, che hanno `trail`, e
+  i key1 0x180–0x182), mostra il fumetto (task id 0x7A, riga 3 di FIELDSTG_triggerAnims) se non c'è già quello
+  di un'uscita (id 6); il tocco (X) gira il giocatore verso di lui (direzione da FIELDSTG_dirSteps) e chiama
+  `FIELDSTG_talkToActorAt`.
+- **Un task nuovo gira solo se sta in uno spazio "figlio"** di un task che gira (`runChildTasks` scorre
+  l'array `children` del genitore): creato e basta resta in TASK_INIT per sempre. Il fumetto dei personaggi sta
+  in `ActorChildren.balloon` del giocatore (lo stesso spazio del minigioco, che si riconosce dall'id).
 - Corsa: in `FIELDSTG_runActorAction`, ACTOR_RUN del giocatore (`control == FIELDSTG_controlPlayer`) con la
   levetta usa `speed * NATIVE_RUN_PERCENT / 100` (58).
 - Porte: in `FIELDSTG_updateTriggers` substate 1, uno SLOT_EXIT parte anche quando la levetta è spinta (il
@@ -71,4 +75,5 @@
   letto prima del tocco.
 - Un pannello nuovo si azzera al primo fotogramma: va avviato un fotogramma dopo.
 - `native_touch_tap` non deve consumare gli id ≥ 0x7A00.
+- Fumetto dei personaggi invisibile (0.8): creato senza genitore, non girava mai. Ora è figlio del giocatore.
 - Righe della memory card troppo lunghe ("Slot MEMORY CARD N" tagliato): accorciate in "MEMORY CARD N".

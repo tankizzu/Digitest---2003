@@ -12,7 +12,7 @@
              if (actor->substate != ACTOR_WALK) {
                  actor->setSubstate(actor, ACTOR_WALK);
              }
-@@ -385,17 +389,100 @@
+@@ -385,17 +389,105 @@
   * case being an early exit, a do-while (0) with a break, after which the
   * event's check is the rest of the block.
   */
@@ -26,7 +26,7 @@
 +/* The character nearest the player within reach that a talk can go to: not a
 +   partner (they follow a trail), not one of 0x180 to 0x182 */
 +static Actor *nativeTalkable(Actor *player) {
-+    Actor *actor = TASK_REGISTRY.funcs.find(FIELD_TASK_ACTOR, -1, 1);
++    Actor *actor = TASK_REGISTRY.funcs.find(FIELD_TASK_ACTOR, -1, -1);
 +    Actor *best = NULL;
 +    s32 bestDist = NATIVE_TALK_REACH * NATIVE_TALK_REACH + 1;
 +
@@ -45,13 +45,18 @@
 +    return best;
 +}
 +
-+/* The balloon shown while there is someone to talk to (and no other balloon is up), shut when there isn't */
-+static void nativeTalkBalloon(Actor *target) {
-+    Balloon *balloon = TASK_REGISTRY.funcs.find(NATIVE_TALK_BALLOON, -1, -1);
++/* The balloon shown while there is someone to talk to (and no exit's balloon is up), shut when there isn't. It is
++   the player's own child (ActorChildren.balloon, the gauge game's otherwise), so that it runs with the player */
++static void nativeTalkBalloon(Actor *player, Actor *target) {
++    Balloon **slot = &((ActorChildren *)player->children)->balloon;
++    Balloon *balloon = *slot;
 +
++    if (balloon != NULL && balloon->id != NATIVE_TALK_BALLOON) {
++        return; /* the gauge game's */
++    }
 +    if (target != NULL && TASK_REGISTRY.funcs.find(6, -1, -1) == NULL) {
 +        if (balloon == NULL) {
-+            FIELDSTG_createBalloon(0, NATIVE_TALK_ANIM, NATIVE_TALK_BALLOON);
++            *slot = FIELDSTG_createBalloon(0, NATIVE_TALK_ANIM, NATIVE_TALK_BALLOON);
 +        } else if (balloon->state == TASK_DONE) {
 +            balloon->setState(balloon, TASK_RUN);
 +            balloon->frame = 0, balloon->time = 0;
@@ -96,7 +101,7 @@
          forced = FLAGS_00.checkCondition(FIELD_FLAG_TALK_AHEAD, 1);
 +#ifdef NATIVE
 +        talkTo = nativeTalkable(actor);
-+        nativeTalkBalloon(talkTo);
++        nativeTalkBalloon(actor, talkTo);
 +        if (pressed && talkTo != NULL && !forced) {
 +            /* the tap: the player turns to the character and talks to it */
 +            actor->getFacingTile(actor, &pos);
@@ -105,7 +110,7 @@
 +                pos = talkTo->tile;
 +            }
 +            if (FIELDSTG_talkToActorAt(actor, &pos)) {
-+                nativeTalkBalloon(NULL);
++                nativeTalkBalloon(actor, NULL);
 +            }
 +            return;
 +        }
@@ -113,7 +118,7 @@
          if (pressed || forced) {
              actor->getFacingTile(actor, &pos);
              do {
-@@ -823,9 +910,14 @@
+@@ -823,9 +915,14 @@
              prim.sprt->w = 0x20;
              prim.sprt->h = 0x10;
              prim.sprt->clut = getClut(shadow->shadow.clutX, shadow->shadow.clutY);
@@ -129,7 +134,7 @@
              addPrim(ot, prim.any);
              prim.tpage++;
          }
-@@ -1438,7 +1530,15 @@
+@@ -1438,7 +1535,15 @@
      case ACTOR_RUN:
          beginActorAnim(actor, ACTOR_ANIM_RUN);
          if (!(actor->key2 & 0xE)) {

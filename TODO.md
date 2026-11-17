@@ -5,10 +5,9 @@ Priorità: P1 subito, P2 dopo, P3 più avanti. Obiettivo attuale: **prologo perf
 
 ## P1 — prologo
 
-- [ ] Verificare sul telefono la 0.8: crash del kit risolto, pulsante OK del kit, Indietro in basso a sinistra,
+- [ ] Verificare sul telefono la 0.9: crash del kit risolto, pulsante OK del kit, Indietro in basso a sinistra,
       "MEMORY CARD N", porte automatiche, corsa più lenta, fumetto vicino ai personaggi.
-- [ ] Fumetto dei personaggi: verificare su Linux che compaia vicino agli NPC dell'atrio e che il tocco parli
-      (prova in corso il 17/11/2026).
+- [x] Fumetto dei personaggi: verificato su Linux (0.9).
 - [ ] Percorrere il prologo dal nuovo gioco fino alla battaglia tutorial e annotare ogni punto in cui serve un
       tasto o ci si blocca.
 - [ ] Rivedere con l'utente: scale, salti e minigiochi automatici come le porte?
