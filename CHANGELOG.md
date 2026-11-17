@@ -7,7 +7,7 @@
 - Battaglia in verticale: il **lampo bianco** (entrata di un partner, alcuni colpi) copriva solo le prime 240 righe
   dello schermo; ora tutto. La **digievoluzione** (il vecchio Digimon che diventa reticolo e il nuovo che appare)
   scorre su tutta l'altezza, e i suoi effetti a tutto schermo stanno a metà schermo invece che in alto. (Lampo:
-  prova su Linux in corso. Digievoluzione: non provata, la squadra di prova non può digievolvere.)
+  verificato su Linux, entrata di Renamon. Digievoluzione: non provata, la squadra di prova non può digievolvere.)
 - Proposta spenta (da approvare): strada di Asuka del prologo a tutto schermo, solo la scena ingrandita
   (`DW3_ZOOM_MAP=1`).
 

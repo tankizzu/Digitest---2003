@@ -84,8 +84,12 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [ ] Provare sul telefono (l'utente): 2.3, soprattutto il trascinamento per cambiare pagina nelle liste.
 - [x] Disposizione dell'utente dalle demo (2.3): HUD, volto, messaggi, Tecniche, Oggetti, DV, Tag; niente L1 / R1
       nelle liste, tocco per scegliere, trascinamento per la pagina. Verificato su Linux (aspetto e tocchi).
-- [ ] Menu di entrata del partner dopo Tag (quale Digimon entra, tecnica di coppia: switch_in_menu.c) e cornice MP
-      lì: non ancora ridisposto in verticale.
+- [x] Menu di entrata del partner (quando uno va KO): statistiche dove l'utente ha messo quelle del DV, "Nome /
+      Switch" in basso a destra. Verificato su Linux; con la tecnica di coppia (cornice MP) non provato.
+- [x] Lampo bianco a tutto schermo; digievoluzione su tutta l'altezza (2.4; la digievoluzione non provata).
+- [ ] Resoconto di fine battaglia (STFGTREP) in verticale: oggi in 4:3. Serve una vittoria nelle prove (Numemon nel
+      Settore Sud fugge o vince: provare un'altra zona o la prova di battaglia di debug), poi una demo da disporre.
+- [ ] Inquadrature ravvicinate: nero oltre il set 3D (vedi PROJECT_STATE, da decidere).
 - [ ] Inizio e fine battaglia (transizione, risultati, resoconto STFGTREP) a tutto schermo.
 
 ## P3

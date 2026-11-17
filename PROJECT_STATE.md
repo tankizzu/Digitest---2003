@@ -46,6 +46,9 @@ titolo).
   TECHNICAL_NOTES e prototipo funzionante su Linux, **spento** (`DW3_ZOOM_MAP=1`): ingrandisce di 1,85 solo la scena
   (mappa e personaggi), i dialoghi seguono i personaggi. Serve l'approvazione per accenderlo (anche nell'APK).
 - Rinominare una memory card dopo il primo salvataggio (oggi non si può).
+- **Battaglia in verticale, inquadrature ravvicinate** (entrata di un partner): la telecamera mostra i bordi del set
+  3D, sopra il muro e sotto il pavimento c'è il nero (in orizzontale restava fuori). Lasciarlo (come il nero oltre la
+  mappa del campo) o avvicinare la telecamera solo in quelle inquadrature (si perde un po' ai lati).
 - Fascia alta: scelte di partenza (sopra la mappa, solo col giocatore in controllo, prima di Genji solo i
   partner); OPZIONI quando ci sarà la schermata impostazioni.
 
