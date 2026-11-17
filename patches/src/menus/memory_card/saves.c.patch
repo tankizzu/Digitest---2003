@@ -1,11 +1,13 @@
 --- a/src/menus/memory_card/saves.c
 +++ b/src/menus/memory_card/saves.c
-@@ -2,12 +2,21 @@
+@@ -2,12 +2,23 @@
     errors */
  
  #include "menus/memory_card.h"
 +
 +#ifdef NATIVE
++/* touch: a tap anywhere is X for the screen's messages (its rows take their own taps first) */
++#define MC_CROSS() (PAD_PRESSED(PAD_CROSS) || native_touch_text_tap())
 +static s32 nativeTop, nativeSel, nativeSource; /* the games' rows (below) */
 +static void nativeShowRows(MemCardSaves *saves, MemCardSavesWindows *win);
 +#endif
@@ -22,7 +24,7 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +125,177 @@
+@@ -116,9 +127,194 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -103,7 +105,7 @@
 +    if (prev != *sel) {
 +        SOUND.playSound(SOUND_CURSOR);
 +    }
-+    return PAD_PRESSED(PAD_CROSS) != 0;
++    return (PAD.getPressed(0) & (1 << PAD_CROSS)) != 0;
 +}
 +
 +/* The game picked (or, saving, the one being played): its card is the one the screen reads from now on, as port 0 */
@@ -145,7 +147,7 @@
 +    }
 +    if (count == 0) {
 +        native_touch_in_menu();
-+        if (PAD_PRESSED(PAD_CROSS) || PAD_PRESSED(PAD_TRIANGLE) || native_touch_anywhere()) {
++        if (MC_CROSS() || PAD_PRESSED(PAD_TRIANGLE) || native_touch_anywhere()) {
 +            nativeLeave(saves);
 +        }
 +        return;
@@ -178,9 +180,26 @@
 +
 +    if (nativeRowInput(&nativeSource, 2, NULL)) {
 +        if (nativeSource == 0) {
-+            SOUND.playSound(SOUND_SELECT);
-+            native_autosave_load(native_game_number(nativeSel));
-+            saves->substate = 6; /* nothing more: the autosave takes over */
++            if (native_autosave_read(native_game_number(nativeSel), STGMCARD_funcs.dataBuf)) {
++                /* the autosave, a save as the card has it: loaded as STGMCARD_loadSave does, then its end (500) */
++                SOUND.playSound(SOUND_SELECT);
++                GAME_SAVE = STGMCARD_funcs.dataBuf->save;
++                native_extra_loaded();
++                win->windows[2]->setVisible(win->windows[2], 0);
++                win->windows[3]->setVisible(win->windows[3], 0);
++                win->cursor->setVisible(win->cursor, 0);
++                win->windows[1]->setString(win->windows[1], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x11);
++                if (win->panel == NULL) {
++                    win->panel = STGMCARD_createPanel(0xCD, 0xC1, 0x62, 0xA);
++                }
++                win->panel->setTopColor(win->panel, 0x7F, 0x32, 0xF2);
++                win->panel->setBottomColor(win->panel, 0xD1, 0x2F, 0xDE);
++                saves->choosing = 0;
++                saves->backToPick = 0;
++                saves->substate = 7; /* the panel fills next frame: a new one resets itself first */
++            } else {
++                nativeStartCheck(saves, win);
++            }
 +        } else {
 +            nativeStartCheck(saves, win);
 +        }
@@ -200,7 +219,38 @@
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -403,6 +580,9 @@
+@@ -135,7 +331,7 @@
+         win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
+         SOUND.playSound(SOUND_CURSOR);
+     }
+-    if (PAD_PRESSED(PAD_CROSS)) {
++    if (MC_CROSS()) {
+         win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
+         STGMCARD_showPort(saves, win, 1);
+         win->windows[1]->setVisible(win->windows[1], 0);
+@@ -302,7 +498,7 @@
+     s32 status;
+ 
+     if (win->menu->substate == 6) {
+-        if (PAD_PRESSED(PAD_CROSS)) {
++        if (MC_CROSS()) {
+             SOUND.playSound(SOUND_MENU_CONFIRM);
+             saves->substate = 400;
+             win->menu->substate = 0;
+@@ -359,6 +555,12 @@
+ 
+ /* Slides the slots and header out before leaving the screen (601) */
+ static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
++#ifdef NATIVE
++    if (win->menu->slid == 0) { /* an autosave loaded: the slots never came in, nothing to slide out */
++        saves->substate++;
++        return;
++    }
++#endif
+     if (win->menu->substate == 0) {
+         if (win->menu->slid == 2) {
+             win->info->hide(win->info);
+@@ -403,6 +605,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -210,7 +260,43 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -872,8 +1052,19 @@
+@@ -564,7 +769,7 @@
+ static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
+     s32 check;
+ 
+-    if (PAD_PRESSED(PAD_CROSS)) {
++    if (MC_CROSS()) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         saves->prompting = 0;
+         saves->substate = saves->step;
+@@ -595,7 +800,7 @@
+ /* Waits for cross on the loaded message, then waits for the card (400) and leaves
+    the screen (600) */
+ static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
+-    if (PAD_PRESSED(PAD_CROSS)) {
++    if (MC_CROSS()) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         saves->prompting = 0;
+         saves->substate = saves->step;
+@@ -676,7 +881,7 @@
+             SOUND.playSound(SOUND_CURSOR);
+             win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
+         }
+-        if (PAD_PRESSED(PAD_CROSS)) {
++        if (MC_CROSS()) {
+             SOUND.playSound(SOUND_SELECT);
+             win->windows[0]->setVisible(win->windows[0], 0);
+             win->windows[4]->setVisible(win->windows[4], 0);
+@@ -726,7 +931,7 @@
+                 STGMCARD_showError(saves, win);
+             }
+         }
+-    } else if (PAD_PRESSED(PAD_CROSS)) {
++    } else if (MC_CROSS()) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         saves->substate = 400;
+         saves->prompting = 0;
+@@ -872,8 +1077,23 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -227,7 +313,20 @@
 +        break;
 +    case 6:
 +        break;
++    case 7:
++        win->panel->start(win->panel, 2, 0x14);
++        saves->substate = 500;
++        break;
 +#endif
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
+@@ -921,7 +1141,7 @@
+         break;
+     case 40:
+         STGMCARD_moveChoiceCursor(saves, win);
+-        if (PAD_PRESSED(PAD_CROSS)) {
++        if (MC_CROSS()) {
+             STGMCARD_hideChoices(win);
+             SOUND.playSound(SOUND_SELECT);
+             /* match depends on the 400 going through status */

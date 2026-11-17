@@ -337,6 +337,9 @@ int native_touch_tap_id(int id); /* a tap on the port's own target id (0x7A00 on
 int native_auto_text(void);      /* automatic dialogues: 0 off, else the speed 1-3 (platform/prefs.c) */
 void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialogues button shows (touch.c) */
 void native_touch_no_stick(void);    /* no stick on this screen */
+void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */
+void native_autosave_point(int mode, int x, int y, int dir); /* there, where a load would bring them back (state.c) */
+int native_autosave_read(int game, void *buf); /* the game's newest autosave, a GAME_SAVE_SIZE save: 1 if any */
 /* The phone's keyboard for the name entry (touch.c): on Android its own keys replace the screen's */
 int native_soft_keyboard(void);
 void native_text_begin(void); /* shows it; call each frame it is wanted */
@@ -358,7 +361,6 @@ int native_game_current(void); /* the game being played, 0 if none */
 void native_game_select(int game);
 void native_game_new(void);
 int native_autosave_exists(int game);
-void native_autosave_load(int game); /* at this frame's end */
 
 /* The language picked at the language select, remembered (platform/prefs.c): -1 if none yet */
 int native_saved_language(void);

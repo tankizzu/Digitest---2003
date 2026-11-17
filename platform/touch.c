@@ -28,6 +28,8 @@ static int s_nkeys;
 static int s_enabled = -1;
 static int s_w, s_h;
 static SDL_FingerID s_stick_id;
+static Uint64 s_stick_from;
+static int s_stick_moved;
 static int s_stick_on;
 static float s_bx, s_by, s_fx, s_fy, s_rad; /* the stick's base, the finger, its reach */
 static float s_vx, s_vy;                    /* -1..1 */
@@ -282,6 +284,9 @@ static void layout(int w, int h) {
 
     s_w = w, s_h = h, s_rad = u * 0.11f;
     s_nkeys = 0;
+    if (SDL_getenv("DW3_TOUCH_KEYS") == NULL) {
+        return; /* the game is played by touch alone: the PlayStation's buttons only for tests */
+    }
     s_keys[s_nkeys++] = (Key){cx, cy - gap, r, B_TRIANGLE, TOUCH_TRIANGLE, 0};
     s_keys[s_nkeys++] = (Key){cx + gap, cy, r, B_CIRCLE, TOUCH_CIRCLE, 0};
     s_keys[s_nkeys++] = (Key){cx, cy + gap, r, B_CROSS, TOUCH_CROSS, 0};
@@ -292,13 +297,25 @@ static void layout(int w, int h) {
     s_keys[s_nkeys++] = (Key){w - sr * 1.8f, h * 0.36f, sr, B_R1, TOUCH_R1, 0};
 }
 
-static Uint64 s_dialog_until, s_no_stick_until;
+static Uint64 s_dialog_until, s_no_stick_until, s_free_until, s_saved_at;
+static int s_tap_cross;
 static int s_auto_down;
 void native_auto_text_toggle(void); /* prefs.c */
 
 /* A dialogue is open: the automatic dialogues button shows, at the screen's bottom left (talk_box.c, message_box.c) */
 void native_touch_dialog_open(void) {
     s_dialog_until = SDL_GetTicks() + 150;
+}
+
+/* The field leaves the player in control this frame (field.c): the stick is for walking, and a short tap is X (talk,
+   look, open) */
+void native_touch_field_free(void) {
+    s_free_until = SDL_GetTicks() + 150;
+}
+
+/* An autosave was written (state.c): a sign shows for a moment */
+void touch_saved(void) {
+    s_saved_at = SDL_GetTicks();
 }
 
 /* No stick on this screen (the name entry): a finger off the options does nothing */
@@ -527,12 +544,13 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                 }
                 seen_skip = 1;
                 s_skip_x = x, s_skip_y = y;
-            } else if (SDL_GetTicks() < s_no_stick_until) {
-                /* no stick here */
+            } else if (SDL_GetTicks() < s_no_stick_until || SDL_GetTicks() >= s_free_until) {
+                /* no stick: only the field, while the player has the control, walks */
             } else if (!s_stick_on) { /* a new finger off the keys: the stick appears under it */
                 s_stick_on = seen_stick = 1;
                 s_stick_id = fingers[i]->id;
                 s_bx = s_fx = x, s_by = s_fy = y;
+                s_stick_from = SDL_GetTicks(), s_stick_moved = 0;
             }
         }
         SDL_free(fingers);
@@ -546,7 +564,12 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     s_ndown = now_n;
     forget_targets(now_down, now_n);
     if (!seen_stick) {
+        if (s_stick_on && !s_stick_moved && SDL_GetTicks() - s_stick_from < 300) {
+            native_touch_hold(13, 3); /* a short tap where the player walks: X (the game's PAD_CROSS) */
+        }
         s_stick_on = 0;
+    } else if ((s_fx - s_bx) * (s_fx - s_bx) + (s_fy - s_by) * (s_fy - s_by) > s_rad * s_rad * 0.04f) {
+        s_stick_moved = 1;
     }
     if (!seen_skip) {
         s_skip_on = 0;
@@ -616,6 +639,11 @@ int touch_shapes(TouchShape *out, int max) {
     if (s_stick_on && n + 2 <= max) {
         out[n++] = (TouchShape){s_bx, s_by, s_rad * 1.25f, TOUCH_RING, 0.45f, 0};
         out[n++] = (TouchShape){s_bx + s_vx * s_rad, s_by + s_vy * s_rad, s_rad * 0.5f, TOUCH_KNOB, 0.75f, 0};
+    }
+    if (s_saved_at != 0 && SDL_GetTicks() - s_saved_at < 1500 && n < max) {
+        /* the autosave's sign: a ring filled at the top centre */
+        float u = (float)SDL_min(s_w, s_h);
+        out[n++] = (TouchShape){s_w * 0.5f, u * 0.08f, u * 0.045f, TOUCH_PROGRESS, 0.85f, 1.0f};
     }
     if (dialog_shown() && n < max) {
         float x, y, r;

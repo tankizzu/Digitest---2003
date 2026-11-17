@@ -80,15 +80,8 @@ static void state_path(char *path, size_t n) {
     snprintf(path, n, "%s/../saves/quick.state", data_dir());
 }
 
-/* The autosaves (games.c): each game's auto_a.state and auto_b.state, written in turn */
 void native_game_dir(int game, char *out, size_t n); /* games.c */
 int native_game_current(void);
-static void auto_path(int game, int slot, char *path, size_t n) {
-    char dir[1100];
-    native_game_dir(game, dir, sizeof dir);
-    snprintf(path, n, "%s/auto_%c.state", dir, 'a' + slot);
-}
-
 static Header header(void) {
     Header h = {{'D', 'W', '3', 'S'}, (uint32_t)(uintptr_t)game_vars_begin,
                 (uint32_t)(ovl_sub_end - game_vars_begin), NATIVE_HEAP_SIZE};
@@ -190,23 +183,56 @@ static int state_fits(const char *path) {
     return ok;
 }
 
-#define AUTOSAVE_EVERY (60 * 60 * 3) /* vsyncs: three minutes */
-static int s_auto_last, s_auto_load;
+/* The autosaves (games.c): a game save as the memory card has it (GAME's first GAME_SAVE_SIZE bytes, its checksum
+   and version), written to the game's auto_a.sav and auto_b.sav in turn: the older, or one that doesn't load. Not a
+   savestate: it loads in any build, and at any address. Taken where the field leaves the player in control, as the
+   field menu's save would: every few minutes, and when the app goes to the background. Continue's "Automatic"
+   loads the newest good one as a memory card load would (STGMCARD saves.c) */
+#define GAME_SAVE_SIZE 0x26C4      /* EU */
+#define SAVE_VERSION 4             /* MEMCARD_SAVE_VERSION, EU */
+#define GAME_FIELD_MODE 0x34       /* GameState.fieldMode, fieldPos (x, y), fieldDir: where a load goes back to */
+#define AUTOSAVE_EVERY (60 * 60 * 2) /* vsyncs: two minutes */
+uint8_t computeChecksum(void *data, int32_t size); /* main/memcard */
+void touch_saved(void);                           /* touch.c: the "saved" sign */
 
-/* When a state file was written (0: none, or not this build's) */
-static Sint64 state_time(const char *path) {
-    SDL_PathInfo info;
-    return state_fits(path) && SDL_GetPathInfo(path, &info) ? info.modify_time : 0;
+static int s_auto_last = -1, s_point_at = -1000, s_point[4];
+
+static void auto_path(int game, int slot, char *path, size_t n) {
+    char dir[1100];
+    native_game_dir(game, dir, sizeof dir);
+    snprintf(path, n, "%s/auto_%c.sav", dir, 'a' + slot);
 }
 
-/* The game's newest autosave this build can load (its slot), or -1 */
+/* A good save in that file (its size, checksum and version): when it was written, else 0 */
+static Sint64 save_time(const char *path, uint8_t *into) {
+    static uint8_t buf[GAME_SAVE_SIZE];
+    SDL_PathInfo info;
+    FILE *f = fopen(path, "rb");
+    int ok;
+
+    if (f == NULL) {
+        return 0;
+    }
+    ok = fread(buf, GAME_SAVE_SIZE, 1, f) == 1 && fgetc(f) == EOF;
+    fclose(f);
+    ok = ok && buf[2] == SAVE_VERSION && (computeChecksum(buf + 4, GAME_SAVE_SIZE - 4) & ~buf[0]) == 0;
+    if (!ok || !SDL_GetPathInfo(path, &info)) {
+        return 0;
+    }
+    if (into != NULL) {
+        memcpy(into, buf, GAME_SAVE_SIZE);
+    }
+    return info.modify_time > 0 ? info.modify_time : 1;
+}
+
+/* The game's newest good autosave (its slot), or -1 */
 static int newest_autosave(int game) {
     char a[1200], b[1200];
     Sint64 ta, tb;
 
     auto_path(game, 0, a, sizeof a);
     auto_path(game, 1, b, sizeof b);
-    ta = state_time(a), tb = state_time(b);
+    ta = save_time(a, NULL), tb = save_time(b, NULL);
     if (ta == 0 && tb == 0) {
         return -1;
     }
@@ -217,63 +243,70 @@ int native_autosave_exists(int game) {
     return game > 0 && newest_autosave(game) >= 0;
 }
 
-/* Loads the game's newest autosave at this frame's end (Continue, STGMCARD's patch) */
-void native_autosave_load(int game) {
-    s_auto_load = game;
+/* The game's newest autosave into `buf` (GAME_SAVE_SIZE bytes): 1 if there is one */
+int native_autosave_read(int game, void *buf) {
+    int slot = game > 0 ? newest_autosave(game) : -1;
+    char path[1200];
+
+    if (slot < 0) {
+        return 0;
+    }
+    auto_path(game, slot, path, sizeof path);
+    return save_time(path, buf) != 0;
 }
 
-/* The current game's autosave, into the slot not written last (the older, or one that doesn't load) */
+/* GAME as a save, with the field and place the player is at, into the slot not written last */
 static void autosave(void) {
+    static uint8_t buf[GAME_SAVE_SIZE];
     int game = native_game_current(), newest;
-    char path[1200];
+    char path[1200], tmp[1210];
+    FILE *f;
 
     if (game == 0) {
         return;
     }
+    memcpy(buf, GAME, GAME_SAVE_SIZE);
+    memcpy(buf + GAME_FIELD_MODE, s_point, sizeof s_point);
+    buf[2] = SAVE_VERSION;
+    buf[0] = computeChecksum(buf + 4, GAME_SAVE_SIZE - 4);
     newest = newest_autosave(game);
     auto_path(game, newest == 0 ? 1 : 0, path, sizeof path);
-    save_state_to(path);
+    snprintf(tmp, sizeof tmp, "%s.tmp", path);
+    if ((f = fopen(tmp, "wb")) != NULL && fwrite(buf, GAME_SAVE_SIZE, 1, f) == 1 && fclose(f) == 0 && SDL_RenamePath(tmp, path)) {
+        LOG("autosave: %s", path);
+        touch_saved();
+    } else {
+        LOG("autosave: can't write %s", path);
+    }
     s_auto_last = VSync(-1);
 }
 
-/* The app is about to go to the background: called from SDL's event pump, on the game's thread at a frame's end */
+/* The app is about to go to the background (SDL's event pump, on the game's thread): a save if the player was in
+   control a moment ago */
 static bool SDLCALL on_lifecycle(void *data, SDL_Event *e) {
     (void)data;
-    if (e->type == SDL_EVENT_WILL_ENTER_BACKGROUND && touch_enabled() && !movie_playing() && getMode() >> 8 != MODE_TITLE >> 8 &&
-        getMode() >> 8 != MODE_LANGUAGE >> 8 && getMode() >> 8 != 0x0C) {
+    if (e->type == SDL_EVENT_WILL_ENTER_BACKGROUND && VSync(-1) - s_point_at < 10) {
         autosave();
     }
     return true;
 }
 
-/* Once a frame: an autosave Continue asked for, and (where touch is on) a save every few minutes of play, not at
-   the title, the language select, the memory card screen (0x0C) or a movie */
-static void autosave_frame(void) {
+/* The field, each frame the player has the control (field.c): where a load would bring them back, and a save when
+   it is due */
+void native_autosave_point(int mode, int x, int y, int dir) {
     static int watching;
-    int mode = getMode() >> 8, every;
+    int every = SDL_getenv("DW3_AUTOSAVE_VSYNCS") ? SDL_atoi(SDL_getenv("DW3_AUTOSAVE_VSYNCS")) : AUTOSAVE_EVERY;
 
-    if (s_auto_load > 0) {
-        int game = s_auto_load, slot = newest_autosave(game);
-        char path[1200];
-
-        s_auto_load = 0;
-        if (slot >= 0) {
-            auto_path(game, slot, path, sizeof path);
-            load_state_from(path);
-            s_auto_last = VSync(-1);
-        }
-        return;
-    }
-    if (!touch_enabled()) {
-        return;
-    }
     if (!watching) {
         SDL_AddEventWatch(on_lifecycle, NULL);
         watching = 1;
-        s_auto_last = VSync(-1);
     }
-    every = SDL_getenv("DW3_AUTOSAVE_VSYNCS") ? SDL_atoi(SDL_getenv("DW3_AUTOSAVE_VSYNCS")) : AUTOSAVE_EVERY;
-    if (mode != MODE_TITLE >> 8 && mode != MODE_LANGUAGE >> 8 && mode != 0x0C && !movie_playing() && VSync(-1) - s_auto_last >= every) {
+    s_point[0] = mode, s_point[1] = x, s_point[2] = y, s_point[3] = dir;
+    if (s_auto_last < 0 || VSync(-1) - s_point_at > 30) {
+        s_auto_last = VSync(-1); /* back in control after a while: the count starts again */
+    }
+    s_point_at = VSync(-1);
+    if (VSync(-1) - s_auto_last >= every) {
         autosave();
     }
 }
@@ -297,7 +330,6 @@ void state_frame(void) {
     int key = s_key;
 
     s_key = 0;
-    autosave_frame();
     if (g_field_mode != 0 && (getMode() >> 8 == MODE_TITLE >> 8 || getMode() >> 8 == MODE_LANGUAGE >> 8)) {
         int title = MODE_TITLE;
 
