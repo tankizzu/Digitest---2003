@@ -83,6 +83,8 @@
 - Partite: `saves/game<N>/card.mcd` + `auto_a.sav` / `auto_b.sav`; `prefs.txt` (language, auto_text, game).
 - GAME_SAVE = primi 0x26C4 byte di GAME; checksum al byte 0 = computeChecksum(buf+4, size-4); versione byte 2 =
   4; fieldMode a 0x34, posizione 0x38/0x3C, direzione 0x40.
+- `platform/savetexts.c` riscrive anche il file STATUS (fid 178 EN, 180 IT, 108 stringhe): i suggerimenti coi tasti.
+  `rebuild()` prende il numero di stringhe originale e nuovo.
 - Testi della memory card riscritti in `platform/savetexts.c` (IT ed EN; le altre lingue ricevono solo i testi
   aggiunti in inglese).
 

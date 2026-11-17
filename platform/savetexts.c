@@ -126,7 +126,7 @@ static uint8_t *s_made[FID_LAST - FID_FIRST + 1];
 static long s_size[FID_LAST - FID_FIRST + 1];
 
 /* The table rebuilt: the original strings but those `texts` gives, then the added ones */
-static uint8_t *rebuild(const uint8_t *orig, long orig_size, const Text *texts, long *size) {
+static uint8_t *rebuild(const uint8_t *orig, long orig_size, const Text *texts, uint32_t original_count, int text_count, long *size) {
     uint8_t *out = SDL_calloc(1, (size_t)orig_size + 4096);
     uint32_t count, off;
     int pos;
@@ -136,14 +136,14 @@ static uint8_t *rebuild(const uint8_t *orig, long orig_size, const Text *texts, 
         return NULL;
     }
     SDL_memcpy(&count, orig, 4);
-    if (count != ORIGINAL_COUNT) {
+    if (count != original_count) {
         SDL_free(out);
         return NULL; /* not the file this was made for */
     }
-    count = TEXT_COUNT;
+    count = (uint32_t)text_count;
     SDL_memcpy(out, &count, 4);
-    pos = 4 + 4 * TEXT_COUNT;
-    for (int i = 0; i < TEXT_COUNT; i++) {
+    pos = 4 + 4 * text_count;
+    for (int i = 0; i < text_count; i++) {
         const Text *t = texts;
 
         while (t->text != NULL && t->id != i) {
@@ -153,7 +153,7 @@ static uint8_t *rebuild(const uint8_t *orig, long orig_size, const Text *texts, 
         SDL_memcpy(out + 4 + 4 * i, &off, 4);
         if (t->text != NULL) {
             pos += native_text_encode(t->text, out + pos, (int)(orig_size + 4096 - pos));
-        } else if (i < ORIGINAL_COUNT) {
+        } else if (i < (int)original_count) {
             uint32_t from;
             int len;
 
@@ -171,22 +171,72 @@ static uint8_t *rebuild(const uint8_t *orig, long orig_size, const Text *texts, 
     return out;
 }
 
-/* made_file's (mods.c): the rewritten MEMCRD file, or NULL for any other file */
+/* The field menu's texts (STATUS, STSTATUS's and the field menu's): its hints without the PlayStation buttons (touch:
+   the back arrow goes back, the menu's own rows sort). Italian and English; the others as they are */
+#define STATUS_EN 178
+#define STATUS_IT 180
+#define STATUS_COUNT 108
+
+static const Text STATUS_IT_TEXTS[] = {
+    {0x0F, "Cambia formazione Digimon"},
+    {0x10, "Non puoi cambiare formazione"},
+    {0x13, "Menu"},
+    {0x15, "Menu"},
+    {0x21, "Oggetti"},
+    {0, NULL},
+};
+
+static const Text STATUS_EN_TEXTS[] = {
+    {0x0F, "Change Digimon formation"},
+    {0x10, "Can not change formation"},
+    {0x13, "Menu"},
+    {0x15, "Menu"},
+    {0x21, "Items"},
+    {0, NULL},
+};
+
+static uint8_t *s_status[2];
+static long s_status_size[2];
+
+static const uint8_t *status_file(int fid, long *size) {
+    int i = fid == STATUS_IT;
+
+    if (s_status[i] == NULL) {
+        uint8_t *orig = NULL;
+        long n = native_read_raw(fid, &orig);
+
+        if (n <= 0) {
+            return NULL;
+        }
+        s_status[i] = rebuild(orig, n, i ? STATUS_IT_TEXTS : STATUS_EN_TEXTS, STATUS_COUNT, STATUS_COUNT, &s_status_size[i]);
+        free(orig);
+        if (s_status[i] == NULL) {
+            return NULL;
+        }
+    }
+    *size = s_status_size[i];
+    return s_status[i];
+}
+
+/* made_file's (mods.c): the rewritten MEMCRD and STATUS files, or NULL for any other file */
 const uint8_t *savetexts_file(int fid, long *size) {
     int i = fid - FID_FIRST;
 
+    if (fid == STATUS_EN || fid == STATUS_IT) {
+        return status_file(fid, size);
+    }
     if (fid < FID_FIRST || fid > FID_LAST) {
         return NULL;
     }
     if (s_made[i] == NULL) {
         uint8_t *orig = NULL;
         long n = native_read_raw(fid, &orig);
-        static const Text ADDED_ONLY[] = {{0x29, "Continue from where."}, {0x2A, "Autosave"}, {0x2B, "Saves"}, {0x2C, "Delete MEMORY CARD #."}, {0x2D, "Delete"}, {0x2E, "Choose a slot to replace"}, {0x2F, "Replace MEMORY CARD #."}, {0x30, "Load"}, {0, NULL}};
+        static const Text ADDED_ONLY[] = {{0x29, "Continue from where."}, {0x2A, "Autosave"}, {0x2B, "Saves"}, {0x2C, "Delete MEMORY CARD #."}, {0x2D, "Delete"}, {0x2E, "Choose a slot to replace"}, {0x2F, "Replace MEMORY CARD #."}, {0x30, "Load"}, {0x31, "Name your MEMORY CARD"}, {0x32, "OK"}, {0, NULL}};
 
         if (n <= 0) {
             return NULL;
         }
-        s_made[i] = rebuild(orig, n, fid == FID_IT ? IT : fid == FID_EN ? EN : ADDED_ONLY, &s_size[i]);
+        s_made[i] = rebuild(orig, n, fid == FID_IT ? IT : fid == FID_EN ? EN : ADDED_ONLY, ORIGINAL_COUNT, TEXT_COUNT, &s_size[i]);
         free(orig); /* native_read_raw's calloc */
     }
     *size = s_size[i];

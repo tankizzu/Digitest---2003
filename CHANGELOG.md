@@ -11,6 +11,10 @@
   OPZIONI non c'è ancora: il gioco non ha una schermata opzioni nel campo e quella della lingua esce dalla partita.
   Verificato su Linux: pannelli (game5, prologo) e MENU → menu del campo (`--field 515 --progress 5`); orizzontale
   identico ai riferimenti.
+- **Menu del campo senza tasti PlayStation**: i testi "Tasto △: chiudi lo stato", "Tasto △: torna al menu",
+  "Tasto □: ordina oggetti" e simili (file STATUS, IT ed EN) diventano "Menu", "Oggetti", "Cambia formazione
+  Digimon". Verificato su Linux (EN). Corretto anche: in francese, tedesco e spagnolo la domanda del nome della
+  memory card e "OK" erano vuoti.
 
 ### 2.0
 
