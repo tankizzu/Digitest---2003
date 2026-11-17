@@ -180,3 +180,21 @@ Stato reale (17/11/2026, prototipo su Linux, `DW3_PORTRAIT=1`):
   (le righe dei vecchi buffer le usano i banner dell'area).
 - Su Android il port sceglie render_scale fino a 4: con la VRAM 1024×1024 la copia GL è 4096² → da limitare (2
   o 3) prima di accendere il verticale sul telefono.
+
+## Piano: fascia alta del campo in verticale (da approvare nei dettagli, 17/11/2026)
+
+Demo approvata: tre pannelli dei partner (nome, barra HP) a sinistra, MENU e OPZIONI a destra, in alto sul campo.
+Proposta di realizzazione, tutta col materiale già in VRAM nel campo:
+- Disegno: un compito del port nel campo (field.c, dove gira `openFieldMenu`), sul layer della mappa a profondità 0,
+  solo in verticale e quando il giocatore ha il controllo (niente dialoghi, eventi, menu). Posizione: le prime
+  ~100 righe della tela (y psx da -(H-240)/2), dentro l'area sicura (`native_touch_safe_inset`).
+- Pannelli: le barre e i riquadri del foglio dei menu (FILE_MENU_SPRITES, 0x140,0: barre 0x1A / 0x41 / 0x42,
+  pannellino 0x16) scalati; nome del partner in una finestra di testo del gioco (font del gioco); HP come barra
+  piena/vuota (POLY_F4 verde come le barre del gioco, o le barre dei menu tagliate). Dati: `GAME.party[i]` →
+  `GAME.partners[m].info.stats[STAT_HP / STAT_MAX_HP / STAT_LEVEL]`.
+- MENU: tocco = Start (il menu del campo esiste solo da STORY_GENJI_BEATEN: prima il pulsante non si mostra).
+  OPZIONI: le impostazioni del port (oggi la schermata della lingua; volume da aggiungere).
+- Da decidere con l'utente: la fascia copre la mappa (sovrapposta) o sposta il centro della telecamera più in basso;
+  se mostrarla sempre o solo da fermi; prima di Genji (niente menu) solo i partner.
+Battaglia in verticale: lavoro più grande (layout della battaglia, telecamera 3D, comandi): serve un piano a parte
+dopo il riscontro sulla 2.0.
