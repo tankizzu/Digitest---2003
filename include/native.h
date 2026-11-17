@@ -339,6 +339,7 @@ void native_touch_dialog_open(void); /* a dialogue is open: the automatic dialog
 /* The balloons' arrow for that button: the menu sprites' sheet, its texture's place and the CLUT row to show */
 int native_touch_safe_inset(int side); /* the safe area in the picture's pixels: 0 left, 1 top, 2 right, 3 bottom */
 int native_settings_look(void); /* tests: DW3_SETTINGS_LOOK, the settings button's proposals (1-3) */
+int native_test_save(void); /* tests: DW3_PRESS "save", once */
 void native_sheet_dump(const void *sheet, int tex_x, int tex_y, const char *tag); /* tests: DW3_SHEET_DUMP */
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */
@@ -363,6 +364,12 @@ int native_games_full(void);           /* every MEMORY CARD slot taken */
 void native_game_new_at(int game);    /* a new game in that slot */
 void native_replace_pending(int on);  /* the title asks the memory card screen for a slot to replace */
 int native_replace_is_pending(void);
+int native_text_encode(const char *s, unsigned char *out, int room); /* plain text to the game's 1-byte text (savetexts.c) */
+int native_name_char(int c);                                   /* a character a MEMORY CARD name can have */
+int native_game_name(int game, char *out, int room);          /* its name (name.txt), "" if none: the length */
+int native_game_named(int game);                              /* the name asked already (name.txt there) */
+void native_game_set_name(int game, const char *name);        /* "" leaves it "MEMORY CARD N" */
+int native_game_label(int game, unsigned char *out, int room); /* name or "MEMORY CARD N", game-encoded */
 int native_games_column_text(int first, int count, const char *empty, unsigned char *out, int room);
 int native_touch_stick_level(void); /* 0 the stick isn't pushed, 1 a little (walk), 2 most of the way (run) */
 void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */

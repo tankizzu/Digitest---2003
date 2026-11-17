@@ -84,8 +84,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - **Impostazioni a tema** (17/11/2026, proposta in attesa della scelta dell'utente): l'ingranaggio del gioco
   (icona "Macchina" dei menu) nel pannellino dei menu, in alto a destra (B). Alternative: A icona sola, C pannello
   sotto CONTINUA. Scartato: l'ingranaggio bianco disegnato dal port (non c'entra con lo stile del gioco).
-- **Nome della memory card** (da fare): "MEMORY CARD N" è il nome generico; al primo salvataggio si sceglie un
-  nome, mostrato col font del gioco.
+- **Nome della memory card** (fatto, 17/11/2026): "MEMORY CARD N" è il nome generico; al primo salvataggio si
+  sceglie un nome con la tastiera del telefono, mostrato col font del gioco in due riquadri affiancati (nome | OK);
+  vuoto resta generico; non si richiede più (name.txt c'è anche se vuoto).
 - **Salvataggi / Autosalvataggio** (da fare): ognuno apre una lista con immagine e dati (i salvataggi manuali; i
   due autosalvataggi alternati).
 - **Barre di sistema nascoste** su Android, pulsanti nell'area sicura del telefono.

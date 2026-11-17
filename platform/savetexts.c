@@ -18,7 +18,7 @@ long native_read_raw(int fid, uint8_t **out); /* files.c */
 #define FID_FIRST 120
 #define FID_LAST 126
 #define ORIGINAL_COUNT 41
-#define TEXT_COUNT 49
+#define TEXT_COUNT 51
 
 typedef struct {
     int id;
@@ -51,6 +51,8 @@ static const Text IT[] = {
     {0x2E, "Scegli lo slot da sostituire"},
     {0x2F, "Sostituire MEMORY CARD #."},
     {0x30, "Carica"},
+    {0x31, "Dai un nome alla MEMORY CARD"},
+    {0x32, "OK"},
     {0, NULL},
 };
 
@@ -80,6 +82,8 @@ static const Text EN[] = {
     {0x2E, "Choose a slot to replace"},
     {0x2F, "Replace MEMORY CARD #."},
     {0x30, "Load"},
+    {0x31, "Name your MEMORY CARD"},
+    {0x32, "OK"},
     {0, NULL},
 };
 

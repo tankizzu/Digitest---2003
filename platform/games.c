@@ -233,6 +233,88 @@ int native_game_delete(int game) {
 
 int native_text_encode(const char *s, unsigned char *out, int room); /* savetexts.c */
 
+/* A game's MEMORY CARD name (STGMCARD's patches: asked at its first save), saves/game<N>/name.txt: letters, digits and
+   spaces, at most NATIVE_NAME_MAX. An empty file: asked, and left unnamed ("MEMORY CARD N") */
+#define NATIVE_NAME_MAX 16
+
+static void name_path(int game, char *out, size_t n) {
+    native_game_dir(game, out, n);
+    SDL_strlcat(out, "/name.txt", n);
+}
+
+/* Whether a character can be in a name (the game's font has these in its 1-byte encoding) */
+int native_name_char(int c) {
+    return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == ' ';
+}
+
+/* The name (plain text) into out, "" if none; its length */
+int native_game_name(int game, char *out, int room) {
+    char path[1200];
+    size_t size = 0;
+    char *data;
+    int n = 0;
+
+    out[0] = 0;
+    if (game <= 0 || room <= 0) {
+        return 0;
+    }
+    name_path(game, path, sizeof path);
+    if ((data = SDL_LoadFile(path, &size)) == NULL) {
+        return 0;
+    }
+    for (size_t i = 0; i < size && n < room - 1 && n < NATIVE_NAME_MAX; i++) {
+        if (native_name_char((unsigned char)data[i])) {
+            out[n++] = data[i];
+        }
+    }
+    while (n > 0 && out[n - 1] == ' ') { /* no trailing spaces */
+        n--;
+    }
+    out[n] = 0;
+    SDL_free(data);
+    return n;
+}
+
+/* Whether the player was asked for the name already (name.txt there, maybe empty) */
+int native_game_named(int game) {
+    char path[1200];
+
+    if (game <= 0) {
+        return 1;
+    }
+    name_path(game, path, sizeof path);
+    return SDL_GetPathInfo(path, NULL);
+}
+
+void native_game_set_name(int game, const char *name) {
+    char path[1200];
+    SDL_IOStream *io;
+
+    if (game <= 0) {
+        return;
+    }
+    name_path(game, path, sizeof path);
+    if ((io = SDL_IOFromFile(path, "wb")) != NULL) {
+        SDL_WriteIO(io, name, SDL_strlen(name));
+        SDL_CloseIO(io);
+    }
+}
+
+/* What a slot is called: its name, else "MEMORY CARD N" */
+static void label(int game, char *out, int room) {
+    if (native_game_name(game, out, room) == 0) {
+        SDL_snprintf(out, (size_t)room, "MEMORY CARD %d", game);
+    }
+}
+
+/* The same, game-encoded with its 00 (the memory card screen's lines): the length written */
+int native_game_label(int game, unsigned char *out, int room) {
+    char name[64];
+
+    label(game, name, sizeof name);
+    return native_text_encode(name, out, room);
+}
+
 /* The memory card screen's list (STGMCARD's patches): `rows` games from the `top`-th, each "MEMORY CARD N" with the
    day and time it was made, a blank line between them so that each row is two lines high for a finger. In the
    game's encoding, its 00 at the end; the length written */
@@ -241,15 +323,17 @@ int native_games_list_text(int top, int rows, unsigned char *out, int room) {
 
     ready();
     for (int i = top; i < top + rows && i < s_count && n < room - 64; i++) {
-        char line[96]; /* |01|05 the game's full stop, |01|07 its colon */
+        char line[96], name[64]; /* |01|05 the game's full stop, |01|07 its colon */
         SDL_DateTime dt;
         SDL_Time t = created(s_games[i]);
 
+        label(s_games[i], name, sizeof name);
+
         if (t != 0 && SDL_TimeToDateTime(t, &dt, true)) {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d   %02d|01|05%02d|01|05%04d  %02d|01|07%02d", i > top ? "\n\n" : "",
-                         s_games[i], dt.day, dt.month, dt.year, dt.hour, dt.minute);
+            SDL_snprintf(line, sizeof line, "%s%s   %02d|01|05%02d|01|05%04d  %02d|01|07%02d", i > top ? "\n\n" : "",
+                         name, dt.day, dt.month, dt.year, dt.hour, dt.minute);
         } else {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d", i > top ? "\n\n" : "", s_games[i]);
+            SDL_snprintf(line, sizeof line, "%s%s", i > top ? "\n\n" : "", name);
         }
         n += native_text_encode(line, out + n, room - n) - 1; /* without its 00: the next goes on */
     }
@@ -278,17 +362,18 @@ int native_games_column_text(int first, int count, const char *empty, unsigned c
 
     ready();
     for (int g = first; g < first + count && n < room - 64; g++) {
-        char line[96]; /* |01|05 the game's full stop, |01|07 its colon */
+        char line[96], name[64]; /* |01|05 the game's full stop, |01|07 its colon */
         SDL_DateTime dt;
         SDL_Time t = native_game_exists(g) ? created(g) : 0;
 
+        label(native_game_exists(g) ? g : -g, name, sizeof name); /* an empty slot: the generic name */
         if (!native_game_exists(g)) {
             SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %s", g > first ? "\n\n" : "", g, empty);
         } else if (t != 0 && SDL_TimeToDateTime(t, &dt, true)) {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %02d|01|05%02d|01|05%02d %02d|01|07%02d", g > first ? "\n\n" : "",
-                         g, dt.day, dt.month, dt.year % 100, dt.hour, dt.minute);
+            SDL_snprintf(line, sizeof line, "%s%s\n %02d|01|05%02d|01|05%02d %02d|01|07%02d", g > first ? "\n\n" : "",
+                         name, dt.day, dt.month, dt.year % 100, dt.hour, dt.minute);
         } else {
-            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n", g > first ? "\n\n" : "", g);
+            SDL_snprintf(line, sizeof line, "%s%s\n", g > first ? "\n\n" : "", name);
         }
         n += native_text_encode(line, out + n, room - n) - 1;
     }

@@ -33,7 +33,7 @@
      layer = GFX.funcs.createLayer(&rect, 1, FIELD_LAYER_BACK);
      layer->setBgColor(layer, 1, 1, 1);
      GFX.funcs.createLayer(&rect, 1, FIELD_LAYER_COVER);
-@@ -468,6 +485,17 @@
+@@ -468,6 +485,25 @@
   */
  static inline void openFieldMenu(FieldTask *task, FieldChildren *children) {
      if (FIELDSTG_state.menuOpen != 1 && FIELDSTG_state.busy == 0 && FIELDSTG_state.acting == 0) {
@@ -46,12 +46,20 @@
 +            native_touch_field_free();
 +            native_autosave_point(GAME.funcs.getMode(), children->actors[0]->pos.x, children->actors[0]->pos.y,
 +                                  children->actors[0]->dir);
++            if (native_test_save()) { /* tests (DW3_PRESS "save"): the memory card screen, as the menu's SAVE row */
++                GAME.fieldMode = GAME.funcs.getMode();
++                GAME.fieldPos = children->actors[0]->pos;
++                GAME.fieldDir = children->actors[0]->dir;
++                FILE_CACHE.markCached();
++                g_save_from_menu = 1;
++                GAME.funcs.requestMode(MODE_CONTINUE, (s32)0x80000000);
++            }
 +        }
 +#endif
          do {
              if (GAME.progress < STORY_GENJI_BEATEN || !(PAD.getPressed(0) & (1 << PAD_START))) {
                  break;
-@@ -494,7 +522,11 @@
+@@ -494,7 +530,11 @@
      s32 mode;
  
      if (FIELDSTG_keepsFileCache() == 0) {
@@ -63,7 +71,7 @@
      }
      setUpFieldScreen();
      if (FIELDSTG_keepsFileCache() == 0) {
-@@ -511,7 +543,14 @@
+@@ -511,7 +551,14 @@
      if (FIELDSTG_state.stageInit != NULL) {
          children->stage = FIELDSTG_state.stageInit(task);
      }
@@ -78,7 +86,7 @@
      FLAGS_00.applyAction(FIELD_VISITED_FLAG(GAME.funcs.getMode()), 1);
      mode = GAME.funcs.getPrevMode();
      /* from other than a field (0x2xx, 0x3xx), STDWTITL,
-@@ -635,6 +674,13 @@
+@@ -635,6 +682,13 @@
          switch (task->substate) {
          case 0:
          default:
@@ -92,7 +100,7 @@
              openFieldMenu(task, children);
              break;
          case 1:
-@@ -974,6 +1020,9 @@
+@@ -974,6 +1028,9 @@
      if (task != NULL) {
          FIELDSTG_state.busy = 1;
          FIELDSTG_state.battleStarting = 1;
@@ -102,7 +110,7 @@
          next = MODE_BATTLE_MOVIE;
          if (GAME.progress != STORY_MOVIE_BATTLES) {
              next = MODE_BATTLE;
-@@ -1020,7 +1069,12 @@
+@@ -1020,7 +1077,12 @@
      FieldTask *field = TASK_REGISTRY.funcs.find(FIELD_TASK_FIELD, -1, -1);
      FieldChildren *children = field->children;
  

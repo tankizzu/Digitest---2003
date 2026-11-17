@@ -58,6 +58,11 @@
   conferma dell'eliminazione (`native_game_delete`). Data di creazione: `saves/game<N>/created.txt` (secondi),
   altrimenti l'ultima scrittura di card.mcd.
 
+- **Nome della memory card**: `saves/game<N>/name.txt` (games.c: `native_game_name`, `native_game_named`,
+  `native_game_set_name`, `native_game_label` già codificato per le finestre). saves.c substate 8 = scrittura del
+  nome (prima di `nativeStartCheck` quando si salva e il file non c'è); testi MEMCRD 0x31 (domanda) e 0x32 (OK).
+- I test di caricamento cambiano `saves/prefs.txt` (`game = N`): rimetterlo a 9 prima del confronto con i
+  riferimenti in orizzontale (altrimenti l'elenco parte da un'altra riga).
 - Partite: `saves/game<N>/card.mcd` + `auto_a.sav` / `auto_b.sav`; `prefs.txt` (language, auto_text, game).
 - GAME_SAVE = primi 0x26C4 byte di GAME; checksum al byte 0 = computeChecksum(buf+4, size-4); versione byte 2 =
   4; fieldMode a 0x34, posizione 0x38/0x3C, direzione 0x40.
@@ -85,6 +90,10 @@
 - I tocchi `tXyY` di DW3_PRESS passano solo dai bersagli (`native_touch_target`), non dall'elenco scorrevole:
   per l'elenco usare `down`/`up`/`cross`.
 - `DW3_SHOT_TOUCH=1` mette i pulsanti del touch negli screenshot.
+- `DW3_PRESS` "save" (es. `1900:save`): il campo apre la schermata di salvataggio come la riga SALVA del menu
+  (serve `build-linux/native.ini` con `save_anywhere = 1` solo per la riga del menu, non per questo).
+- Percorso di prova in verticale (H 710): `300:start,500:start,700:t160y509` (CONTINUA), `1000:t190y662` (slot 5),
+  `1100:t84y375` (Carica), `1200:t84y375` (Automatico), `1400:cross` → campo verso 1700.
 - `DW3_AUTOSAVE_VSYNCS=600` salvataggio automatico più frequente. `DW3_LOG=1` stampa i log. `--field 1280`
   parte dalla schermata del nome.
 

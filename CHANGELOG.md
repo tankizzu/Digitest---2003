@@ -13,8 +13,17 @@
   (0x16), in alto a destra dentro l'area sicura del telefono. Tre proposte (screenshot reali): A solo l'icona, **B
   icona nel pannello (scelta di partenza)**, C pannello sotto CONTINUA. Verificato su Linux: aspetto delle tre e
   tocco (apre la schermata della lingua); orizzontale identico ai riferimenti tranne il pannello nuovo sul titolo.
+- **Nome della memory card al primo salvataggio**: la prima volta che si salva una partita, la schermata chiede "Dai
+  un nome alla MEMORY CARD": si scrive con la tastiera del telefono e il nome appare col font del gioco nel riquadro
+  di sinistra (toccandolo torna la tastiera), **OK** nel riquadro di destra (o Invio) conferma; vuoto resta
+  "MEMORY CARD N". La freccia Indietro esce senza salvare. Il nome (lettere, cifre, spazi, max 16) sta in
+  `saves/gameN/name.txt` e compare nell'elenco degli slot, sopra le scelte dello slot e nella riga in alto quando si
+  salva. Verificato su Linux in verticale (scrittura simulata, OK, elenco); in orizzontale non provato.
+- Salvando in verticale, "Nessun salvataggio in questo slot" e gli altri testi del gioco tornano dentro la cornice
+  (prima finivano sotto, al posto della colonna degli slot).
 - Test: `DW3_SHEET_DUMP=cartella` salva ogni fotogramma dei fogli di sprite del titolo e dei menu (per scegliere la
-  grafica del gioco per i pulsanti); `DW3_SETTINGS_LOOK=1/2/3` mostra le tre proposte.
+  grafica del gioco per i pulsanti); `DW3_SETTINGS_LOOK=1/2/3` mostra le tre proposte; `DW3_PRESS` "save" apre la schermata di salvataggio
+  dal campo (anche nel prologo, senza menu).
 
 ### 1.9
 

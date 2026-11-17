@@ -201,6 +201,17 @@ static void open_gamepad(void) {
     SDL_free(ids);
 }
 
+/* DW3_PRESS's "save": the field opens the memory card screen to save (field.c), as the menu's SAVE row does; for
+   tests in the prologue, before the field menu */
+static int s_test_save;
+
+int native_test_save(void) {
+    int t = s_test_save;
+
+    s_test_save = 0;
+    return t;
+}
+
 /* DW3_PRESS="300:cross,500:start,600:f5": holds a button for 6 vsyncs at a vsync
    count, to drive the game in tests without anyone at the keyboard */
 static uint16_t scripted(int frame) {
@@ -218,6 +229,9 @@ static uint16_t scripted(int frame) {
             if (SDL_sscanf(name, "t%dy%d", &tx, &ty) == 2) {
                 touch_script_tap(tx, ty);
             }
+        }
+        if (frame == at && SDL_strcmp(name, "save") == 0) {
+            s_test_save = 1;
         }
         if (frame == at && SDL_strcmp(name, "esc") == 0) {
             menu_toggle(); /* the options menu */
