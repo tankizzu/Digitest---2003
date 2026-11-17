@@ -94,7 +94,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   gioco d'epoca. (Sostituisce la vecchia idea "nelle stanze piccole si ingrandisce".)
 - **Fascia in alto** (idea approvata dall'utente, 17/11/2026): pulsante Impostazioni, pulsante Menu e stato dei
   partner (nome, livello, HP, esperienza), con la grafica del gioco; la fascia in basso per dialoghi e comandi.
-- Tela del campo 320×512 (limite tecnico: CLUT del gioco nelle righe 496–511).
+- Tela del campo 320 × (forma del telefono, max 720), da VRAM (0,512) in una VRAM del port 1024×2048; su
+  Android render_scale 2 (l'utente accetta meno risoluzione pur di avere tutto schermo, 17/11/2026).
+- Filmati sempre in 4:3. Banner del cambio di ambiente a tutto schermo.
 
 - **Il verticale è la modalità principale** (ribadito il 17/11/2026, "fin dall'inizio"). Tutto schermo vero:
   campo, menu e battaglie riempiono il telefono. L'orizzontale è un di più.

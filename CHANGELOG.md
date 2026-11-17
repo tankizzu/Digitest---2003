@@ -2,6 +2,13 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.3
+
+- **Campo a tutto schermo in verticale**: la tela prende la forma del telefono (320 × fino a 720; su un 9:20,
+  320×711). VRAM del port 1024×2048; su Android render_scale 2 (risoluzione del 3D più bassa, come concordato).
+  Verificato su Linux con DW3_PORTRAIT_H=710.
+- **Schermata del cambio di ambiente** (banner dell'area) su tutta la tela verticale. Verificato su Linux.
+
 ### 1.2
 
 - **"Vuoi scaricare il Partner Digimon ora?" si risponde col tocco**: era una copia del menu sì/no dentro la
