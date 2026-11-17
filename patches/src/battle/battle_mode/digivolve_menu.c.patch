@@ -1,0 +1,17 @@
+--- a/src/battle/battle_mode/digivolve_menu.c
++++ b/src/battle/battle_mode/digivolve_menu.c
+@@ -91,6 +91,14 @@
+         task->nextState(task);
+         break;
+     case TASK_RUN:
++#ifdef NATIVE
++        if (native_portrait()) { /* the forms where the user put them (types.h): a tap picks, a drag turns the pages */
++            for (i = 0; i < task->count && i < 4; i++) {
++                NXF_PLACE(w->names[i], NXF_DV_FORMS, 0xBB, 0x92 + i * 0x13);
++            }
++            native_battle_list(w->cursor, NXF(NXF_DV_FORMS));
++        }
++#endif
+         changed = 0;
+         show = 1; /* never cleared, but the original tests it */
+         /* the match depends on the do-while and its breaks, the stages' early exit */

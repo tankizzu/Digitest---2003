@@ -1,0 +1,93 @@
+--- a/src/battle/battle_mode/partner_info.c
++++ b/src/battle/battle_mode/partner_info.c
+@@ -11,10 +11,37 @@
+     drawer.setLayerId(BATTLE_LAYER_MENUS, 1);
+     drawer.setTexture(0x200, 0);
+     if (GFX.funcs.getTime() & 0x10) {
++#ifdef NATIVE
++        NXF_DRAW(drawer, sheet, 0x1F, 0x18, 0xAB, NXF_DV_STATS);
++        NXF_DRAW(drawer, sheet, 0x20, 0x48, 0xAB, NXF_DV_STATS);
++#else
+         drawer.draw(sheet, 0x1F, 0x18, 0xAB);
+         drawer.draw(sheet, 0x20, 0x48, 0xAB);
+-    }
+-}
++#endif
++    }
++}
++
++#ifdef NATIVE
++/* Upright: the pages' texts where the user put the stats (types.h); no L1 / R1 (a drag on the forms turns the pages) */
++static void nativeInfoPlace(TextWindow **windows) {
++    static const s16 TECH_Y = 0x51;
++    s32 i;
++
++    for (i = 1; i <= 2; i++) {
++        if (windows[i] != NULL) {
++            windows[i]->setVisible(windows[i], 0);
++        }
++    }
++    NXF_PLACE(windows[3], NXF_DV_STATS, 0x5A, 0xA9);
++    NXF_PLACE(windows[4], NXF_DV_STATS, 0x93, 0xA9);
++    for (i = 0; i < 13; i++) {
++        NXF_PLACE(windows[i + 5], NXF_DV_STATS, FIGHTSTG_statLines[i].x, FIGHTSTG_statLines[i].y);
++    }
++    for (i = 0; i < 6; i++) {
++        NXF_PLACE(windows[i + 18], NXF_DV_STATS, 0x26, TECH_Y + i * 0xE);
++    }
++}
++#endif
+ 
+ /* Shows the PartnerInfo's page buttons (texts 0x11 and 0x12) */
+ void FIGHTSTG_showPageButtons(PartnerInfo *task, TextWindow **windows) {
+@@ -37,10 +64,17 @@
+     drawer.setLayerId(BATTLE_LAYER_MENUS, 1);
+     sheet = FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16);
+     drawer.setTexture(0x140, 0);
++#ifdef NATIVE
++    NXF_DRAW(drawer, sheet, 0x23, 0x18, 0x51, NXF_DV_STATS);
++    sheet = FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16);
++    drawer.setTexture(0x200, 0);
++    NXF_DRAW(drawer, sheet, 0x25, 0x10, 0x4A, NXF_DV_STATS);
++#else
+     drawer.draw(sheet, 0x23, 0x18, 0x51);
+     sheet = FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16);
+     drawer.setTexture(0x200, 0);
+     drawer.draw(sheet, 0x25, 0x10, 0x4A);
++#endif
+ }
+ 
+ /* the stat numbers of FIGHTSTG_showStats */
+@@ -101,12 +135,20 @@
+     for (i = 0; i < 6; i++) {
+         tech = task->techs[i] & SKILL_ID;
+         if (tech != 0) {
++#ifdef NATIVE
++            NXF_DRAW(drawer, sheet, TECHS[tech - 1].icon + 0x37, 0x18, 0x51 + i * 0xE, NXF_DV_STATS);
++#else
+             drawer.draw(sheet, TECHS[tech - 1].icon + 0x37, 0x18, 0x51 + i * 0xE);
++#endif
+         }
+     }
+     sheet = FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16);
+     drawer.setTexture(0x200, 0);
++#ifdef NATIVE
++    NXF_DRAW(drawer, sheet, 0x26, 0x10, 0x4A, NXF_DV_STATS);
++#else
+     drawer.draw(sheet, 0x26, 0x10, 0x4A);
++#endif
+ }
+ 
+ /* Shows the techniques page: the level (text 0x1A for none) and the six
+@@ -240,6 +282,11 @@
+         task->nextState(task);
+         break;
+     case 1:
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativeInfoPlace(windows);
++        }
++#endif
+         FIGHTSTG_drawPageArrows(task);
+         switch (task->page) {
+         case 0:

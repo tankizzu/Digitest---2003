@@ -1,6 +1,6 @@
 --- a/include/battle/battle_mode/types.h
 +++ b/include/battle/battle_mode/types.h
-@@ -30,11 +30,63 @@
+@@ -30,11 +30,134 @@
  #define BATTLE_LAYER_MODELS 0x1004
  #define BATTLE_LAYER_MENUS 0x1005 /* the HUD, the menus and the messages */
  #define BATTLE_LAYER_FRONT 0x1006 /* the fades, the flashes and the sprite effects over all */
@@ -13,6 +13,77 @@
 +#define NATIVE_CMD_X(i) (6 + (i) % 2 * 158)
 +#define NATIVE_CMD_Y(i) (240 - 6 - native_touch_safe_inset(3) - (3 - (i) / 2) * (NATIVE_CMD_H + 6))
 +#define NATIVE_CMD_GRID(params) (native_portrait() && (params).count == 6 && (params).x == 17)
++
++/* Upright, the battle's pieces where the user put them in the layout demos (artifact "Disposizione battaglia",
++   TECHNICAL_NOTES): each one goes from its rect in the game's 320x240 (ox, oy, ow, oh) to the user's (x, y, w, h).
++   The HUD and the partner's view keep to the top (y in the tall screen); the menus keep to the bottom (y in
++   BATTLE_LAYER_MENUS' last 240 lines: the demo's y less 470), whatever the phone's height */
++typedef struct NativeXf {
++    s16 ox, oy, ow, oh;
++    s16 x, y, w, h;
++} NativeXf;
++
++enum {
++    NXF_ENEMY, NXF_PARTNER, NXF_GAUGE, NXF_FACE,                        /* the top: the HUD's layer */
++    NXF_TECH_LIST, NXF_TECH_MP, NXF_TECH_DESC, NXF_DV_STATS, NXF_DV_FORMS, /* the menus */
++    NXF_MESSAGE, NXF_TAG_1, NXF_TAG_2, NXF_ITEM_LIST, NXF_ITEM_COUNT, NXF_ITEM_DESC,
++    NXF_COUNT
++};
++
++static const NativeXf NATIVE_XF[NXF_COUNT] = {
++    {8, 15, 150, 44, 6, 85, 171, 50},       /* the enemy's panel */
++    {161, 15, 151, 44, 146, 153, 169, 49},  /* the partner's panel */
++    {260, 61, 50, 10, 263, 211, 50, 10},    /* the gauge */
++    {206, 73, 105, 65, 26, 157, 105, 65},   /* the partner's view */
++    {8, 62, 151, 111, 8, 9, 227, 166},      /* Tech: the list */
++    {163, 50, 96, 22, 223, -24, 96, 22},    /* Tech: the MP */
++    {11, 188, 297, 39, 11, 188, 297, 39},   /* Tech: the description */
++    {17, 74, 142, 111, 6, 7, 194, 152},     /* DV: the stats */
++    {167, 143, 141, 18, 168, 166, 141, 18}, /* DV: the forms */
++    {11, 188, 296, 38, 12, 18, 296, 38},    /* the battle's messages */
++    {16, 73, 181, 63, 12, 24, 268, 99},     /* Tag: the two other partners (the user's two rects together) */
++    {16, 106, 181, 30, 12, 79, 265, 44},    /* Tag: the third alone (unused: one list) */
++    {8, 62, 151, 120, 14, 65, 209, 166},    /* Item: the list */
++    {166, 160, 40, 22, 249, 62, 59, 32},    /* Item: the count */
++    {11, 188, 297, 39, 13, 15, 297, 39},    /* Item: the description */
++};
++
++/* A point of the piece's, where the user put it; a sprite or a text drawn about the piece's corner (draw it at its
++   own x + NXF_DX, y + NXF_DY) */
++#define NXF(i) (&NATIVE_XF[i])
++#define NXF_X(f, px) ((f)->x + ((px) - (f)->ox) * (f)->w / (f)->ow)
++#define NXF_Y(f, py) ((f)->y + ((py) - (f)->oy) * (f)->h / (f)->oh)
++#define NXF_DX(f) ((f)->x - (f)->ox)
++#define NXF_DY(f) ((f)->y - (f)->oy)
++#define NXF_SPRITE(drawer, f) \
++    ((drawer).setScale(ONE * (f)->w / (f)->ow, ONE * (f)->h / (f)->oh, ONE), (drawer).setPivot((f)->x, (f)->y))
++#define NXF_SPRITE_END(drawer) ((drawer).setScale(ONE, ONE, ONE))
++/* a sprite of piece `piece` at its own x, y: upright where the user put it, else where the game has it */
++#define NXF_DRAW(drawer, sheet, frame, px, py, piece)                                              \
++    do {                                                                                          \
++        if (native_portrait()) {                                                                  \
++            const NativeXf *nxf_ = NXF(piece);                                                    \
++            NXF_SPRITE(drawer, nxf_);                                                             \
++            (drawer).draw((sheet), (frame), (px) + NXF_DX(nxf_), (py) + NXF_DY(nxf_));            \
++            NXF_SPRITE_END(drawer);                                                               \
++        } else {                                                                                  \
++            (drawer).draw((sheet), (frame), (px), (py));                                          \
++        }                                                                                         \
++    } while (0)
++/* a text window of the piece's, upright, where the user put it (its own place in the game: tx, ty) */
++#define NXF_PLACE(win, piece, tx, ty)                                                              \
++    do {                                                                                          \
++        if (native_portrait() && (win) != NULL) {                                                 \
++            NXF_TEXT((win), NXF(piece), (tx), (ty));                                              \
++        }                                                                                         \
++    } while (0)
++/* a text window of the piece's at its own x, y (each frame: the windows' places are kept by their tasks) */
++#define NXF_TEXT(win, f, tx, ty)                                                              \
++    do {                                                                                     \
++        (win)->setPos((win), (tx) + NXF_DX(f), (ty) + NXF_DY(f));                            \
++        (win)->setScale((win), ONE * (f)->w / (f)->ow, ONE * (f)->h / (f)->oh);              \
++        (win)->setPivot((win), (f)->x, (f)->y);                                              \
++    } while (0)
 +#endif
  
  /* The body of WFIGHTMN's and WFIGHTTS's layer setups: the display and the
@@ -64,7 +135,7 @@
  #define FIGHTSTG_CREATE_LAYERS(screen, frontCallbacks)                          \
      Layer *layer;                                                               \
                                                                                  \
-@@ -60,5 +112,6 @@
+@@ -60,5 +183,6 @@
      layer = GFX.funcs.createLayer(&(screen), 1, BATTLE_LAYER_FRONT);            \
      layer->setOffset(layer, 0, 0);                                              \
      layer->allocCallbacks(layer, frontCallbacks)

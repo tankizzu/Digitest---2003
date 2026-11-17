@@ -1,6 +1,6 @@
 --- a/src/battle/battle_mode/cursor.c
 +++ b/src/battle/battle_mode/cursor.c
-@@ -32,6 +32,22 @@
+@@ -32,6 +32,27 @@
                  FIGHTSTG_cursorBarRect.x = 0x90;
                  y = task->params.y + task->prevSel * task->params.step;
              }
@@ -13,6 +13,11 @@
 +
 +                    x = NATIVE_CMD_X(k) + 6;
 +                    y = NATIVE_CMD_Y(k) + (NATIVE_CMD_H - 12) / 2;
++                } else if (task->nativeXf != NULL) { /* a list where the user put it */
++                    const NativeXf *f = task->nativeXf;
++
++                    x = NXF_X(f, task->params.x);
++                    y = NXF_Y(f, y);
 +                }
 +                SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, x,
 +                            NATIVE_FIELD_Y + native_field_h() - SCREEN_HEIGHT + y);
@@ -23,7 +28,7 @@
              SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, task->params.x, y);
              addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
              SetDrawMove(&FIGHTSTG_cursorBarMoves[i + 1], &FIGHTSTG_cursorBarRect, task->params.x, y + 0x100);
-@@ -39,6 +55,10 @@
+@@ -39,6 +60,10 @@
          }
          while (IsIdleGPU(0)) {
          }
@@ -34,11 +39,20 @@
          ContinueDraw(FIGHTSTG_cursorBarOt, saved);
      }
      task->prevSel = task->sel;
-@@ -76,6 +96,15 @@
+@@ -76,6 +101,24 @@
          } else {
              drawer.setClutRow(0);
          }
 +#ifdef NATIVE
++        if (task->nativeXf != NULL) { /* a list where the user put it */
++            const NativeXf *f = task->nativeXf;
++
++            NXF_SPRITE(drawer, f);
++            drawer.draw(sheet, task->params.sprite, task->params.spriteX + NXF_DX(f), y + NXF_DY(f));
++            NXF_SPRITE_END(drawer);
++            y += task->params.spriteStep;
++            continue;
++        }
 +        if (NATIVE_CMD_GRID(task->params)) { /* the command's row of the game, as a big button */
 +            drawer.setScale(ONE * NATIVE_CMD_W / 97, ONE * NATIVE_CMD_H / 18, ONE);
 +            drawer.setPivot(NATIVE_CMD_X(i), NATIVE_CMD_Y(i));
@@ -50,7 +64,7 @@
          drawer.draw(sheet, task->params.sprite, task->params.spriteX, y);
          y += task->params.spriteStep;
      }
-@@ -107,6 +136,33 @@
+@@ -107,6 +150,33 @@
              if (task->params.sprite != -1) {
                  FIGHTSTG_drawCursorSprites(task);
              }
@@ -60,7 +74,7 @@
 +                   commands are the turn's first menu: the others go back, so they show the back button */
 +                s32 line, tapped;
 +
-+                for (line = 0; line < task->params.count; line++) {
++                for (line = 0; line < task->params.count && task->nativeXf == NULL; line++) {
 +                    if (NATIVE_CMD_GRID(task->params)) {
 +                        native_touch_target(line, NATIVE_CMD_X(line), NATIVE_CMD_Y(line) - 2, NATIVE_CMD_W, NATIVE_CMD_H + 4);
 +                        continue;
@@ -84,3 +98,55 @@
              if (task->locked == 0) {
                  pressed = PAD.getRepeated(0) | PAD.getPressed(0);
                  if (pressed & (1 << PAD_UP)) {
+@@ -137,5 +207,51 @@
+     MenuCursor *task = createTask(FIGHTSTG_updateCursor, sizeof(MenuCursor), 0);
+ 
+     task->params = *layout;
++#ifdef NATIVE
++    task->nativeXf = NULL;
++#endif
+     return task;
+ }
++
++#ifdef NATIVE
++/* Upright, a battle list where the user put it (f, types.h): a finger on it taps a row (picked and confirmed, X) or
++   drags: up or left turns to the next page (R1), down or right to the previous one (L1), a page per drag of 36
++   pixels. The list's own taps and pages stay the game's: this only presses its buttons */
++void native_battle_list(MenuCursor *cursor, const NativeXf *f) {
++    static s32 accX, accY, idle;
++    s32 y, dy, dx, ev, row, rowH;
++
++    cursor->nativeXf = f;
++    native_touch_list(f->x, f->y, f->w, f->h);
++    ev = native_touch_list_event(&y, &dy);
++    dx = native_touch_list_dx();
++    if (dx == 0 && dy == 0) {
++        if (++idle > 8) {
++            accX = accY = 0; /* the finger off or still: a new drag starts from nothing */
++        }
++    } else {
++        idle = 0;
++        accX += dx, accY += dy;
++    }
++    if (ev == 1 && cursor->locked == 0) {
++        rowH = cursor->params.step * f->h / f->oh;
++        row = rowH > 0 ? (y - NXF_Y(f, cursor->params.y - 2)) / rowH : -1;
++        if (y >= NXF_Y(f, cursor->params.y - 2) && row >= 0 && row < cursor->params.count) {
++            if (cursor->sel != row) {
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            cursor->sel = row;
++            native_touch_hold(PAD_CROSS, 3);
++        }
++        accX = accY = 0;
++        return;
++    }
++    if (accX <= -36 || accY <= -36) {
++        native_touch_hold(PAD_R1, 3);
++        accX = accY = 0;
++    } else if (accX >= 36 || accY >= 36) {
++        native_touch_hold(PAD_L1, 3);
++        accX = accY = 0;
++    }
++}
++#endif

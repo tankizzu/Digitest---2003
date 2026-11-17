@@ -1,0 +1,75 @@
+--- a/src/battle/battle_mode/item_menu.c
++++ b/src/battle/battle_mode/item_menu.c
+@@ -19,22 +19,57 @@
+         if (index > task->count - 1) {
+             break;
+         }
++#ifdef NATIVE
++        NXF_DRAW(drawer, sheet, ITEM_FUNCS.getCategory(task->usable[index]), 0x1D, 0x45 + i * 0xE, NXF_ITEM_LIST);
++#else
+         drawer.draw(sheet, ITEM_FUNCS.getCategory(task->usable[index]), 0x1D, 0x45 + i * 0xE);
++#endif
+     }
+     sheet = FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16);
+     drawer.setTexture(0x200, 0);
+     if (GFX.funcs.getTime() & 0x10) {
++#ifdef NATIVE
++        if (task->page > 0) {
++            NXF_DRAW(drawer, sheet, 0x1F, 0x10, 0xA9, NXF_ITEM_LIST);
++        }
++        if (task->page < task->pageCount - 1) {
++            NXF_DRAW(drawer, sheet, 0x20, 0x90, 0xA9, NXF_ITEM_LIST);
++        }
++#else
+         if (task->page > 0) {
+             drawer.draw(sheet, 0x1F, 0x10, 0xA9);
+         }
+         if (task->page < task->pageCount - 1) {
+             drawer.draw(sheet, 0x20, 0x90, 0xA9);
+         }
+-    }
++#endif
++    }
++#ifdef NATIVE
++    NXF_DRAW(drawer, sheet, 0x27, 8, 0x3E, NXF_ITEM_LIST);
++    NXF_DRAW(drawer, sheet, 0x28, 0xA6, 0xA0, NXF_ITEM_COUNT);
++    NXF_DRAW(drawer, sheet, 0x31, 0xB, 0xBC, NXF_ITEM_DESC);
++#else
+     drawer.draw(sheet, 0x27, 8, 0x3E);
+     drawer.draw(sheet, 0x28, 0xA6, 0xA0);
+     drawer.draw(sheet, 0x31, 0xB, 0xBC);
+-}
++#endif
++}
++
++#ifdef NATIVE
++/* Upright: the menu's texts where the user put the pieces (types.h); no L1 / R1 (a drag turns the pages) */
++static void nativeItemPlace(ItemMenuWindows *w) {
++    s32 i;
++
++    w->prevButton->setVisible(w->prevButton, 0);
++    w->nextButton->setVisible(w->nextButton, 0);
++    NXF_PLACE(w->countLabel, NXF_ITEM_COUNT, 0xAC, 0xA5);
++    NXF_PLACE(w->count, NXF_ITEM_COUNT, 0xC6, 0xA5);
++    for (i = 0; i < ITEM_MENU_LINES; i++) {
++        NXF_PLACE(w->names[i], NXF_ITEM_LIST, 0x2A, 0x45 + i * 0xE);
++    }
++    NXF_PLACE(w->message, NXF_ITEM_DESC, 0x14, 0xC2);
++}
++#endif
+ 
+ /* Makes the item menu's windows: the page buttons, the count's label, the
+    seven names, the description and the count */
+@@ -153,6 +188,12 @@
+         task->nextState(task);
+         break;
+     case TASK_RUN:
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativeItemPlace(w);
++            native_battle_list(w->cursor, NXF(NXF_ITEM_LIST));
++        }
++#endif
+         FIGHTSTG_drawItemMenu(task);
+         pressed = PAD.getPressed(0);
+         page = task->page;

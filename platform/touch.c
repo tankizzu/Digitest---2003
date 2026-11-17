@@ -614,7 +614,7 @@ static int dialog_shown(void);
 /* A scrolling list (the memory card screen's games), in display pixels: a finger dragged on it scrolls it, a tap
    without moving picks the row under it, a finger held still for LIST_HOLD_MS asks for the row's own choice */
 #define LIST_HOLD_MS 600
-static float s_list[4], s_list_y0, s_list_ylast, s_list_dy;
+static float s_list[4], s_list_y0, s_list_ylast, s_list_dy, s_list_x0, s_list_xlast, s_list_dx;
 static Uint64 s_list_until, s_list_from;
 static SDL_FingerID s_list_id;
 static int s_list_on, s_list_moved, s_list_held, s_list_event, s_list_event_y;
@@ -638,6 +638,21 @@ int native_touch_list_event(int *y, int *dy) {
     *y = s_list_event_y;
     s_list_event = 0;
     return ev;
+}
+
+/* The list's sideways drag since the last call, in display pixels (left negative): the battle's lists turn their
+   pages with it */
+int native_touch_list_dx(void) {
+    int dx = (int)s_list_dx;
+
+    s_list_dx -= (float)dx;
+    return dx;
+}
+
+/* The tap's x (display pixels) of the last tap event */
+static int s_list_event_x;
+int native_touch_list_tap_x(void) {
+    return s_list_event_x;
 }
 
 /* The corner buttons, in pixels: the menu at the top right; back at the bottom left, where a thumb reaches it with
@@ -844,13 +859,15 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                         py -= (float)s_origin_y;
                     }
                     if (s_list_on && fingers[i]->id == s_list_id) {
-                        if (!s_list_moved && SDL_fabsf(py - s_list_y0) > 4) {
+                        if (!s_list_moved && (SDL_fabsf(py - s_list_y0) > 4 || SDL_fabsf(px - s_list_x0) > 4)) {
                             s_list_moved = 1;
                         }
                         if (s_list_moved) {
                             s_list_dy += py - s_list_ylast;
+                            s_list_dx += px - s_list_xlast;
                         }
                         s_list_ylast = py;
+                        s_list_xlast = px;
                         seen_list = 1;
                         continue;
                     }
@@ -858,6 +875,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                         && py < s_list[1] + s_list[3]) {
                         s_list_on = 1, s_list_id = fingers[i]->id;
                         s_list_y0 = s_list_ylast = py, s_list_from = SDL_GetTicks();
+                        s_list_x0 = s_list_xlast = px;
                         s_list_moved = s_list_held = 0;
                         seen_list = 1;
                         continue;
@@ -904,7 +922,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     SDL_free(devs);
     if (s_list_on && !seen_list) { /* lifted: a tap if it neither moved nor was held */
         if (!s_list_moved && !s_list_held) {
-            s_list_event = 1, s_list_event_y = (int)s_list_y0;
+            s_list_event = 1, s_list_event_y = (int)s_list_y0, s_list_event_x = (int)s_list_x0;
         }
         s_list_on = 0;
     } else if (s_list_on && !s_list_moved && !s_list_held && SDL_GetTicks() - s_list_from >= LIST_HOLD_MS) {

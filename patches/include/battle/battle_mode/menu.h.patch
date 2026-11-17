@@ -29,17 +29,22 @@
  } ConfusedMenuWindows;
  
  /* A menu cursor's layout, which FIGHTSTG_createCursor copies into its task: a
-@@ -306,8 +314,13 @@
+@@ -306,9 +314,18 @@
      /* 0x58 */ CursorLayout params;
      /* 0x78 */ s32 prevSel; /* where the bar was drawn last */
      /* 0x7C */ s32 frame; /* of the bar, 0-11 */
 +#ifdef NATIVE
 +    /* 0x80 */ s32 blink[7]; /* the seventh confused-menu row also blinks */
 +    /* 0x9C */ u8 pad[0x0C]; /* preserve the original task size */
++    const void *nativeXf; /* upright: the NativeXf (types.h) of the list where the user put it, else NULL */
 +#else
      /* 0x80 */ s32 blink[6]; /* the time of each line's sprite */
      /* 0x98 */ u8 pad[0x10]; /* never read or written: createTask allocates 0xA8 bytes */
 +#endif
  } MenuCursor;
++#ifdef NATIVE
++void native_battle_list(MenuCursor *cursor, const struct NativeXf *f); /* cursor.c: a list where the user put it */
++#endif
  
  /* One of FIGHTSTG_updateTechMenu's children: the cursor first, then the text windows */
+ typedef union TechMenuChild {

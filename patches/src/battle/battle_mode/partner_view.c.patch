@@ -1,26 +1,39 @@
 --- a/src/battle/battle_mode/partner_view.c
 +++ b/src/battle/battle_mode/partner_view.c
-@@ -7,7 +7,11 @@
+@@ -7,9 +7,16 @@
      SpriteDrawer drawer;
  
      initSpriteDrawer(&drawer);
 +#ifdef NATIVE
-+    drawer.setLayerId(native_portrait() ? NATIVE_BATTLE_LAYER_HUD : BATTLE_LAYER_MENUS, 0); /* upright: under the HUD */
++    drawer.setLayerId(native_portrait() ? NATIVE_BATTLE_LAYER_HUD : BATTLE_LAYER_MENUS, 0); /* upright: where the user put it */
++    drawer.setTexture(0x200, 0);
++    drawer.draw(FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16), 10, 246 + (native_portrait() ? NXF_DX(NXF(NXF_FACE)) : 0),
++                74 + (native_portrait() ? NXF_DY(NXF(NXF_FACE)) : 0));
 +#else
      drawer.setLayerId(BATTLE_LAYER_MENUS, 0);
-+#endif
      drawer.setTexture(0x200, 0);
      drawer.draw(FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16), 10, 246, 74);
++#endif
  }
-@@ -29,6 +33,11 @@
+ 
+ /* The partner view's task: makes layer 0x1009 beside the menus, then once the
+@@ -29,8 +36,19 @@
          FIGHTSTG_fighterCameraRect.y = 0x4C;
          FIGHTSTG_fighterCameraRect.w = 0x64;
          FIGHTSTG_fighterCameraRect.h = 0x3C;
 +#ifdef NATIVE
-+        if (native_portrait()) { /* upright: in the tall screen, under the HUD as sideways */
-+            FIGHTSTG_fighterCameraRect.y += NATIVE_FIELD_Y;
++        if (native_portrait()) { /* upright: in the tall screen, where the user put it (types.h) */
++            FIGHTSTG_fighterCameraRect.x += NXF_DX(NXF(NXF_FACE));
++            FIGHTSTG_fighterCameraRect.y += NATIVE_FIELD_Y + NXF_DY(NXF(NXF_FACE));
 +        }
 +#endif
          task->layer = GFX.funcs.createLayer(&FIGHTSTG_fighterCameraRect, 0xC, 0x1009);
++#ifdef NATIVE
++        task->layer->setOffset(task->layer, 0x102 + (native_portrait() ? NXF_DX(NXF(NXF_FACE)) : 0),
++                               0x6A + (native_portrait() ? NXF_DY(NXF(NXF_FACE)) : 0));
++#else
          task->layer->setOffset(task->layer, 0x102, 0x6A);
++#endif
          task->layer->allocCallbacks(task->layer, 0x32);
+         task->nextState(task);
+         break;

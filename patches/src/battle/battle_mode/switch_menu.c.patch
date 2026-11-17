@@ -1,7 +1,7 @@
 --- a/src/battle/battle_mode/switch_menu.c
 +++ b/src/battle/battle_mode/switch_menu.c
 @@ -17,6 +17,14 @@
-     fighter = &FIGHTSTG_battle.fighters[0][index];
+     fighter = &FIGHTSTG_battle.state.fighters[0][index];
      next = GET_DIGIMON(fighter->id)->pairPartner;
      count = GAME.funcs.getPartnerSlots(partner, task->slots);
 +#ifdef NATIVE
@@ -15,3 +15,53 @@
      if (count <= 0 || next == 0) {
          return 0;
      }
+@@ -41,10 +49,33 @@
+     drawer.setTexture(0x200, 0);
+     for (i = 0; i < task->count; i++) {
+         if (task->pairs[i] != 0) {
++#ifdef NATIVE
++            NXF_DRAW(drawer, sheet, 0x30, 0x5A, 0x45 + i * 0x1F, NXF_TAG_1);
++#else
+             drawer.draw(sheet, 0x30, 0x5A, 0x45 + i * 0x1F);
+-        }
+-    }
+-}
++#endif
++        }
++    }
++}
++
++#ifdef NATIVE
++/* Upright: the two partners' texts where the user put them (types.h) */
++static void nativeSwitchPlace(SwitchMenu *task, SwitchMenuWindows *w) {
++    s32 i;
++
++    for (i = 0; i < task->count && i < 2; i++) {
++        NXF_PLACE(w->hpLabel[i], NXF_TAG_1, 0x6C, 0x4E + i * 0x20);
++        NXF_PLACE(w->hpSlash[i], NXF_TAG_1, 0x99, 0x4E + i * 0x20);
++        NXF_PLACE(w->mpLabel[i], NXF_TAG_1, 0x6C, 0x5C + i * 0x20);
++        NXF_PLACE(w->mpSlash[i], NXF_TAG_1, 0x99, 0x5C + i * 0x20);
++        NXF_PLACE(w->hp[i], NXF_TAG_1, 0x98, 0x4E + i * 0x20);
++        NXF_PLACE(w->maxHp[i], NXF_TAG_1, 0xBB, 0x4E + i * 0x20);
++        NXF_PLACE(w->mp[i], NXF_TAG_1, 0x98, 0x5C + i * 0x20);
++        NXF_PLACE(w->maxMp[i], NXF_TAG_1, 0xBB, 0x5C + i * 0x20);
++        NXF_PLACE(w->name[i], NXF_TAG_1, 0x24, 0x4C + i * 0x20);
++    }
++}
++#endif
+ 
+ /* Makes the switch menu's windows, two lines a fighter: the name, HP over max
+    HP and MP over max MP */
+@@ -138,6 +169,12 @@
+         }
+         break;
+     case TASK_RUN:
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativeSwitchPlace(task, w);
++            native_battle_list(w->cursor, NXF(NXF_TAG_1));
++        }
++#endif
+         FIGHTSTG_drawSwitchMenu(task);
+         /* the match depends on the do-while and its break, the stages' early exit */
+         do {

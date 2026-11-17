@@ -360,6 +360,8 @@ void native_map_clut_pos(int slot, int *x, int *y);
 #define NATIVE_MAP_IMAGES 29
 #define NATIVE_RUN_PERCENT 58 /* the player's run on the stick, against the game's (actor_control.c) */
 void native_touch_list(int x, int y, int w, int h); /* a scrolling list this frame, in display pixels */
+int native_touch_list_dx(void);    /* the list's sideways drag since the last call (display pixels) */
+int native_touch_list_tap_x(void); /* the last tap's x */
 int native_touch_list_event(int *y, int *dy);       /* 1 tap, 2 hold (at display row *y); *dy dragged since */
 int native_games_list_text(int top, int rows, unsigned char *out, int room); /* the games' rows, game-encoded */
 int native_game_delete(int game);                   /* games.c: the game's saves gone */

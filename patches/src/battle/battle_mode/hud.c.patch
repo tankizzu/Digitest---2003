@@ -82,3 +82,124 @@
          windows[0]->setString(windows[0], GAME.partners[GAME.funcs.getPartyMember(FIGHTSTG_battle.state.active[0])].info.name, -1);
      }
      if (FIGHTSTG_battle.state.active[1] != task->shown[1]) {
+@@ -121,6 +180,51 @@
+ 
+ /* Draws the battle HUD: both HP bars, the technique gauge (full at 1000) and
+    the fighters' icons */
++#ifdef NATIVE
++/* Upright: a HUD sprite or quad of a piece (types.h's NATIVE_XF), where the user put it */
++static void nativeHudDraw(SpriteDrawer *d, void *sheet, s32 frame, s32 x, s32 y, s32 piece) {
++    if (native_portrait()) {
++        const NativeXf *f = NXF(piece);
++
++        NXF_SPRITE(*d, f);
++        d->draw(sheet, frame, x + NXF_DX(f), y + NXF_DY(f));
++        NXF_SPRITE_END(*d);
++    } else {
++        d->draw(sheet, frame, x, y);
++    }
++}
++
++static void nativeHudQuad(DVECTOR *points, CVECTOR *colors, s32 piece) {
++    DVECTOR moved[4];
++    s32 k;
++
++    if (!native_portrait()) {
++        FIGHTSTG_battle.drawQuad(BATTLE_LAYER_MENUS, 1, points, colors);
++        return;
++    }
++    for (k = 0; k < 4; k++) {
++        moved[k].vx = NXF_X(NXF(piece), points[k].vx);
++        moved[k].vy = NXF_Y(NXF(piece), points[k].vy);
++    }
++    FIGHTSTG_battle.drawQuad(BATTLE_LAYER_MENUS, 1, moved, colors);
++}
++
++/* its texts (names and HP), each frame */
++static void nativeHudTexts(TextWindow **windows) {
++    static const s16 AT[5][3] = {
++        {0xAE, 0x15, NXF_PARTNER}, {0x11, 0x15, NXF_ENEMY}, {0x10C, 0x1A, NXF_PARTNER}, {0x12E, 0x1A, NXF_PARTNER},
++        {0x10B, 0x1A, NXF_PARTNER},
++    };
++    s32 i;
++
++    for (i = 0; native_portrait() && i < 5; i++) {
++        if (windows[i] != NULL) {
++            NXF_TEXT(windows[i], NXF(AT[i][2]), AT[i][0], AT[i][1]);
++        }
++    }
++}
++#endif
++
+ void FIGHTSTG_drawHud(HpDisplay *task, TextWindow **windows) {
+     SpriteDrawer drawer;
+     CVECTOR colors[4];
+@@ -138,8 +242,13 @@
+     initSpriteDrawer(&drawer);
+     drawer.setLayerId(BATTLE_LAYER_MENUS, 1);
+     drawer.setTexture(0x200, 0);
++#ifdef NATIVE
++    nativeHudDraw(&drawer, sheet, 0, 8, 0xF, NXF_ENEMY);
++    nativeHudDraw(&drawer, sheet, 1, 0xA1, 0xF, NXF_PARTNER);
++#else
+     drawer.draw(sheet, 0, 8, 0xF);
+     drawer.draw(sheet, 1, 0xA1, 0xF);
++#endif
+     FIGHTSTG_showFighterNames(task, windows);
+     fighter = &FIGHTSTG_battle.state.fighters[0][FIGHTSTG_battle.state.active[0]];
+     if (windows[4] == NULL) {
+@@ -178,23 +287,41 @@
+             colors[0] = colors[2] = FIGHTSTG_hpBarColors[2];
+             colors[1] = colors[3] = FIGHTSTG_hpBarColors[3];
+         }
++#ifdef NATIVE
++        nativeHudQuad(FIGHTSTG_hpBars[i], colors, i == 0 ? NXF_PARTNER : NXF_ENEMY);
++#else
+         FIGHTSTG_battle.drawQuad(BATTLE_LAYER_MENUS, 1, FIGHTSTG_hpBars[i], colors);
++#endif
+     }
+     blink = (GFX.funcs.getTime() >> 2) & 3;
+     member = GAME.funcs.getPartyMember(FIGHTSTG_battle.state.active[0]);
++#ifdef NATIVE
++    nativeHudDraw(&drawer, sheet, 0x1E, 0x104, 0x3D, NXF_GAUGE);
++#else
+     drawer.draw(sheet, 0x1E, 0x104, 0x3D);
++#endif
+     if (BATTLE_SETUP.gauges[member] < 1000) {
+         /* the match depends on storing [2] before [0] (the other order gives 2
+            diffs) */
+         FIGHTSTG_techGauge[2].vx = FIGHTSTG_techGauge[0].vx = BATTLE_SETUP.gauges[member] / 25 + 0x109;
++#ifdef NATIVE
++        nativeHudQuad(FIGHTSTG_techGauge, FIGHTSTG_techGaugeColors, NXF_GAUGE);
++#else
+         FIGHTSTG_battle.drawQuad(BATTLE_LAYER_MENUS, 1, FIGHTSTG_techGauge, FIGHTSTG_techGaugeColors);
+-    }
++#endif
++    }
++#ifdef NATIVE
++    nativeHudDraw(&drawer, sheet, BATTLE_SETUP.gauges[member] < 1000 ? blink + 0x33 : blink + 0x37, 0x109, 0x3E, NXF_GAUGE);
++    nativeHudDraw(&drawer, sheet, 0xB, 0x104, 0x3D, NXF_GAUGE);
++    nativeHudTexts(windows);
++#else
+     if (BATTLE_SETUP.gauges[member] < 1000) {
+         drawer.draw(sheet, blink + 0x33, 0x109, 0x3E);
+     } else {
+         drawer.draw(sheet, blink + 0x37, 0x109, 0x3E);
+     }
+     drawer.draw(sheet, 0xB, 0x104, 0x3D);
++#endif
+     for (side = 0; side < 2; side++) {
+         for (slot = 0; slot < 3; slot++) {
+             if (FIGHTSTG_battle.state.kind >= BATTLE_KIND_FINAL && slot > 0 && side > 0) {
+@@ -214,7 +341,11 @@
+                 } else {
+                     frame += 0x3C;
+                 }
++#ifdef NATIVE
++                nativeHudDraw(&drawer, sheet, frame, FIGHTSTG_iconX[side][slot], 0x30, side == 0 ? NXF_PARTNER : NXF_ENEMY);
++#else
+                 drawer.draw(sheet, frame, FIGHTSTG_iconX[side][slot], 0x30);
++#endif
+             }
+         }
+     }

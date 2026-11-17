@@ -1,6 +1,34 @@
 --- a/src/battle/battle_mode/message.c
 +++ b/src/battle/battle_mode/message.c
-@@ -55,7 +55,11 @@
+@@ -6,6 +6,12 @@
+ void FIGHTSTG_drawMessageBox(BattleMessageBox *task) {
+     SpriteDrawer drawer;
+     void *sheet;
++#ifdef NATIVE
++    /* upright: where the user put it (types.h) */
++    s32 dx = native_portrait() ? NXF_DX(NXF(NXF_MESSAGE)) : 0, dy = native_portrait() ? NXF_DY(NXF(NXF_MESSAGE)) : 0;
++#else
++    const s32 dx = 0, dy = 0;
++#endif
+ 
+     initSpriteDrawer(&drawer);
+     drawer.setLayerId(BATTLE_LAYER_MENUS, 1);
+@@ -19,12 +25,12 @@
+         }
+         drawer.setTexture(0x140, 0);
+         drawer.setClutRow(task->arrowPalette);
+-        drawer.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 10, 0x123, 0xD0);
++        drawer.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 10, 0x123 + dx, 0xD0 + dy);
+         drawer.setClutRow(0);
+     }
+     sheet = FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16);
+     drawer.setTexture(0x200, 0);
+-    drawer.draw(sheet, 0x31, 0xB, 0xBC);
++    drawer.draw(sheet, 0x31, 0xB + dx, 0xBC + dy);
+ }
+ 
+ /* Shows the message's lines one by one, 3 frames apart, then on cross shows
+@@ -55,7 +61,11 @@
          }
          break;
      case 3:
@@ -12,7 +40,7 @@
              SOUND.playSound(SOUND_MENU_CONFIRM);
              if (task->queue[++task->next] == 0) {
                  task->state = 3;
-@@ -67,7 +71,11 @@
+@@ -67,7 +77,11 @@
          }
          break;
      case 4:
@@ -24,3 +52,16 @@
              task->state = 3;
          }
          break;
+@@ -266,6 +280,12 @@
+     if (w->lines[1] == NULL) {
+         w->lines[1] = createTextWindow(BATTLE_LAYER_MENUS, 1, 0x14, 0xD0);
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* where the user put the box (types.h) */
++        w->lines[0]->setPos(w->lines[0], 0x14 + NXF_DX(NXF(NXF_MESSAGE)), 0xC2 + NXF_DY(NXF(NXF_MESSAGE)));
++        w->lines[1]->setPos(w->lines[1], 0x14 + NXF_DX(NXF(NXF_MESSAGE)), 0xD0 + NXF_DY(NXF(NXF_MESSAGE)));
++    }
++#endif
+     task->shown = 0;
+     switch (type) {
+     case 1:

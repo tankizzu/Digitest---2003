@@ -1,0 +1,80 @@
+--- a/src/battle/battle_mode/tech_menu.c
++++ b/src/battle/battle_mode/tech_menu.c
+@@ -21,23 +21,62 @@
+             if (tech == 0) {
+                 break;
+             }
++#ifdef NATIVE
++            NXF_DRAW(drawer, sheet, TECHS[tech - 1].icon + 0x37, 0x1D, 0x45 + i * 0xE, NXF_TECH_LIST);
++#else
+             drawer.draw(sheet, TECHS[tech - 1].icon + 0x37, 0x1D, 0x45 + i * 0xE);
++#endif
+         }
+     }
+     drawer.setTexture(0x200, 0);
+     sheet = FILE_CACHE.getEntry(FILE_BATTLE_MENU << 16);
+     if (GFX.funcs.getTime() & 0x10) {
++#ifdef NATIVE
++        if (task->page > 0) {
++            NXF_DRAW(drawer, sheet, 0x1F, 0x10, 0x9F, NXF_TECH_LIST);
++        }
++        if (task->page < task->pageCount - 1) {
++            NXF_DRAW(drawer, sheet, 0x20, 0x90, 0x9F, NXF_TECH_LIST);
++        }
++#else
+         if (task->page > 0) {
+             drawer.draw(sheet, 0x1F, 0x10, 0x9F);
+         }
+         if (task->page < task->pageCount - 1) {
+             drawer.draw(sheet, 0x20, 0x90, 0x9F);
+         }
+-    }
++#endif
++    }
++#ifdef NATIVE
++    NXF_DRAW(drawer, sheet, 0x2A, 8, 0x3E, NXF_TECH_LIST);
++    NXF_DRAW(drawer, sheet, 0x29, 0xA3, 0x21, NXF_TECH_MP);
++    NXF_DRAW(drawer, sheet, 0x31, 0xB, 0xBC, NXF_TECH_DESC);
++#else
+     drawer.draw(sheet, 0x2A, 8, 0x3E);
+     drawer.draw(sheet, 0x29, 0xA3, 0x21);
+     drawer.draw(sheet, 0x31, 0xB, 0xBC);
+-}
++#endif
++}
++
++#ifdef NATIVE
++/* Upright: the menu's texts where the user put the pieces (types.h); no L1 / R1 (a drag turns the pages) */
++static void nativeTechPlace(TechMenuChild *children) {
++    s32 i;
++
++    children[1].window->setVisible(children[1].window, 0);
++    children[2].window->setVisible(children[2].window, 0);
++    NXF_PLACE(children[3].window, NXF_TECH_MP, 0xAC, 0x3A);
++    NXF_PLACE(children[6].window, NXF_TECH_MP, 0xD8, 0x3A);
++    NXF_PLACE(children[5].window, NXF_TECH_MP, 0xD9, 0x3A);
++    NXF_PLACE(children[4].window, NXF_TECH_MP, 0xFB, 0x3A);
++    for (i = 0; i < TECH_MENU_LINES; i++) {
++        NXF_PLACE(children[7 + i].window, NXF_TECH_LIST, 0x2A, 0x45 + i * 0xE);
++    }
++    NXF_PLACE(children[13].window, NXF_TECH_DESC, 0x14, 0xC2);
++    NXF_PLACE(children[14].window, NXF_TECH_DESC, 0x100, 0xD0);
++    NXF_PLACE(children[15].window, NXF_TECH_DESC, 0x12B, 0xD0);
++}
++#endif
+ 
+ /* Makes the technique menu's windows: the page buttons, the active fighter's
+    MP over its max (or a text by its MP for a temporary Digimon), the six
+@@ -283,6 +322,12 @@
+         task->nextState(task);
+         break;
+     case TASK_RUN:
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativeTechPlace(children);
++            native_battle_list(children[0].cursor, NXF(NXF_TECH_LIST));
++        }
++#endif
+         FIGHTSTG_drawTechMenu(task);
+         /* the match depends on the do-while and its breaks, which skip the
+            update of sel, the stages' early exit */
