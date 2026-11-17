@@ -75,7 +75,14 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [ ] Verificare sul telefono il salvataggio automatico quando l'app va in secondo piano.
 - [ ] Schermate del menu del campo (squadra, oggetti, tecniche, mappa), negozi, laboratorio.
 
-## P3
+## P1 — battaglia in verticale (2.2, prima versione)
 
-- [ ] Battaglia: ridisposizione per il verticale.
+- [x] Tela alta, scena 3D a tutta altezza, statistiche in alto, volto del partner sotto, comandi 2×3 grandi in basso.
+- [ ] Provare sul telefono (l'utente).
+- [ ] Liste Tecniche e Oggetti più grandi; togliere "L1 / R1" e "X" dalle liste (tasti PlayStation) e dare il tocco
+      per cambiare pagina.
+- [ ] DV (digievoluzione) e Tag (cambio partner): controllare in verticale.
+- [ ] Inizio e fine battaglia (transizione, risultati, resoconto STFGTREP) a tutto schermo.
+
+## P3
 - [ ] Mappa 2D estesa a tutto schermo (task 9).

@@ -2,7 +2,20 @@
 
 ## Android (Digimon World 2003 per Android)
 
-### 2.1 (in preparazione)
+### 2.2 (in preparazione)
+
+- **Battaglia in verticale** (prima versione da provare): la tela alta; la **scena 3D a tutta altezza** (il centro
+  della ripresa a metà schermo: si vede molto più ambiente sopra e sotto); in alto le **statistiche affiancate**
+  (nemico e partner, come nel gioco) e sotto il riquadro col volto del partner; in basso i **sei comandi come
+  pulsanti grandi** su due colonne (Fight / Tech, DV / Tag, Item / Run: la riga del gioco ingrandita, le parole una
+  volta e mezza più grandi), un tocco sceglie. Tecniche, oggetti e messaggi si aprono in basso con la loro grafica.
+  Verificato su Linux: incontro nel Settore Sud, comandi, Tecniche, Oggetti; orizzontale invariato.
+- Corretto: in verticale la battaglia scartava i pezzi 3D sopra il centro dello schermo (confronto col rettangolo
+  del layer alla riga 512 della VRAM) e la barra del cursore finiva nella memoria del vecchio schermo.
+- Prove: la "prova di battaglia" di debug del gioco (`--field 1536 --arg 1`) andava in crash: il gioco originale le
+  dà 0 byte di spazio; ora ha il suo.
+
+### 2.1
 
 - **Fascia in alto nel campo (verticale)**: mentre il giocatore ha il controllo, in alto a sinistra i tre partner,
   ognuno nella barra dei menu del gioco con il nome (font del gioco) e la barra degli HP; in alto a destra **MENU**

@@ -1,7 +1,7 @@
 # Stato del progetto
 
-Ultimo aggiornamento: 17/11/2026 — versione **2.1** (versionCode 24) pronta (2.0 già mandata); l'ultima provata
-dall'utente sul telefono è precedente alla 1.9.
+Ultimo aggiornamento: 17/11/2026 — versione **2.2** (versionCode 25) pronta (2.0 e 2.1 già mandate); l'ultima
+provata dall'utente sul telefono è precedente alla 1.9.
 
 ## Obiettivo attuale
 
@@ -26,6 +26,7 @@ tutto schermo** (modalità principale); poi la battaglia.
 | Lingua, nome, kit e conferma a tutto schermo in verticale (2.0) | sì | no |
 | Fascia alta nel campo: partner (nome, HP) e MENU (2.1) | sì | no |
 | Menu del campo senza tasti PlayStation nei testi (2.1) | sì (EN) | no |
+| Battaglia in verticale: scena alta, statistiche in alto, comandi 2×3 grandi (2.2) | sì | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
 | Salvataggio quando l'app va in secondo piano | no (solo su telefono) | no |
 | Dialoghi: tocco, tenere premuto, automatici x1/x2/x3 (trattini della freccia) | sì | parziale |

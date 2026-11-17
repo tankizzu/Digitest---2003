@@ -210,3 +210,17 @@ Proposta di realizzazione, tutta col materiale già in VRAM nel campo:
   se mostrarla sempre o solo da fermi; prima di Genji (niente menu) solo i partner.
 Battaglia in verticale: lavoro più grande (layout della battaglia, telecamera 3D, comandi): serve un piano a parte
 dopo il riscontro sulla 2.0.
+
+## Battaglia in verticale (2.2)
+
+- `FIGHTSTG_CREATE_LAYERS` (include/battle/battle_mode/types.h): con `native_portrait()` area mostrata
+  (0, 512, 320, H), layer sulla tela alta; i layer 3D (SCREEN, CAMERA, STAGE, WIREFRAME, MODELS) con l'offset
+  (160, H/2); BATTLE_LAYER_MENUS con offset (0, H-240) (le sue 240 righe in fondo) e `native_touch_origin(H-240)`;
+  un layer in più, NATIVE_BATTLE_LAYER_HUD (0x1007), con offset 0: hud.c ridefinisce BATTLE_LAYER_MENUS su di lui.
+- model_mesh.c `FIGHTSTG_isMeshOnScreen`: il clip del layer va contato dall'alto della tela (meno 512).
+- cursor.c: la barra del cursore è una copia VRAM→VRAM a vsync nelle coordinate dello schermo: in verticale una sola,
+  a 512 + H - 240 + y. Il cursore dei comandi (6 righe, x 17: `NATIVE_CMD_GRID`) disegna la riga del gioco
+  (sprite 34) scalata in una griglia 2×3 (NATIVE_CMD_X/Y), con i tocchi; command_menu.c mette le parole lì, ×1,5.
+- partner_view.c: il layer del volto (0x1009) a y 512 + 0x4C, la cornice sul layer dell'HUD.
+- Prova: `--field 578 --party 0` e camminare a destra e sinistra (incontro verso il fotogramma 1250); griglia a
+  y 470 + 108/150/192 (+18 il centro) con H 710.

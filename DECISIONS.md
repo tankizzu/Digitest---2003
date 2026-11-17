@@ -100,6 +100,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## App
 
+- **Battaglia in verticale, realizzazione** (17/11/2026): la scena 3D ha il centro a metà della tela alta (mostra
+  più ambiente, niente ingrandimento); statistiche e volto del partner in alto su un layer a parte; menu e messaggi
+  nelle ultime 240 righe; i sei comandi come righe del gioco ingrandite in una griglia 2×3.
 - **Battaglia in verticale**: nomi e statistiche in alto **affiancati** (non uno sopra l'altro); a tutto schermo, i pulsanti dei comandi grandi in basso **sopra** la scena 3D
   (richiesta del 17/11/2026). Demo e interfacce sempre con la grafica del gioco (l'utente ha scartato le demo
   disegnate a mano).

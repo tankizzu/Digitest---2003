@@ -6,9 +6,9 @@
              w->lines[i]->setString(w->lines[i], text, i + 1);
 +#ifdef NATIVE
 +            if (native_portrait()) { /* upright: in its big button (cursor.c), the words half as big again */
-+                w->lines[i]->setPos(w->lines[i], NATIVE_CMD_X(i) + 34, NATIVE_CMD_Y(i) + 12);
++                w->lines[i]->setPos(w->lines[i], NATIVE_CMD_X(i) + 34, NATIVE_CMD_Y(i) + 8);
 +                w->lines[i]->setScale(w->lines[i], ONE * 3 / 2, ONE * 3 / 2);
-+                w->lines[i]->setPivot(w->lines[i], NATIVE_CMD_X(i) + 34, NATIVE_CMD_Y(i) + 12);
++                w->lines[i]->setPivot(w->lines[i], NATIVE_CMD_X(i) + 34, NATIVE_CMD_Y(i) + 8);
 +            }
 +#endif
          }
