@@ -12,7 +12,8 @@ void pref_set(const char *key, int value);
 void memcard_open(const char *path);     /* memcard.c */
 void log_once(const char *what);
 
-#define MAX_GAMES 99
+#define MAX_GAMES 99   /* folders looked at (older builds made more) */
+#define NATIVE_SLOTS 10 /* the MEMORY CARD slots offered */
 
 static int s_games[MAX_GAMES], s_count = -1; /* the games' numbers, ascending */
 
@@ -58,6 +59,19 @@ static void ready(void) {
         scan();
         migrate();
     }
+}
+
+int native_game_delete(int game);
+
+/* Whether game `game` (a MEMORY CARD slot) has a folder */
+int native_game_exists(int game) {
+    ready();
+    for (int i = 0; i < s_count; i++) {
+        if (s_games[i] == game) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 int native_game_count(void) {
@@ -128,9 +142,24 @@ void native_game_new(void) {
     SDL_Time now = 0;
 
     ready();
-    next = s_count > 0 ? s_games[s_count - 1] + 1 : 1;
-    if (next > MAX_GAMES) {
-        next = MAX_GAMES; /* ponytail: the last one is used again; no player makes a hundred games */
+    /* the first free of the ten MEMORY CARD slots; all ten taken, the one made longest ago is used again */
+    next = 0;
+    for (int g = 1; g <= NATIVE_SLOTS && next == 0; g++) {
+        if (!native_game_exists(g)) {
+            next = g;
+        }
+    }
+    if (next == 0) {
+        SDL_Time oldest = 0;
+
+        next = 1;
+        for (int g = 1; g <= NATIVE_SLOTS; g++) {
+            SDL_Time t = created(g);
+            if (oldest == 0 || t < oldest) {
+                oldest = t, next = g;
+            }
+        }
+        native_game_delete(next);
     }
     native_game_select(next);
     native_game_dir(next, path, sizeof path);
@@ -201,4 +230,30 @@ void native_game_card_path(char *out, size_t n) {
     }
     native_game_dir(g, out, n);
     SDL_strlcat(out, "/card.mcd", n);
+}
+
+/* The upright memory card screen's column (STGMCARD's patches): slots `first` to first + count - 1, two lines each:
+   "MEMORY CARD N", then the day and time it was made or the word for an empty one (`empty`). Game-encoded, its 00 at
+   the end; the length written */
+int native_games_column_text(int first, int count, const char *empty, unsigned char *out, int room) {
+    int n = 0;
+
+    ready();
+    for (int g = first; g < first + count && n < room - 64; g++) {
+        char line[96]; /* |01|05 the game's full stop, |01|07 its colon */
+        SDL_DateTime dt;
+        SDL_Time t = native_game_exists(g) ? created(g) : 0;
+
+        if (!native_game_exists(g)) {
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %s", g > first ? "\n" : "", g, empty);
+        } else if (t != 0 && SDL_TimeToDateTime(t, &dt, true)) {
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n %02d|01|05%02d|01|05%02d %02d|01|07%02d", g > first ? "\n" : "",
+                         g, dt.day, dt.month, dt.year % 100, dt.hour, dt.minute);
+        } else {
+            SDL_snprintf(line, sizeof line, "%sMEMORY CARD %d\n", g > first ? "\n" : "", g);
+        }
+        n += native_text_encode(line, out + n, room - n) - 1;
+    }
+    out[n++] = 0;
+    return n;
 }

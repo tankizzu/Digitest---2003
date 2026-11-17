@@ -357,6 +357,8 @@ void native_touch_list(int x, int y, int w, int h); /* a scrolling list this fra
 int native_touch_list_event(int *y, int *dy);       /* 1 tap, 2 hold (at display row *y); *dy dragged since */
 int native_games_list_text(int top, int rows, unsigned char *out, int room); /* the games' rows, game-encoded */
 int native_game_delete(int game);                   /* games.c: the game's saves gone */
+int native_game_exists(int game);
+int native_games_column_text(int first, int count, const char *empty, unsigned char *out, int room);
 int native_touch_stick_level(void); /* 0 the stick isn't pushed, 1 a little (walk), 2 most of the way (run) */
 void native_touch_field_free(void);  /* the field leaves the player in control: the stick walks, a tap is X */
 void native_autosave_point(int mode, int x, int y, int dir); /* there, where a load would bring them back (state.c) */

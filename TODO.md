@@ -40,7 +40,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 
 - [x] Titolo (sfondo ingrandito, contenuto al centro, tocchi con l'origine).
 - [x] Titolo: pulsanti grandi, copyright in fondo, ingranaggio impostazioni (lingua).
-- [x] Memory card a tutto schermo (sfondo esteso); finestra ancora alla grandezza originale.
+- [x] Memory card a tutto schermo: 10 slot in griglia con icona, Elimina, CARICA nel riquadro di metallo.
+- [ ] Strada di Asuka all'inizio del prologo: ancora 4:3 (imposta lo schermo per conto suo? da trovare).
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
 - [ ] Lingua, nome, kit, conferma a tutto schermo.
 

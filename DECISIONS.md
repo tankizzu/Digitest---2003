@@ -75,6 +75,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - Elenco grande: due partite alla volta nel riquadro principale, righe alte il doppio, giorno e ora di
   creazione accanto (created.txt), trascinare per scorrere, tocco per scegliere, **tenere premuto per
   eliminare** (con Sì/No).
+- **10 slot MEMORY CARD al massimo** (17/11/2026). In verticale tutti visibili su due colonne, con l'icona della
+  memory card del gioco; un tocco su uno slot offre Automatico / Salvataggi / Elimina. Una partita nuova va nel
+  primo slot libero; con 10 occupati riusa il più vecchio (da confermare con l'utente).
 - Continua → elenco delle partite (grafica del gioco) → "Automatico" o "Salvataggi". Nessuna finestra Android
   "vuoi riprendere".
 

@@ -2,6 +2,16 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.8
+
+- **Memory card in verticale con 10 slot**: due colonne da cinque, ogni slot con l'icona della memory card del
+  gioco (sprite 0x23 del foglio GMCARD, a metà grandezza, lampeggia sullo slot scelto), nome, data e ora o
+  "vuota"; cornice del gioco 1,9 volte più alta; "CARICAMENTO" tolto, "CARICA" nel riquadro di metallo sopra.
+  Toccando uno slot: Automatico (se c'è) / Salvataggi / **Elimina** (con Sì/No, "No" già scelto).
+  Verificato su Linux: aspetto, scelta dello slot, Elimina → conferma.
+- **Massimo 10 memory card**: una partita nuova prende il primo slot libero; con tutti e 10 occupati riusa quello
+  creato da più tempo.
+
 ### 1.7
 
 - **Titolo in verticale**: INIZIA/CONTINUA e "Premi START" 1,6 volte più grandi e più in basso, copyright in fondo
