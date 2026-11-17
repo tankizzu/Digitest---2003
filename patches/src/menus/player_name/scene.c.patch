@@ -1,0 +1,28 @@
+--- a/src/menus/player_name/scene.c
++++ b/src/menus/player_name/scene.c
+@@ -24,10 +24,25 @@
+         rect.y = 0;
+         rect.w = 0x140;
+         rect.h = 0xF0;
++#ifdef NATIVE
++        if (native_portrait()) { /* upright (portrait.c): the tall screen, the mode's 320x240 in its middle */
++            GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, native_field_h());
++            rect.y = NATIVE_FIELD_Y;
++            rect.h = native_field_h();
++        }
++#endif
+         layer = GFX.funcs.createLayer(&rect, 1, SCREEN_LAYER);
+         layer->setBgColor(layer, 1, 1, 1);
+         STPLNMET_centerLayer(task, screen, layer, &rect);
++#ifdef NATIVE
++        layer = GFX.funcs.createLayer(&rect, 3, 0x1001);
++        if (native_portrait()) { /* the second layer's origin at the 320x240's top left, as the game has it */
++            layer->setOffset(layer, 0, (native_field_h() - SCREEN_HEIGHT) / 2);
++            native_touch_origin((native_field_h() - SCREEN_HEIGHT) / 2);
++        }
++#else
+         GFX.funcs.createLayer(&rect, 3, 0x1001);
++#endif
+         GFX.funcs.moveLayer(0x1001, 0x1000, 1);
+         *screen = STPLNMET_createScreen();
+         task->nextState(task);

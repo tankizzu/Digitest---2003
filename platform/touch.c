@@ -433,7 +433,7 @@ void native_touch_auto_sprite(const void *sheet_ptr, int tex_x, int tex_y, int c
 /* Tests (DW3_SHEET_DUMP=directory): every frame of a sprite sheet, as the game would draw it at texture (tex_x, tex_y),
    one PPM each ("<tag>_<frame id>.ppm"), once per tag. To pick the game's graphics for the port's buttons */
 void native_sheet_dump(const void *sheet_ptr, int tex_x, int tex_y, const char *tag) {
-    enum { MAX = 256 };
+    enum { MAX = 640 };
     static char done[512];
     static uint32_t px[MAX * MAX];
     const char *dir = SDL_getenv("DW3_SHEET_DUMP");
@@ -457,7 +457,7 @@ void native_sheet_dump(const void *sheet_ptr, int tex_x, int tex_y, const char *
         FILE *out;
 
         p += 3;
-        if (count <= 0 || count > 256) {
+        if (count <= 0 || count > 1024) {
             continue;
         }
         for (int i = 0; i < count; i++) {

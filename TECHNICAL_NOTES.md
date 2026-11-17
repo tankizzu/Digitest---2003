@@ -127,6 +127,10 @@
 - Fumetto dei personaggi invisibile (0.8): creato senza genitore, non girava mai. Ora è figlio del giocatore.
 - Righe della memory card troppo lunghe ("Slot MEMORY CARD N" tagliato): accorciate in "MEMORY CARD N".
 
+- **Modalità del nome (STPLNMET) in verticale**: scene.c (patch nuova) crea i due layer sulla tela alta; il primo
+  ha l'origine al centro (si centra da solo), il secondo (0x1001) riceve l'offset (H-240)/2. Lo sfondo (backdrop.c,
+  foglio PLNMET_SCROLL: fotogrammi 0 e 1 che scorrono in diagonale, 540×532 e 580×477; 2 fermo) ha periodo verticale
+  44 (fotogramma 0) e 38 (fotogramma 1): copie a ±264 e ±266. `native_sheet_dump` ora salva fogli fino a 640 pixel.
 - **Strada di Asuka** (MODE_NEW_GAME 0x2D7, `--field 727`): mappa di 5×3 riquadri (640×384). In verticale la
   telecamera la centra (scroll y ≈ -223 con H 710): le bande nere sono la fine della mappa, non un 4:3.
 

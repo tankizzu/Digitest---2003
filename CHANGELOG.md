@@ -37,6 +37,9 @@
   prima di questa versione non hanno immagine. In orizzontale nessuna modifica.
 - **Lingua a tutto schermo in verticale**: lo sfondo a riquadri del gioco su tutta l'altezza, pannelli e bandiere al
   centro, la dissolvenza in uscita su tutta la tela. Verificato su Linux (aspetto, tocco su ITALIANO, uscita).
+- **Nome, kit e conferma a tutto schermo in verticale** (modalità del nome, STPLNMET): la tela alta, il contenuto al
+  centro come nel gioco, e lo sfondo a esagoni del gioco ripetuto in altezza (le sue bande si ripetono ogni 44 / 38
+  pixel: copie sopra e sotto, nessuna deformazione).
 - Strada di Asuka (inizio del prologo): verificato che non è in 4:3; la sua mappa è alta solo 384 pixel (3 riquadri)
   e in verticale si vede tutta, col nero dove finisce. Tre possibilità da scegliere (nessuna modifica fatta).
 - Salvando in verticale, "Nessun salvataggio in questo slot" e gli altri testi del gioco tornano dentro la cornice
