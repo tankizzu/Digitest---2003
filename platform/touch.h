@@ -3,7 +3,7 @@
 #define TOUCH_H
 #include <stdint.h>
 
-enum { TOUCH_RING, TOUCH_KNOB, TOUCH_CROSS, TOUCH_CIRCLE, TOUCH_TRIANGLE, TOUCH_SQUARE, TOUCH_START, TOUCH_SELECT, TOUCH_L1, TOUCH_R1, TOUCH_PROGRESS, TOUCH_MENU, TOUCH_BACK, TOUCH_AUTO, TOUCH_LABEL, TOUCH_GEAR };
+enum { TOUCH_RING, TOUCH_KNOB, TOUCH_CROSS, TOUCH_CIRCLE, TOUCH_TRIANGLE, TOUCH_SQUARE, TOUCH_START, TOUCH_SELECT, TOUCH_L1, TOUCH_R1, TOUCH_PROGRESS, TOUCH_MENU, TOUCH_BACK, TOUCH_AUTO, TOUCH_LABEL, TOUCH_GEAR, TOUCH_BACK_ARROW };
 
 typedef struct TouchShape {
     float x, y, r; /* the window's pixels, from the top left */
@@ -25,4 +25,5 @@ void native_touch_target(int id, int x, int y, int w, int h);
 int native_touch_tap(void);
 void native_touch_menu_available(void); /* the field: the menu button shows (and is Start) this moment */
 void native_touch_in_menu(void);        /* a menu: the back button shows (and is Triangle) this moment */
+int touch_arrow_plain(const uint32_t **pixels, int *w, int *h); /* the arrow without its speed dashes */
 #endif

@@ -1,6 +1,6 @@
 --- a/src/menus/memory_card/saves.c
 +++ b/src/menus/memory_card/saves.c
-@@ -2,12 +2,45 @@
+@@ -2,12 +2,44 @@
     errors */
  
  #include "menus/memory_card.h"
@@ -22,8 +22,7 @@
 +#define NATIVE_BOX_Y(i) (0xF0 + (i) * 42)
 +#define NATIVE_TEXT_X (NATIVE_BOX_X + 48)              /* a slot's text, right of its icon, two lines */
 +#define NATIVE_ICON_DY (-18)                            /* the card sprite's own offset, at 0.6 */
-+#define NATIVE_TITLE_X 0x3C                             /* "LOAD" / "SAVE" in the metal box hanging over the frame */
-+#define NATIVE_TITLE_Y (-0x2A)
++#define NATIVE_ARROW_TURN 1024                          /* a quarter turn (4096 a whole one): the arrow points left */
 +#define NATIVE_BTN_X(i) ((i) == 0 ? 16 : 168)          /* the two choices in the frame */
 +#define NATIVE_BTN_Y 0x78
 +#define NATIVE_BTN_W 136
@@ -46,7 +45,7 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +149,507 @@
+@@ -116,9 +148,512 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -55,7 +54,7 @@
 +        nativeTop = nativeSel = 0;
 +        if (NATIVE_UP) {
 +            nativeSel = native_game_current() >= 1 && native_game_current() <= NATIVE_SLOTS ? native_game_current() - 1 : 0;
-+            win->title->setPos(win->title, NATIVE_TITLE_X, NATIVE_TITLE_Y);
++            win->title->setVisible(win->title, 0);
 +            nativeStep = -1;
 +            nativeShowRows(saves, win);
 +            return;
@@ -70,8 +69,8 @@
 +#endif
 +    }
 +#ifdef NATIVE
-+    if (NATIVE_UP && saves->choosing) { /* upright: the title in the metal bar, no second heading under it */
-+        win->title->setPos(win->title, NATIVE_TITLE_X, NATIVE_TITLE_Y);
++    if (NATIVE_UP && saves->choosing) { /* upright: the metal box holds the back arrow, no title, no heading */
++        win->title->setVisible(win->title, 0);
 +        win->windows[4]->setVisible(win->windows[4], 0);
 +        return;
 +    }
@@ -314,10 +313,17 @@
 +    return -1;
 +}
 +
-+static void nativePickSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
-+    s32 i, prev = nativeSel, tapped = -1;
++/* Upright: the back arrow in the metal box hanging over the frame (drawn by STGMCARD_drawSaves): tapped this frame */
++#define NATIVE_BACK_X 0x52
++#define NATIVE_BACK_Y (-0x1F)
++static s32 nativeBackTap(void) {
++    native_touch_target(0x7A7E, NATIVE_BACK_X - 0x24, NATIVE_BACK_Y - 0x20, 0x48, 0x38);
++    return native_touch_tap_id(0x7A7E) || PAD_PRESSED(PAD_TRIANGLE);
++}
 +
-+    native_touch_in_menu();
++static void nativePickSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
++    s32 i, prev = nativeSel, tapped = -1, back = nativeBackTap();
++
 +    for (i = 0; i < NATIVE_SLOTS; i++) {
 +        native_touch_target(0x7A60 + i, NATIVE_BOX_X, NATIVE_BOX_Y(i) - 2, NATIVE_BOX_W, NATIVE_BOX_H + 4);
 +    }
@@ -352,7 +358,7 @@
 +        } else {
 +            SOUND.playSound(SOUND_MENU_CANCEL); /* an empty slot: nothing to load */
 +        }
-+    } else if (PAD_PRESSED(PAD_TRIANGLE)) {
++    } else if (back) {
 +        native_replace_pending(0);
 +        nativeLeave(saves);
 +    }
@@ -419,8 +425,7 @@
 +    if (NATIVE_UP) { /* the slot's two boxes: Load / Delete, then Autosave / Saves */
 +        s32 tapped = nativeButtonTap();
 +
-+        native_touch_in_menu();
-+        if (PAD_PRESSED(PAD_TRIANGLE) || (tapped < 0 && PAD_PRESSED(PAD_CROSS) && 0)) {
++        if (nativeBackTap()) {
 +            tapped = -2;
 +        }
 +        if (tapped == -2) {
@@ -502,8 +507,7 @@
 +    if (NATIVE_UP) { /* Yes / No side by side: delete the slot, or replace it with the new game */
 +        s32 tapped = nativeButtonTap();
 +
-+        native_touch_in_menu();
-+        if (PAD_PRESSED(PAD_TRIANGLE)) {
++        if (nativeBackTap()) {
 +            tapped = 1;
 +        }
 +        if (tapped == 0 && native_replace_is_pending()) {
@@ -555,7 +559,7 @@
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -135,7 +666,7 @@
+@@ -135,7 +670,7 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          SOUND.playSound(SOUND_CURSOR);
      }
@@ -564,7 +568,7 @@
          win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
          STGMCARD_showPort(saves, win, 1);
          win->windows[1]->setVisible(win->windows[1], 0);
-@@ -302,7 +833,7 @@
+@@ -302,7 +837,7 @@
      s32 status;
  
      if (win->menu->substate == 6) {
@@ -573,7 +577,7 @@
              SOUND.playSound(SOUND_MENU_CONFIRM);
              saves->substate = 400;
              win->menu->substate = 0;
-@@ -359,6 +890,12 @@
+@@ -359,6 +894,12 @@
  
  /* Slides the slots and header out before leaving the screen (601) */
  static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -586,7 +590,7 @@
      if (win->menu->substate == 0) {
          if (win->menu->slid == 2) {
              win->info->hide(win->info);
-@@ -403,6 +940,9 @@
+@@ -403,6 +944,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -596,7 +600,7 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -564,7 +1104,7 @@
+@@ -564,7 +1108,7 @@
  static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 check;
  
@@ -605,7 +609,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -595,7 +1135,7 @@
+@@ -595,7 +1139,7 @@
  /* Waits for cross on the loaded message, then waits for the card (400) and leaves
     the screen (600) */
  static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -614,7 +618,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -676,7 +1216,7 @@
+@@ -676,7 +1220,7 @@
              SOUND.playSound(SOUND_CURSOR);
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
          }
@@ -623,7 +627,7 @@
              SOUND.playSound(SOUND_SELECT);
              win->windows[0]->setVisible(win->windows[0], 0);
              win->windows[4]->setVisible(win->windows[4], 0);
-@@ -726,7 +1266,7 @@
+@@ -726,7 +1270,7 @@
                  STGMCARD_showError(saves, win);
              }
          }
@@ -632,7 +636,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->substate = 400;
          saves->prompting = 0;
-@@ -872,8 +1412,24 @@
+@@ -872,8 +1416,24 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -658,7 +662,7 @@
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
-@@ -921,7 +1477,7 @@
+@@ -921,7 +1481,7 @@
          break;
      case 40:
          STGMCARD_moveChoiceCursor(saves, win);
@@ -667,7 +671,19 @@
              STGMCARD_hideChoices(win);
              SOUND.playSound(SOUND_SELECT);
              /* match depends on the 400 going through status */
-@@ -1017,6 +1573,46 @@
+@@ -1000,6 +1560,11 @@
+    waits for it, the list's frame and the box of the cursor's two choices */
+ void STGMCARD_drawSaves(MemCardSaves *saves) {
+     SpriteDrawer sprite;
++
++#ifdef NATIVE
++    /* the balloons' arrow (menu sprite 7) for the touch back button, as a dialogue reads it (platform/touch.c) */
++    native_touch_auto_sprite(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x140, 0, 0);
++#endif
+ 
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(saves->layer, 2);
+@@ -1017,6 +1582,60 @@
      }
      sprite.setTexture(0x280, 0);
      sprite.setClutRow(0);
@@ -680,6 +696,20 @@
 +        sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 33, saves->origin[0] + saves->slide[0].value, saves->origin[1] + saves->slide[1].value);
 +        if (saves->choosing == 0) {
 +            return;
++        }
++        if (saves->substate == 2 || saves->substate == 5 || saves->substate == 6) {
++            /* the back arrow: the balloons' orange arrow (menu sprite 7), turned to point left, blinking as theirs do */
++            sprite.setTexture(0x140, 0);
++            sprite.setLayerId(saves->layer, 0);
++            sprite.setClutRow((GFX.funcs.getTime() >> 3) & 3);
++            sprite.setScale(ONE * 5 / 2, ONE * 5 / 2, ONE);
++            sprite.setRotation(0, 0, NATIVE_ARROW_TURN);
++            sprite.setPivot(NATIVE_BACK_X, NATIVE_BACK_Y);
++            sprite.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 7, NATIVE_BACK_X - 4, NATIVE_BACK_Y - 10);
++            sprite.setRotation(0, 0, 0);
++            sprite.setScale(ONE, ONE, ONE);
++            sprite.setClutRow(0);
++            sprite.setTexture(0x280, 0);
 +        }
 +        sprite.setLayerId(saves->layer, 1);
 +        if (saves->substate != 2 && saves->substate != 5 && saves->substate != 6) { /* the game's own screens */

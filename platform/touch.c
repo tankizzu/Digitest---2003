@@ -431,6 +431,18 @@ void native_touch_auto_sprite(const void *sheet_ptr, int tex_x, int tex_y, int c
 }
 
 /* For gl/touch.c: the arrow's pixels (ARROW_MAX wide rows), its size; 0 if not read yet */
+/* The arrow without its three dashes: the back button (gl/touch.c) */
+int touch_arrow_plain(const uint32_t **pixels, int *w, int *h) {
+    static uint32_t plain[ARROW_MAX * ARROW_MAX];
+
+    SDL_memcpy(plain, s_arrow, sizeof plain);
+    if (s_arrow_h >= 12) {
+        SDL_memset(plain, 0, 8 * ARROW_MAX * sizeof plain[0]); /* rows 0-7: the dashes */
+    }
+    *pixels = plain, *w = s_arrow_w, *h = s_arrow_h;
+    return s_arrow_ok;
+}
+
 int touch_arrow(const uint32_t **pixels, int *w, int *h) {
     /* the speed in the arrow's own three dashes (its rows 0-1, 3-4, 6-7, on its left once turned): none at x1 (and
        off), the two by the shaft at x2, all three at x3 */
@@ -941,7 +953,8 @@ int touch_shapes(TouchShape *out, int max) {
     if (back_shown() && n < max) {
         float x, y, r;
         corner(0, &x, &y, &r);
-        out[n++] = (TouchShape){x, y, r, TOUCH_BACK, s_back_down ? 0.95f : 0.75f, 0};
+        /* the game's arrow pointing left once read (a dialogue's balloon), else a drawn one */
+        out[n++] = (TouchShape){x, y, r, s_arrow_ok ? TOUCH_BACK_ARROW : TOUCH_BACK, s_back_down ? 0.95f : 0.75f, 0};
     }
     if (s_skip_on == 1 && n < max) {
         float f = SDL_min(1.0f, (float)(SDL_GetTicks() - s_skip_from) / SKIP_HOLD_MS);

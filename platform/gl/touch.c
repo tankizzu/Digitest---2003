@@ -43,7 +43,7 @@ static const char *TOUCH_FS =
     "        return;\n"
     "    }\n"
     "    if (kind == 13) { discard; }\n" /* the arrow itself: the sprite pass below */
-    "    if (kind == 14) { discard; }\n" /* the speed: small copies of the arrow, the sprite pass below */
+    "    if (kind == 14 || kind == 16) { discard; }\n" /* the speed: small copies of the arrow, the sprite pass below */
     "    float g = 1e3; vec3 c = vec3(1.0);\n"
     "    if (kind == 2) { g = min(seg(p, vec2(-0.38, -0.38), vec2(0.38, 0.38)), seg(p, vec2(-0.38, 0.38), vec2(0.38, -0.38))); c = vec3(0.55, 0.7, 1.0); }\n"
     "    if (kind == 3) { g = abs(d - 0.4); c = vec3(1.0, 0.45, 0.45); }\n"
@@ -95,10 +95,10 @@ static GLint s_arrow_screen, s_arrow_tint;
 
 static void draw_arrow(const TouchShape *b, int w, int h) {
     const uint32_t *px;
-    int aw, ah;
+    int aw, ah, left = b->kind == TOUCH_BACK_ARROW;
     float k, qw, qh, x0, y0, v[4 * 6];
 
-    if (!touch_arrow(&px, &aw, &ah) || aw == 0) {
+    if (!(left ? touch_arrow_plain(&px, &aw, &ah) : touch_arrow(&px, &aw, &ah)) || aw == 0) {
         return;
     }
     if (s_arrow_prog == 0) {
@@ -126,6 +126,11 @@ static void draw_arrow(const TouchShape *b, int w, int h) {
         /* corners: screen (x, y) and texture (u, v) with u = 1 - screen y, v = screen x */
         float c[6][4] = {{x0, y0, us, 0}, {x0 + qw, y0, us, vs}, {x0 + qw, y0 + qh, 0, vs},
                          {x0, y0, us, 0}, {x0 + qw, y0 + qh, 0, vs}, {x0, y0 + qh, 0, 0}};
+        if (left) { /* the back button: the same turned the other way, about its middle */
+            for (int i = 0; i < 6; i++) {
+                c[i][0] = 2.0f * b->x - c[i][0];
+            }
+        }
         SDL_memcpy(v, c, sizeof c);
     }
     GL(glUseProgram)(s_arrow_prog);
@@ -204,7 +209,7 @@ void gl_touch_draw(int w, int h) {
     GL(glVertexAttribPointer)(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *)(6 * sizeof(float)));
     GL(glDrawArrays)(GL_TRIANGLES, 0, k);
     for (int i = 0; i < n; i++) {
-        if (shapes[i].kind == TOUCH_AUTO || shapes[i].kind == TOUCH_LABEL) {
+        if (shapes[i].kind == TOUCH_AUTO || shapes[i].kind == TOUCH_LABEL || shapes[i].kind == TOUCH_BACK_ARROW) {
             draw_arrow(&shapes[i], w, h);
         }
     }

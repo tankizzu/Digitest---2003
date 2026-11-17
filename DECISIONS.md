@@ -79,6 +79,8 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   l'icona della memory card, nome e data. Toccando uno slot: Carica / Elimina; Carica → Automatico / Salvataggi.
   Una partita nuova va nel primo slot libero; **con tutti pieni si chiede quale sostituire**.
 - **Tutti i Sì/No affiancati** (17/11/2026).
+- **Indietro a tema** (17/11/2026): la freccia arancione dei fumetti del gioco girata a sinistra; nella memory card
+  dentro il riquadro di metallo appeso (al posto di "CARICA").
 - **Nome della memory card** (da fare): "MEMORY CARD N" è il nome generico; al primo salvataggio si sceglie un
   nome, mostrato col font del gioco.
 - **Salvataggi / Autosalvataggio** (da fare): ognuno apre una lista con immagine e dati (i salvataggi manuali; i

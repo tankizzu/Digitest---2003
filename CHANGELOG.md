@@ -2,6 +2,13 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 2.0 (in preparazione)
+
+- **Indietro a tema col gioco**: nella schermata memory card (verticale) "CARICA" è tolto e nel riquadro di
+  metallo appeso c'è la freccia arancione dei fumetti del gioco, girata a sinistra e lampeggiante: toccandola si
+  torna indietro (anche un passo indietro nelle scelte). Altrove il pulsante Indietro è la stessa freccia (senza
+  trattini) al posto del cerchio con "‹", appena il gioco l'ha letta. Verificato su Linux (aspetto).
+
 ### 1.9
 
 - **Tutto schermo vero sul telefono**: barre di sistema nascoste (modalità immersiva di SDL; uno scorrimento dal
