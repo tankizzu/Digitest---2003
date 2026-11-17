@@ -34,7 +34,7 @@ typedef struct {
 
 /* --- platform state --- */
 #define VRAM_W 1024
-#define VRAM_H 1024 /* as a PlayStation GPU with 2 MB: the game uses the first 512 rows, the port the rest (the field upright) */
+#define VRAM_H 2048 /* the game uses the first 512 rows (a PlayStation's), the port the rest: the field upright (portrait.c) */
 extern uint16_t *g_vram; /* malloc'd: nothing in the OTs points at it */
 extern DISPENV g_disp; /* the last PutDispEnv */
 extern int g_disp_on;  /* SetDispMask */

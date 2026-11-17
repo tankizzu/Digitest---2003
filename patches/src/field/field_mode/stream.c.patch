@@ -15,7 +15,7 @@
  }
  
  /* Takes a decompressed tile's sprites and loads its image into its slot's
-@@ -106,10 +112,27 @@
+@@ -106,10 +112,30 @@
          }
      }
      task->loadedSlot = slot;
@@ -36,8 +36,11 @@
      task->clutY = slot + 0xF0;
 +#ifdef NATIVE
 +    if (native_portrait()) { /* upright, the field's banners use the rows of the old screens: the CLUTs up high */
-+        task->clutX = 384;
-+        task->clutY = 896 + slot;
++        s32 x, y;
++
++        native_map_clut_pos(slot, &x, &y);
++        task->clutX = x;
++        task->clutY = y;
 +    }
 +#endif
      initTimLoader(&loader);

@@ -262,8 +262,9 @@ void SetDrawEnv(uint32_t *dr, DRAWENV *env) {
     c.y = c.y < 0 ? 0 : c.y > VRAM_H - 1 ? VRAM_H - 1 : c.y;
     c.w = c.w < 0 ? 0 : c.w > VRAM_W - c.x ? VRAM_W - c.x : c.w;
     c.h = c.h < 0 ? 0 : c.h > VRAM_H - c.y ? VRAM_H - c.y : c.h;
-    dr[n++] = 0xE3000000u | (c.y & 0x3FF) << 10 | (c.x & 0x3FF);
-    dr[n++] = 0xE4000000u | ((c.y + (c.h ? c.h : 1) - 1) & 0x3FF) << 10 | ((c.x + (c.w ? c.w : 1) - 1) & 0x3FF);
+    /* y in 11 bits (the port's: the PlayStation's 10 reach row 1023; the upright field goes lower, portrait.c) */
+    dr[n++] = 0xE3000000u | (c.y & 0x7FF) << 10 | (c.x & 0x3FF);
+    dr[n++] = 0xE4000000u | ((c.y + (c.h ? c.h : 1) - 1) & 0x7FF) << 10 | ((c.x + (c.w ? c.w : 1) - 1) & 0x3FF);
     dr[n++] = 0xE5000000u | (env->ofs[1] & 0x7FF) << 11 | (env->ofs[0] & 0x7FF);
     dr[n++] = draw_mode(env->dfe, env->dtd, env->tpage);
     dr[n++] = 0xE2000000u | ((env->tw.y >> 3) & 31) << 15 | ((env->tw.x >> 3) & 31) << 10 | twh << 5 | tww;

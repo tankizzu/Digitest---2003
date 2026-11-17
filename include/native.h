@@ -344,8 +344,9 @@ void native_touch_no_stick(void);    /* no stick on this screen */
 int native_portrait(void);
 int native_field_h(void);
 void native_map_image_pos(int slot, int *x, int *y);
+void native_map_clut_pos(int slot, int *x, int *y);
 #define NATIVE_FIELD_Y 512
-#define NATIVE_MAP_IMAGES 27
+#define NATIVE_MAP_IMAGES 29
 #define NATIVE_RUN_PERCENT 58 /* the player's run on the stick, against the game's (actor_control.c) */
 void native_touch_list(int x, int y, int w, int h); /* a scrolling list this frame, in display pixels */
 int native_touch_list_event(int *y, int *dy);       /* 1 tap, 2 hold (at display row *y); *dy dragged since */

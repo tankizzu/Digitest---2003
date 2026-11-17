@@ -30,7 +30,7 @@ typedef struct {
     float w;           /* the same, for the textures in perspective, 0 for none */
     float mx, my;      /* DW3_UPSCALE_DATA=motion: where it was last frame minus where it is, in VRAM pixels, 0 for unknown */
 } GVtx;
-extern uint16_t g_vram_dirty[16]; /* VRAM_H / 64 rows */ /* 64x64 blocks the CPU wrote, a bit each */
+extern uint16_t g_vram_dirty[32]; /* VRAM_H / 64 rows */ /* 64x64 blocks the CPU wrote, a bit each */
 int gfx_init(struct SDL_Window *window);
 void gfx_sync(int force);         /* follows render_scale; force: VRAM was replaced */
 int gfx_scale(void);              /* the render scale in use, at least 1 */

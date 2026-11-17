@@ -53,7 +53,7 @@
              }
          }
      }
-@@ -225,6 +245,39 @@
+@@ -225,6 +245,41 @@
   * on x holding the horizontal flip before it becomes the tile column, and on
   * col counting the slots the first loop clears.
   */
@@ -66,10 +66,12 @@
 +    s32 order[7];
 +    s32 n = 0, k = 0, i, c, y, x;
 +
-+    for (y = top; y <= last && n < 6; y++) {
++    for (y = top; y <= last && n < 7; y++) {
 +        order[n++] = y;
 +    }
-+    order[n++] = last + 1;
++    if (n < 7) {
++        order[n++] = last + 1;
++    }
 +    if (n < 7) {
 +        order[n++] = top - 1;
 +    }
@@ -93,7 +95,7 @@
  void FIELDSTG_pickViewTiles(MapStreamer *task) {
      u8 slots[5][6];
      s32 quadrant;
-@@ -326,7 +379,11 @@
+@@ -326,7 +381,11 @@
                  for (i = 0; i < 30; i++) {
                      pool->tasks[i] = FIELDSTG_createStream(task->frameSectors << 11, task->file);
                  }
@@ -105,7 +107,7 @@
                      task->images[i].frame = -1;
                      task->images[i].time = 0;
                  }
-@@ -339,6 +396,11 @@
+@@ -339,6 +398,11 @@
      case TASK_RUN:
          layer = GFX.funcs.getLayer(FIELD_LAYER_MAP);
          layer->getScroll(layer, &task->scroll);
@@ -117,7 +119,7 @@
          FIELDSTG_pickViewTiles(task);
          FIELDSTG_drawMapTiles(task, pool);
          FIELDSTG_requestTiles(task, pool);
-@@ -379,7 +441,11 @@
+@@ -379,7 +443,11 @@
      s32 y;
  
      if (layer != NULL) {

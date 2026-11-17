@@ -49,7 +49,7 @@ const char *MAIN_FS =
     "flat in uint md, deep;\n"
     "out vec4 frag;\n"
     "const float DITHER[16] = float[16](-4.0, 0.0, -3.0, 1.0, 2.0, -2.0, 3.0, -1.0, -3.0, 1.0, -4.0, 0.0, 3.0, -1.0, 2.0, -2.0);\n"
-    "uint fetch(int x, int y) { return texelFetch(vram, ivec2(x & 1023, y & 1023), 0).r; }\n"
+    "uint fetch(int x, int y) { return texelFetch(vram, ivec2(x & 1023, y & 2047), 0).r; }\n"
     "vec3 rgb5(uint p) { return vec3(p & 31u, (p >> 5) & 31u, (p >> 10) & 31u); }\n"
     /* the texel at (u, v), kept inside the polygon's and through the texture window and the CLUT */
     "uint texel(int u, int v) {\n"
