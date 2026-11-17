@@ -59,6 +59,8 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
   risponde. In verticale in fondo alla tela.
 - **Registrazione dell'account**: Sì e No in due riquadri affiancati, con la cornice della barra di
   registrazione del gioco; un tocco risponde.
+- **Titolo in verticale** (17/11/2026): sfondo a tutta altezza, pulsanti grandi, copyright in fondo con margine,
+  impostazioni in alto a destra (lingua; volume da aggiungere).
 - Da discutere con l'utente (in sospeso): titolo a tutto schermo, pulsante Impostazioni per la lingua,
   pulsanti più grandi — sempre con la grafica del gioco.
 

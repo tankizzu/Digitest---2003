@@ -56,6 +56,8 @@ static const char *TOUCH_FS =
     "                     min(seg(p, vec2(0.2, -0.4), vec2(0.2, 0.0)), min(seg(p, vec2(0.2, 0.0), vec2(-0.25, 0.0)), seg(p, vec2(-0.05, 0.0), vec2(0.3, 0.4))))); }\n"
     "    if (kind == 11) { g = min(min(seg(p, vec2(-0.38, -0.28), vec2(0.38, -0.28)), seg(p, vec2(-0.38, 0.0), vec2(0.38, 0.0))), seg(p, vec2(-0.38, 0.28), vec2(0.38, 0.28))); }\n"
     "    if (kind == 12) { g = min(seg(p, vec2(0.12, -0.38), vec2(-0.22, 0.0)), seg(p, vec2(-0.22, 0.0), vec2(0.12, 0.38))); }\n"
+    "    if (kind == 15) { float an = atan(p.y, p.x), rr = length(p), t = 0.26 + 0.1 * step(0.35, cos(an * 8.0));\n" /* the settings: a cog */
+    "        g = min(abs(rr - t), abs(rr - 0.11)); }\n"
     "    float glyph = 1.0 - smoothstep(0.07, 0.07 + aa, g);\n"
     "    vec4 bg = vec4(0.05, 0.08, 0.1, 0.55 * a * disc);\n"
     "    frag = mix(bg, vec4(c, min(1.0, a * 2.2)), glyph * disc);\n"

@@ -1,0 +1,10 @@
+--- a/src/menus/memory_card/scene.c
++++ b/src/menus/memory_card/scene.c
+@@ -7,6 +7,7 @@
+ #define SCENE_CREATE OVL_NAME(createScreen)
+ #define SCENE_PRIM_BUFFERS 0x5000
+ #define SCENE_OT_SHIFT 2
++#define SCENE_UPRIGHT /* native: full height on the upright phone (shared/update_scene.inc.c) */
+ #include "shared/update_scene.inc.c"
+ #include "shared/start.inc.c"
+ 

@@ -39,7 +39,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 ## P1 — menu iniziali a tutto schermo (fase 2 del verticale, in corso)
 
 - [x] Titolo (sfondo ingrandito, contenuto al centro, tocchi con l'origine).
-- [ ] Memory card (modalità a parte, SCREEN_LAYER: trovare dove crea lo schermo), lingua, nome, kit, conferma.
+- [x] Titolo: pulsanti grandi, copyright in fondo, ingranaggio impostazioni (lingua).
+- [x] Memory card a tutto schermo (sfondo esteso); finestra ancora alla grandezza originale.
+- [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
+- [ ] Lingua, nome, kit, conferma a tutto schermo.
 
 - [ ] Elenco MEMORY CARD a tutto schermo (l'utente: scorrere è ancora complesso; a tutto schermo diventa più
       semplice).

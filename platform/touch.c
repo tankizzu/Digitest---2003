@@ -54,6 +54,7 @@ static Target s_targets[32];
 static int s_ntargets;
 static int s_tap = -1;
 static float s_pic[4] = {0, 0, 1, 1}, s_disp[2] = {320, 240};
+static int s_origin_y; /* where the screen's 320x240 sits on a taller upright display (portrait.c) */
 static SDL_FingerID s_down[10];
 static int s_ndown;
 
@@ -255,9 +256,6 @@ int native_touch_anywhere(void) {
 }
 
 /* The target under a point of the PSX display, or -1 */
-/* Where the screen's 320x240 sits on a taller upright display (portrait.c): the targets are in its coordinates */
-static int s_origin_y;
-
 void native_touch_origin(int y) {
     s_origin_y = y;
 }
@@ -464,6 +462,25 @@ void native_touch_menu_available(void) {
     s_menu_until = SDL_GetTicks() + 150;
 }
 
+/* The title's settings button, top right (title/menu.c asks for it each frame; it reads the tap) */
+static Uint64 s_settings_until;
+static int s_settings_down, s_settings_tap;
+
+void native_touch_settings_available(void) {
+    s_settings_until = SDL_GetTicks() + 150;
+}
+
+static int settings_shown(void) {
+    return SDL_GetTicks() < s_settings_until;
+}
+
+int native_touch_settings_tapped(void) {
+    int t = s_settings_tap;
+
+    s_settings_tap = 0;
+    return t;
+}
+
 void native_touch_in_menu(void) {
     s_back_until = SDL_GetTicks() + 150;
 }
@@ -652,7 +669,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     SDL_FingerID now_down[10];
     int now_n = 0;
 
-    s_menu_down = s_back_down = s_auto_down = 0;
+    s_menu_down = s_back_down = s_auto_down = s_settings_down = 0;
     {
         /* the system's back (gesture or key, SDL_ANDROID_TRAP_BACK_BUTTON) is Triangle, the game's cancel */
         static int back_was;
@@ -696,6 +713,13 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                         continue;
                     }
                 }
+                if (settings_shown() && in_corner(1, x, y)) {
+                    if (!was) {
+                        s_settings_tap = 1;
+                    }
+                    s_settings_down = 1;
+                    continue;
+                }
                 if (menu_shown() && in_corner(1, x, y)) {
                     if (!was) {
                         s_press_start = 6;
@@ -713,6 +737,9 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
                 if (list_shown() || (s_list_on && fingers[i]->id == s_list_id)) {
                     float px = (x - s_pic[0]) / s_pic[2] * s_disp[0], py = (y - s_pic[1]) / s_pic[3] * s_disp[1];
 
+                    if (s_disp[1] > 256) { /* the screen's 320x240 on a taller upright display (portrait.c) */
+                        py -= (float)s_origin_y;
+                    }
                     if (s_list_on && fingers[i]->id == s_list_id) {
                         if (!s_list_moved && SDL_fabsf(py - s_list_y0) > 4) {
                             s_list_moved = 1;
@@ -882,6 +909,11 @@ int touch_shapes(TouchShape *out, int max) {
         float x, y, r;
         corner(1, &x, &y, &r);
         out[n++] = (TouchShape){x, y, r, TOUCH_MENU, s_menu_down ? 0.95f : 0.75f, 0};
+    }
+    if (settings_shown() && n < max) {
+        float x, y, r;
+        corner(1, &x, &y, &r);
+        out[n++] = (TouchShape){x, y, r, TOUCH_GEAR, s_settings_down ? 0.95f : 0.75f, 0};
     }
     if (back_shown() && n < max) {
         float x, y, r;

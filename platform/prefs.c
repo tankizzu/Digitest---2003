@@ -96,3 +96,14 @@ int native_auto_text(void) {
 void native_auto_text_toggle(void) {
     pref_set("auto_text", (native_auto_text() + 1) % 4);
 }
+
+/* The title's settings button asks for the language screen even with a language saved (country_select.c) */
+static int s_language_screen;
+
+void native_language_screen_force(int on) {
+    s_language_screen = on;
+}
+
+int native_language_screen_forced(void) {
+    return s_language_screen;
+}

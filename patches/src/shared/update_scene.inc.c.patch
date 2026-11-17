@@ -1,0 +1,24 @@
+--- a/src/shared/update_scene.inc.c
++++ b/src/shared/update_scene.inc.c
+@@ -15,8 +15,21 @@
+         rect.y = 0;
+         rect.w = SCREEN_WIDTH;
+         rect.h = SCREEN_HEIGHT;
++#if defined(NATIVE) && defined(SCENE_UPRIGHT)
++        if (native_portrait()) { /* upright (portrait.c): the tall screen, the mode's 320x240 in its middle */
++            GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, native_field_h());
++            rect.y = NATIVE_FIELD_Y;
++            rect.h = native_field_h();
++        }
++#endif
+         layer = GFX.funcs.createLayer(&rect, SCENE_OT_SHIFT, SCREEN_LAYER);
+         layer->setBgColor(layer, 0, 0, 0);
++#if defined(NATIVE) && defined(SCENE_UPRIGHT)
++        if (native_portrait()) {
++            layer->setOffset(layer, 0, (native_field_h() - SCREEN_HEIGHT) / 2);
++            native_touch_origin((native_field_h() - SCREEN_HEIGHT) / 2);
++        }
++#endif
+         *child = SCENE_CREATE();
+         task->nextState(task);
+         break;

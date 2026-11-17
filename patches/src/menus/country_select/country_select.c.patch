@@ -88,7 +88,7 @@
      default:
 +#ifdef NATIVE
 +        /* the language picked before (platform/prefs.c): straight on to the opening */
-+        if (native_saved_language() >= 0) {
++        if (native_saved_language() >= 0 && !native_language_screen_forced()) { /* unless the title's settings ask */
 +            LANGUAGE = native_saved_language();
 +            GAME.funcs.requestMode(LANGUAGE == 0 ? MODE_OPENING : MODE_OPENING_2, 0);
 +            task->setState(task, TASK_KILL);
@@ -122,12 +122,13 @@
                  SOUND.playSound(SOUND_MENU_CONFIRM);
                  children->cursor->setState(children->cursor, TASK_DONE);
                  task->nextSubstate(task);
-@@ -562,11 +603,17 @@
+@@ -562,11 +603,18 @@
  #if VERSION_EU
                  LANGUAGE = CNTY_SEL_languages[task->selection];
  #endif
 +#ifdef NATIVE
 +                native_save_language(LANGUAGE);
++                native_language_screen_force(0);
 +#endif
              } else {
                  moveSelection(task);

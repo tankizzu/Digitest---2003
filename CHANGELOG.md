@@ -2,6 +2,16 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 1.7
+
+- **Titolo in verticale**: INIZIA/CONTINUA e "Premi START" 1,6 volte più grandi e più in basso, copyright in fondo
+  con un margine, **pulsante impostazioni** (ingranaggio) in alto a destra che apre la schermata della lingua del
+  gioco anche con una lingua salvata. Verificato su Linux: aspetto e tocco su CONTINUA; il tocco
+  sull'ingranaggio non è simulabile su Linux.
+- **Memory card a tutto schermo**: sfondo a motivo e tubo su tutta l'altezza, finestra al centro, tocchi e lista
+  riallineati. Verificato su Linux (aspetto).
+- Scena comune dei menu (`shared/update_scene.inc.c`) verticale per chi definisce SCENE_UPRIGHT.
+
 ### 1.6
 
 - **Filmati di nuovo in 4:3** (nella 1.3–1.5 erano stirati in verticale: la regola "pixel quadrati" valeva per

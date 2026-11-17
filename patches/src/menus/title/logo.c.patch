@@ -1,0 +1,38 @@
+--- a/src/menus/title/logo.c
++++ b/src/menus/title/logo.c
+@@ -1,6 +1,10 @@
+ /* The title screen's logo */
+ 
+ #include "menus/title.h"
++
++#ifdef NATIVE
++#define NATIVE_COPYRIGHT_DOWN (native_portrait() ? (native_field_h() - SCREEN_HEIGHT) / 2 - 10 : 0)
++#endif
+ 
+ /* Draws the logo once it is visible: sprite 6, and sprites 3 and 5 at their
+    animations' current CLUT rows */
+@@ -11,7 +15,12 @@
+         initSpriteDrawer(&sprite);
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
++#ifdef NATIVE
++        /* upright: the copyright lines (sprites 6 and 5) at the screen's bottom, a margin under them */
++        sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), 6, 29, 209 + NATIVE_COPYRIGHT_DOWN);
++#else
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), 6, 29, 209);
++#endif
+         initSpriteDrawer(&sprite);
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
+@@ -21,7 +30,11 @@
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
+         sprite.setClutRow(task->anims[1].frame);
++#ifdef NATIVE
++        sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), 5, 20, 202 + NATIVE_COPYRIGHT_DOWN);
++#else
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), 5, 20, 202);
++#endif
+     }
+ }
+ 

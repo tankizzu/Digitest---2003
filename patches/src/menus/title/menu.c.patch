@@ -1,10 +1,84 @@
 --- a/src/menus/title/menu.c
 +++ b/src/menus/title/menu.c
-@@ -57,7 +57,11 @@
+@@ -9,6 +9,21 @@
+ #define MENU_SPRITE(i) (STDWTITL_menuSprites[LANGUAGE][i])
+ #endif
+ 
++#ifdef NATIVE
++/* Upright (portrait.c): the menu bigger and lower, there being room: each sprite NATIVE_MENU_SCALE times as big
++   about the screen's middle, its row moved down (NATIVE_MENU_Y) */
++#define NATIVE_MENU_SCALE (ONE * 8 / 5)
++#define NATIVE_MENU_Y(y) ((y) + 70 + ((y) - 154) * 3 / 2)
++static void nativeMenuDraw(SpriteDrawer *sprite, s32 frame, s32 x, s32 y) {
++    if (native_portrait()) {
++        sprite->setScale(NATIVE_MENU_SCALE, NATIVE_MENU_SCALE, ONE);
++        sprite->setPivot(SCREEN_WIDTH / 2, NATIVE_MENU_Y(y) + 8);
++        y = NATIVE_MENU_Y(y);
++    }
++    sprite->draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), frame, x, y);
++}
++#endif
++
+ /* Draws the menu: the cursor while it is shown, then "PRESS START" or the two
+    options, the one not picked dimmed */
+ void STDWTITL_drawMenu(TitleMenuTask *task) {
+@@ -19,27 +34,44 @@
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
+         sprite.setClutRow(task->blink);
++#ifdef NATIVE
++        nativeMenuDraw(&sprite, 7, STDWTITL_menuCursorPositions[task->selection].x,
++                       STDWTITL_menuCursorPositions[task->selection].y - 1);
++#else
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), 7,
+                     STDWTITL_menuCursorPositions[task->selection].x,
+                     STDWTITL_menuCursorPositions[task->selection].y - 1);
++#endif
+     }
+     if (task->showOptions == 0) {
+         initSpriteDrawer(&sprite);
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
+         sprite.setClutRow(task->selection != 2);
++#ifdef NATIVE
++        nativeMenuDraw(&sprite, MENU_SPRITE(0), 79, 166);
++#else
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), MENU_SPRITE(0), 79, 166);
++#endif
+     } else {
+         initSpriteDrawer(&sprite);
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
+         sprite.setClutRow(task->selection != 0);
++#ifdef NATIVE
++        nativeMenuDraw(&sprite, MENU_SPRITE(1), task->options[0].x, task->options[0].y);
++#else
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), MENU_SPRITE(1), task->options[0].x, task->options[0].y);
++#endif
+         initSpriteDrawer(&sprite);
+         sprite.setLayerId(task->layerId, 0);
+         sprite.setTexture(0x280, STDWTITL_TEXTURE_Y);
+         sprite.setClutRow(task->selection != 1);
++#ifdef NATIVE
++        nativeMenuDraw(&sprite, MENU_SPRITE(2), task->options[1].x, task->options[1].y);
++#else
+         sprite.draw(FILE_CACHE.getEntry(STDWTITL_spriteBank), MENU_SPRITE(2), task->options[1].x, task->options[1].y);
++#endif
+     }
+ }
+ 
+@@ -57,7 +89,18 @@
          }
          break;
      case 2:
 +#ifdef NATIVE
++        native_touch_settings_available(); /* the settings, top right: the game's language screen */
++        if (native_touch_settings_tapped()) {
++            SOUND.playSound(SOUND_SELECT);
++            native_language_screen_force(1);
++            GAME.funcs.requestMode(MODE_COUNTRY_SELECT, 0);
++            break;
++        }
 +        if (PAD_PRESSED(PAD_START) || native_touch_anywhere()) { /* touch: a tap anywhere is Start */
 +#else
          if (PAD_PRESSED(PAD_START)) {
@@ -12,7 +86,7 @@
              task->nextSubstate(task);
              task->timer = 0;
              SOUND.playSound(SOUND_SELECT);
-@@ -127,11 +131,30 @@
+@@ -127,11 +170,42 @@
              }
              task->selection = 1;
          }
@@ -21,8 +95,20 @@
 +            /* touch: new game and continue, tapped, are picked at once */
 +            s32 tapped;
 +
-+            native_touch_target(0, 74, 146, 176, 21);
-+            native_touch_target(1, 74, 167, 176, 23);
++            native_touch_settings_available(); /* as at "PRESS START" */
++            if (native_touch_settings_tapped()) {
++                SOUND.playSound(SOUND_SELECT);
++                native_language_screen_force(1);
++                GAME.funcs.requestMode(MODE_COUNTRY_SELECT, 0);
++                break;
++            }
++            if (native_portrait()) { /* the options as drawn, bigger and lower (NATIVE_MENU_Y) */
++                native_touch_target(0, 20, NATIVE_MENU_Y(154) - 14, 280, 40);
++                native_touch_target(1, 20, NATIVE_MENU_Y(174) - 8, 280, 40);
++            } else {
++                native_touch_target(0, 74, 146, 176, 21);
++                native_touch_target(1, 74, 167, 176, 23);
++            }
 +            tapped = native_touch_tap();
 +            if (tapped >= 0) {
 +                task->selection = tapped;
@@ -43,7 +129,7 @@
          break;
      case 2:
          if ((++task->timer & 3) == 0) {
-@@ -170,6 +193,15 @@
+@@ -170,6 +244,15 @@
          if (task->substate == 0) {
              return;
          }

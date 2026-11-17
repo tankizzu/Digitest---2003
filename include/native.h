@@ -342,6 +342,10 @@ void native_touch_no_stick(void);    /* no stick on this screen */
 /* The field upright (platform/portrait.c): its screen 320 x native_field_h() at VRAM (0, NATIVE_FIELD_Y), one buffer;
    the map's images 12 and up at native_map_image_pos */
 int native_portrait(void);
+void native_language_screen_force(int on); /* prefs.c: the language screen shows even with one saved */
+int native_language_screen_forced(void);
+void native_touch_settings_available(void); /* the title's settings button this frame (top right) */
+int native_touch_settings_tapped(void);     /* 1 once when it was tapped */
 void native_touch_origin(int y); /* the 320x240 screen's top on a taller upright display, for the touch targets */
 int native_field_h(void);
 void native_map_image_pos(int slot, int *x, int *y);

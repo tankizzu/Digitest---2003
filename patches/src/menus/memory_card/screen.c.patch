@@ -1,7 +1,39 @@
 --- a/src/menus/memory_card/screen.c
 +++ b/src/menus/memory_card/screen.c
-@@ -66,6 +66,12 @@
-         SOUND.stopSound(0x60800000);
+@@ -50,6 +50,15 @@
+         initSpriteDrawer(&sprite);
+         sprite.setLayerId(screen->layer, 3);
+         sprite.setTexture(0x280, 0);
++#ifdef NATIVE
++        if (native_portrait()) { /* upright: the pipes and the moving pattern repeated above and below */
++            s32 k;
++
++            for (k = -2; k <= 2; k++) {
++                sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 31, 25, k * SCREEN_HEIGHT);
++            }
++        } else
++#endif
+         sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 31, 25, 0);
+         if (screen->bgTick != 0) {
+             screen->bgScroll++;
+@@ -58,6 +67,15 @@
+         } else {
+             screen->bgTick = 1;
+         }
++#ifdef NATIVE
++        if (native_portrait()) {
++            s32 k;
++
++            for (k = -2; k <= 2; k++) { /* the pattern repeats every 96 pixels: whole steps of three */
++                sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 30, screen->bgScroll, screen->bgScroll + k * 288);
++            }
++        } else
++#endif
+         sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 30, screen->bgScroll, screen->bgScroll);
+         break;
+     case TASK_DONE:
+@@ -66,6 +84,12 @@
+         SOUND.stopSound(MUSIC_MEMORY_CARD);
          if (screen->step != 0) {
              if (screen->loading == 0) {
 +#ifdef NATIVE
@@ -13,7 +45,7 @@
                  GAME.funcs.requestMode(GAME.funcs.getPrevMode(), 0);
              } else {
                  GAME.funcs.requestMode(MODE_TITLE, 0);
-@@ -74,6 +80,9 @@
+@@ -74,6 +98,9 @@
              GAME.funcs.requestMode(GAME.fieldMode, 0);
          }
          STGMCARD_funcs.freeBuffers();
@@ -23,7 +55,7 @@
          break;
      }
  }
-@@ -90,12 +99,38 @@
+@@ -90,12 +117,38 @@
      mode = GAME.funcs.getMode() & 0xFF;
      screen->loading = (u32)GAME.funcs.getModeArg() >> 31 ^ 1;
      prev = GAME.funcs.getPrevMode();
@@ -62,7 +94,7 @@
      SOUND.loadBank(0x20);
      return screen;
  }
-@@ -134,6 +169,9 @@
+@@ -134,6 +187,9 @@
      FILE_CACHE.request(TEXT_FILE(TEXT_MEMORY_CARD));
      FILE_CACHE.request(TEXT_FILE(TEXT_AREA_NAMES));
      FILE_CACHE.request(TEXT_FILE(TEXT_SHOP_NAMES));
@@ -72,7 +104,7 @@
  }
  
  /* Whether the screen's strings are still loading */
-@@ -144,6 +182,11 @@
+@@ -144,6 +200,11 @@
      if (FILE_CACHE.isLoading(TEXT_FILE(TEXT_AREA_NAMES)) != 0) {
          return 1;
      }
