@@ -333,6 +333,15 @@ int native_visual_archive_enabled(int archive); /* selected archive contains pre
 void native_touch_target(int id, int x, int y, int w, int h);
 int native_touch_tap(void);
 int native_touch_anywhere(void);
+int native_touch_tap_id(int id); /* a tap on the port's own target id (0x7A00 on), once */
+int native_auto_text(void);      /* automatic dialogues on (platform/prefs.c) */
+/* The phone's keyboard for the name entry (touch.c): on Android its own keys replace the screen's */
+int native_soft_keyboard(void);
+void native_text_begin(void); /* shows it; call each frame it is wanted */
+int native_text_next(void);   /* the next code point typed, 8 backspace, 13 enter, -1 none */
+void native_text_reopen(void); /* shows it again, if the player put it away */
+void native_auto_text_toggle(void);
+int native_auto_text_due(void *who); /* text window `who` has waited long enough to go on by itself */
 void native_touch_menu_available(void); /* the menu button shows this frame; tapped, it is Start */
 void native_touch_in_menu(void);        /* the back button shows this frame; tapped, it is Triangle */
 /* A logical button (PAD_CROSS...) as if pressed: `frames` game frames from now it is held for the last two of them

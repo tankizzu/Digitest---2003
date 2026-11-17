@@ -64,7 +64,7 @@
              break;
          case 1:
 +#ifdef NATIVE
-+            if (NATIVE_TEXT_PRESSED(TEXT_WAIT_BUTTONS[obj->step])) {
++            if (NATIVE_TEXT_PRESSED(TEXT_WAIT_BUTTONS[obj->step]) || native_auto_text_due(obj)) {
 +#else
              if ((PAD.getPressed(0) >> PAD.getButtonBit(0, TEXT_WAIT_BUTTONS[obj->step])) & 1) {
 +#endif

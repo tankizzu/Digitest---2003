@@ -1,0 +1,26 @@
+--- a/src/shared/name_entry/show_name_windows.inc.c
++++ b/src/shared/name_entry/show_name_windows.inc.c
+@@ -7,10 +7,23 @@
+         windows->name->setText(windows->name, task->name);
+         windows->name->setPalette(windows->name, PALETTE_BLUE);
+         for (i = 0; i < 3; i++) {
++#ifdef NATIVE
++            if (native_soft_keyboard()) { /* the phone's keyboard: the screen's keys hidden */
++                windows->tabs[i]->setVisible(windows->tabs[i], 0);
++                continue;
++            }
++#endif
+             windows->tabs[i]->setString(windows->tabs[i], FILE_CACHE.load(TEXT_FILE(TEXT_NAME_ENTRY)),
+                                         OVL_NAME(keyboard).tabTexts[task->page].texts[i]);
+             windows->tabs[i]->setPalette(windows->tabs[i], PALETTE_BLUE);
+         }
++#ifdef NATIVE
++        if (native_soft_keyboard()) { /* nor the arrow keys' labels */
++            windows->leftLabel->setVisible(windows->leftLabel, 0);
++            windows->rightLabel->setVisible(windows->rightLabel, 0);
++            return;
++        }
++#endif
+         windows->leftLabel->setString(windows->leftLabel, FILE_CACHE.load(TEXT_FILE(TEXT_NAME_ENTRY)), 0xD);
+         windows->leftLabel->setPalette(windows->leftLabel, PALETTE_BLUE);
+         windows->rightLabel->setString(windows->rightLabel, FILE_CACHE.load(TEXT_FILE(TEXT_NAME_ENTRY)), 0xE);

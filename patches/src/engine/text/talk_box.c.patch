@@ -1,6 +1,71 @@
 --- a/src/engine/text/talk_box.c
 +++ b/src/engine/text/talk_box.c
-@@ -295,7 +295,11 @@
+@@ -282,6 +282,55 @@
+ const Delays3 ZOOM_BOX_DELAYS = {{0, 2, 4}};
+ 
+ /* The talk box task: opens with its outlines, runs the text, then closes and ends */
++#ifdef NATIVE
++/* touch: the automatic dialogues button at the bottom left, the balloons' own orange arrow (menu sprite 7), its
++   colours cycling while on; a tap turns it on or off (platform/prefs.c) */
++static void nativeAutoButton(s32 layerId) {
++    static s32 frame, time;
++    SpriteDrawer obj;
++
++    native_touch_target(0x7A20, 0, 192, 40, 48);
++    if (native_touch_tap_id(0x7A20)) {
++        native_auto_text_toggle();
++        SOUND.playSound(SOUND_MENU_MOVE);
++    }
++    if (native_auto_text() && GFX.funcs.getTime() - time >= 6) {
++        time = GFX.funcs.getTime();
++        frame = (frame + 1) & 3;
++    }
++    initSpriteDrawer(&obj);
++    obj.setLayerId(layerId, 0);
++    obj.setTexture(0x140, 0);
++    obj.setClutRow(native_auto_text() ? frame : 0);
++    obj.setPivot(16, 206);
++    obj.setScale(0x2400, 0x2400, ONE); /* the arrow is small: twice and a bit */
++    obj.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 7, 16, 200);
++    if (native_auto_text()) {
++        obj.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 7, 16, 214); /* a second arrow under it: on */
++    }
++    {
++        /* behind it (added after, so drawn before), a darkened square as the button: blending 2, subtracted */
++        Layer *layer = GFX.funcs.getLayer(layerId);
++        u_long *ot = layer->getOtEntry(layer, 0);
++        POLY_F4 *poly = GFX.funcs.getPrim();
++        DR_TPAGE *mode;
++
++        setlen(poly, 5);
++        poly->r0 = poly->g0 = poly->b0 = native_auto_text() ? 0x70 : 0x50;
++        setcode(poly, 0x2A);
++        poly->x0 = poly->x2 = 4;
++        poly->x1 = poly->x3 = 34;
++        poly->y0 = poly->y1 = 194;
++        poly->y2 = poly->y3 = 236;
++        mode = (DR_TPAGE *)(poly + 1);
++        addPrim(ot, poly);
++        setDrawTPage(mode, 0, 1, getTPage(0, 2, 320, 0));
++        addPrim(ot, mode);
++        GFX.funcs.setPrim(mode + 1);
++    }
++}
++#endif
++
+ void updateTalkBox(TalkBox *task, TalkBoxChildren *children) {
+     Delays3 delays;
+ 
+@@ -291,13 +340,20 @@
+         task->setState(task, TASK_DONE);
+         break;
+     case 1:
++#ifdef NATIVE
++        nativeAutoButton(task->layerId);
++#endif
+         if (children->windows[1]->isFinished(children->windows[1]) != 0) {
+             task->setState(task, TASK_DONE);
+             task->setSubstate(task, 1);
              children->frame->setState(children->frame, TASK_DONE);
              children->windows[0]->setVisible(children->windows[0], 0);
              children->windows[1]->setVisible(children->windows[1], 0);

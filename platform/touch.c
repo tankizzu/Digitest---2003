@@ -82,7 +82,7 @@ void native_touch_target(int id, int x, int y, int w, int h) {
 int native_touch_tap(void) {
     int t = s_tap;
     s_tap = -1;
-    return t == 0x7A11 ? -1 : t; /* a tap meant for native_touch_anywhere is no option's */
+    return t >= 0x7A00 ? -1 : t; /* the port's own targets (0x7A00 on) are no option's */
 }
 
 static int s_logical[16]; /* native_touch_hold: game frames each logical button is still held for */
@@ -106,6 +106,126 @@ int native_touch_buttons(void) {
         }
     }
     return mask;
+}
+
+/* A tap on the port's own target `id` (0x7A00 on), once */
+int native_touch_tap_id(int id) {
+    if (s_tap == id) {
+        s_tap = -1;
+        return 1;
+    }
+    return 0;
+}
+
+int native_auto_text(void); /* prefs.c */
+#define AUTO_TEXT_WAIT 150      /* vsyncs a page waits before it goes on by itself: two and a half seconds */
+
+/* Automatic dialogues: 1 once the text window `who` has waited AUTO_TEXT_WAIT for the player (text_window.c asks
+   each frame it waits; a break of a few vsyncs starts the count again) */
+int native_auto_text_due(void *who) {
+    static void *waiting;
+    static int since, last;
+    int now = VSync(-1);
+
+    if (who != waiting || now - last > 6) {
+        waiting = who, since = now;
+    }
+    last = now;
+    if (native_auto_text() && now - since >= AUTO_TEXT_WAIT) {
+        waiting = NULL;
+        return 1;
+    }
+    return 0;
+}
+
+/* The phone's keyboard (the name entry): SDL's text input, what is typed queued as code points; 8 is backspace,
+   13 enter. Shown while native_text_begin() is called each frame, hidden a moment after it stops */
+static int s_typed[64], s_typed_n;
+static Uint64 s_text_until;
+static int s_text_on;
+
+static void typed(int c) {
+    if (s_typed_n < (int)SDL_arraysize(s_typed)) {
+        s_typed[s_typed_n++] = c;
+    }
+}
+
+static bool SDLCALL on_text(void *data, SDL_Event *e) {
+    (void)data;
+    if (!s_text_on) {
+        return true;
+    }
+    if (e->type == SDL_EVENT_TEXT_INPUT) {
+        const char *t = e->text.text;
+        Uint32 c;
+        while ((c = SDL_StepUTF8(&t, NULL)) != 0) {
+            typed((int)c);
+        }
+    } else if (e->type == SDL_EVENT_KEY_DOWN && (e->key.key == SDLK_BACKSPACE || e->key.key == SDLK_RETURN)) {
+        typed(e->key.key == SDLK_BACKSPACE ? 8 : 13);
+    }
+    return true;
+}
+
+int native_soft_keyboard(void) {
+    return touch_enabled() || SDL_getenv("DW3_TYPE") != NULL;
+}
+
+void native_text_begin(void) {
+    static int watching;
+    if (!watching) {
+        const char *test = SDL_getenv("DW3_TYPE"); /* tests: what to type, \n for enter, < for backspace */
+        SDL_AddEventWatch(on_text, NULL);
+        watching = 1;
+        for (; test != NULL && *test != 0; test++) {
+            typed(*test == '\n' || *test == '|' ? 13 : *test == '<' ? 8 : (unsigned char)*test);
+        }
+    }
+    s_text_until = SDL_GetTicks() + 300;
+    if (!s_text_on) {
+        int count = 0;
+        SDL_Window **wins = SDL_GetWindows(&count);
+        if (wins != NULL && count > 0) {
+            SDL_StartTextInput(wins[0]);
+        }
+        SDL_free(wins);
+        s_text_on = 1;
+    }
+}
+
+/* The keyboard shown again (a tap on the name: the player may have put it away) */
+void native_text_reopen(void) {
+    int count = 0;
+    SDL_Window **wins = SDL_GetWindows(&count);
+    if (wins != NULL && count > 0) {
+        SDL_StopTextInput(wins[0]);
+        SDL_StartTextInput(wins[0]);
+    }
+    SDL_free(wins);
+}
+
+int native_text_next(void) {
+    int c;
+    if (s_typed_n == 0) {
+        return -1;
+    }
+    c = s_typed[0];
+    SDL_memmove(s_typed, s_typed + 1, sizeof(int) * (size_t)--s_typed_n);
+    return c;
+}
+
+/* the keyboard put away once the name entry stops asking for it (touch_poll, each vsync) */
+static void text_input_idle(void) {
+    if (s_text_on && SDL_GetTicks() > s_text_until) {
+        int count = 0;
+        SDL_Window **wins = SDL_GetWindows(&count);
+        if (wins != NULL && count > 0) {
+            SDL_StopTextInput(wins[0]);
+        }
+        SDL_free(wins);
+        s_text_on = 0;
+        s_typed_n = 0;
+    }
 }
 
 #define ANYWHERE_ID 0x7A11
@@ -280,6 +400,7 @@ void touch_poll(int w, int h, uint16_t *held, uint8_t *lstick) {
     int ndev = 0, seen_stick = 0, seen_skip = 0, text_held = 0;
     SDL_TouchID *devs;
 
+    text_input_idle();
     if (!touch_enabled() || w <= 0 || h <= 0) {
         return;
     }

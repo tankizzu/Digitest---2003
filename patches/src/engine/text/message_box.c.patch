@@ -1,6 +1,72 @@
 --- a/src/engine/text/message_box.c
 +++ b/src/engine/text/message_box.c
-@@ -116,7 +116,11 @@
+@@ -93,6 +93,55 @@
+ }
+ 
+ /* The message box task: shows the text once the frame is open, closes when the text ends */
++#ifdef NATIVE
++/* touch: the automatic dialogues button at the bottom left, the balloons' own orange arrow (menu sprite 7), its
++   colours cycling while on; a tap turns it on or off (platform/prefs.c) */
++static void nativeAutoButton(s32 layerId) {
++    static s32 frame, time;
++    SpriteDrawer obj;
++
++    native_touch_target(0x7A20, 0, 192, 40, 48);
++    if (native_touch_tap_id(0x7A20)) {
++        native_auto_text_toggle();
++        SOUND.playSound(SOUND_MENU_MOVE);
++    }
++    if (native_auto_text() && GFX.funcs.getTime() - time >= 6) {
++        time = GFX.funcs.getTime();
++        frame = (frame + 1) & 3;
++    }
++    initSpriteDrawer(&obj);
++    obj.setLayerId(layerId, 0);
++    obj.setTexture(0x140, 0);
++    obj.setClutRow(native_auto_text() ? frame : 0);
++    obj.setPivot(16, 206);
++    obj.setScale(0x2400, 0x2400, ONE); /* the arrow is small: twice and a bit */
++    obj.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 7, 16, 200);
++    if (native_auto_text()) {
++        obj.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 7, 16, 214); /* a second arrow under it: on */
++    }
++    {
++        /* behind it (added after, so drawn before), a darkened square as the button: blending 2, subtracted */
++        Layer *layer = GFX.funcs.getLayer(layerId);
++        u_long *ot = layer->getOtEntry(layer, 0);
++        POLY_F4 *poly = GFX.funcs.getPrim();
++        DR_TPAGE *mode;
++
++        setlen(poly, 5);
++        poly->r0 = poly->g0 = poly->b0 = native_auto_text() ? 0x70 : 0x50;
++        setcode(poly, 0x2A);
++        poly->x0 = poly->x2 = 4;
++        poly->x1 = poly->x3 = 34;
++        poly->y0 = poly->y1 = 194;
++        poly->y2 = poly->y3 = 236;
++        mode = (DR_TPAGE *)(poly + 1);
++        addPrim(ot, poly);
++        setDrawTPage(mode, 0, 1, getTPage(0, 2, 320, 0));
++        addPrim(ot, mode);
++        GFX.funcs.setPrim(mode + 1);
++    }
++}
++#endif
++
+ void updateMessageBox(Task *task, MessageBox *data) {
+     switch (task->state) {
+     case 0:
+@@ -109,6 +158,9 @@
+             }
+             break;
+         case 1:
++#ifdef NATIVE
++            nativeAutoButton(data->frame->layerId);
++#endif
+             if (data->window->isFinished(data->window) != 0) {
+                 data->frame->substate = 2;
+                 data->window->setVisible(data->window, 0);
+@@ -116,7 +168,11 @@
                  SOUND.playSound(SOUND_MENU_CLOSE);
                  break;
              }
