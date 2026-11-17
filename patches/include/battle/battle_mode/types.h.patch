@@ -1,0 +1,66 @@
+--- a/include/battle/battle_mode/types.h
++++ b/include/battle/battle_mode/types.h
+@@ -30,11 +30,56 @@
+ #define BATTLE_LAYER_MODELS 0x1004
+ #define BATTLE_LAYER_MENUS 0x1005 /* the HUD, the menus and the messages */
+ #define BATTLE_LAYER_FRONT 0x1006 /* the fades, the flashes and the sprite effects over all */
++#ifdef NATIVE
++#define NATIVE_BATTLE_LAYER_HUD 0x1007 /* upright: the HUD at the top of the tall screen (hud.c) */
++#endif
+ 
+ /* The body of WFIGHTMN's and WFIGHTTS's layer setups: the display and the
+    battle's layers on SCREEN (a RECT), the front one with FRONTCALLBACKS
+    callbacks. A macro, as an inline's pointer to SCREEN is taken before the
+    calls, which moves its load */
++#ifdef NATIVE
++/* Upright (platform/portrait.c): the tall screen at VRAM (0, 512); the 3D scene's centre in its middle, so that it
++   shows more above and below; the menus and messages at its bottom (their 240 lines end with the screen) and the HUD
++   on a layer of its own at its top (NATIVE_BATTLE_LAYER_HUD) */
++#define FIGHTSTG_CREATE_LAYERS(screen, frontCallbacks)                          \
++    Layer *layer;                                                               \
++    RECT nativeRect = (screen);                                                 \
++    s32 nativeH = native_portrait() ? native_field_h() : SCREEN_HEIGHT;         \
++                                                                                \
++    GFX.funcs.reset();                                                          \
++    GFX.funcs.allocPrimBuffers(0x19000);                                        \
++    GFX.funcs.setDisplayMode(SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0);                \
++    if (native_portrait()) {                                                    \
++        GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, nativeH);     \
++        nativeRect.y = NATIVE_FIELD_Y;                                          \
++        nativeRect.h = nativeH;                                                 \
++    }                                                                           \
++    native_touch_origin(nativeH - SCREEN_HEIGHT);                               \
++    layer = GFX.funcs.createLayer(&nativeRect, 1, SCREEN_LAYER);                \
++    layer->setOffset(layer, 0xA0, nativeH / 2);                                 \
++    layer = GFX.funcs.createLayer(&nativeRect, 1, BATTLE_LAYER_CAMERA);         \
++    layer->setOffset(layer, 0xA0, nativeH / 2);                                 \
++    layer->allocCallbacks(layer, 100);                                          \
++    layer = GFX.funcs.createLayer(&nativeRect, 8, BATTLE_LAYER_STAGE);          \
++    layer->setOffset(layer, nativeRect.w / 2, nativeH / 2);                     \
++    layer->allocCallbacks(layer, 40);                                           \
++    layer = GFX.funcs.createLayer(&nativeRect, 1, BATTLE_LAYER_WIREFRAME);      \
++    layer->setOffset(layer, 0xA0, nativeH / 2);                                 \
++    layer->allocCallbacks(layer, 100);                                          \
++    layer = GFX.funcs.createLayer(&nativeRect, 12, BATTLE_LAYER_MODELS);        \
++    layer->setOffset(layer, 0xA0, nativeH / 2);                                 \
++    layer->allocCallbacks(layer, 100);                                          \
++    layer = GFX.funcs.createLayer(&nativeRect, 1, BATTLE_LAYER_MENUS);          \
++    layer->setOffset(layer, 0, nativeH - SCREEN_HEIGHT);                        \
++    if (native_portrait()) {                                                    \
++        layer = GFX.funcs.createLayer(&nativeRect, 1, NATIVE_BATTLE_LAYER_HUD); \
++        layer->setOffset(layer, 0, 0);                                          \
++    }                                                                           \
++    layer = GFX.funcs.createLayer(&nativeRect, 1, BATTLE_LAYER_FRONT);          \
++    layer->setOffset(layer, 0, 0);                                              \
++    layer->allocCallbacks(layer, frontCallbacks)
++#else
+ #define FIGHTSTG_CREATE_LAYERS(screen, frontCallbacks)                          \
+     Layer *layer;                                                               \
+                                                                                 \
+@@ -60,5 +105,6 @@
+     layer = GFX.funcs.createLayer(&(screen), 1, BATTLE_LAYER_FRONT);            \
+     layer->setOffset(layer, 0, 0);                                              \
+     layer->allocCallbacks(layer, frontCallbacks)
++#endif
+ 
+ #endif /* FIGHTSTG_TYPES_H */

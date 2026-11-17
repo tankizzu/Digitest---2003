@@ -184,7 +184,20 @@
          setPolyFT3(state->prim.ft3);
          if (state->abr) {
              setSemiTrans(state->prim.ft3, 1);
-@@ -736,12 +886,28 @@
+@@ -675,7 +825,12 @@
+             left = x - layer->offsetX;
+             w = layer->env.clip.w + 128;
+             right = x + w - layer->offsetX;
++#ifdef NATIVE
++            /* upright the layer's clip is in the tall screen at VRAM y 512 (layer.c): from its top */
++            y = layer->env.clip.y - (layer->env.clip.y >= NATIVE_FIELD_Y ? NATIVE_FIELD_Y : 0) - 64;
++#else
+             y = layer->env.clip.y - 64;
++#endif
+             top = y - layer->offsetY;
+             h = layer->env.clip.h + 128;
+             bottom = y + h - layer->offsetY;
+@@ -736,12 +891,28 @@
          if (state->quad) {
              state->sxy[3] = state->screen[i3];
          }
@@ -213,7 +226,7 @@
              if (state->sxy[0] == state->sxy[1] || state->sxy[0] == state->sxy[2] ||
                  state->sxy[1] == state->sxy[2]) {
                  break;
-@@ -754,6 +920,9 @@
+@@ -754,6 +925,9 @@
              if (opz <= 0) {
                  break;
              }
@@ -223,7 +236,7 @@
              if (state->lit) {
                  p = state->cmd + (state->quad + 3);
                  state->colors[0] = state->normalColors[p[0]];
-@@ -813,6 +982,89 @@
+@@ -812,6 +986,89 @@
     (drawMeshPolygons). The match depends on the mesh coming in as a void *,
     on the ?: for q and on each polygon's checks and drawing being a
     do-while (0) with breaks (both in drawMeshPolygons). */
@@ -313,7 +326,7 @@
  void FIGHTSTG_drawMesh(void *arg, Layer *layer) {
      Mesh *mesh = arg;
      MATRIX m;
-@@ -821,13 +1073,51 @@
+@@ -820,13 +1077,51 @@
      s32 hi;
      s32 lo;
  
@@ -365,7 +378,7 @@
      FIGHTSTG_lightMesh(mesh);
      state.cmd = mesh->commands;
      state.texPos = mesh->texPos;
-@@ -892,6 +1182,12 @@
+@@ -891,6 +1186,12 @@
          }
      }
      GFX.funcs.setPrim(state.prim.ptr);
@@ -378,7 +391,7 @@
  }
  
  /* A primitive tag's word with its address replaced: the top byte of tag and
-@@ -1070,6 +1366,9 @@
+@@ -1069,6 +1370,9 @@
      mesh->texPos = texPos;
      mesh->draw = FIGHTSTG_queueMeshDraw;
      mesh->drawWireframe = FIGHTSTG_queueMeshWireframe;

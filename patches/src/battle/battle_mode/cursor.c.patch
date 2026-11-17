@@ -1,6 +1,21 @@
 --- a/src/battle/battle_mode/cursor.c
 +++ b/src/battle/battle_mode/cursor.c
-@@ -39,6 +39,10 @@
+@@ -32,6 +32,14 @@
+                 FIGHTSTG_cursorBarRect.x = 0x90;
+                 y = task->params.y + task->prevSel * task->params.step;
+             }
++#ifdef NATIVE
++            if (native_portrait()) { /* upright: the one tall screen, the menus at its bottom (types.h) */
++                SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, task->params.x,
++                            NATIVE_FIELD_Y + native_field_h() - SCREEN_HEIGHT + y);
++                addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
++                continue;
++            }
++#endif
+             SetDrawMove(&FIGHTSTG_cursorBarMoves[i], &FIGHTSTG_cursorBarRect, task->params.x, y);
+             addPrim(FIGHTSTG_cursorBarOt, &FIGHTSTG_cursorBarMoves[i]);
+             SetDrawMove(&FIGHTSTG_cursorBarMoves[i + 1], &FIGHTSTG_cursorBarRect, task->params.x, y + 0x100);
+@@ -39,6 +47,10 @@
          }
          while (IsIdleGPU(0)) {
          }
@@ -11,7 +26,7 @@
          ContinueDraw(FIGHTSTG_cursorBarOt, saved);
      }
      task->prevSel = task->sel;
-@@ -107,6 +111,29 @@
+@@ -107,6 +119,29 @@
              if (task->params.sprite != -1) {
                  FIGHTSTG_drawCursorSprites(task);
              }

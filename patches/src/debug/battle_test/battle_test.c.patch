@@ -1,0 +1,15 @@
+--- a/src/debug/battle_test/battle_test.c
++++ b/src/debug/battle_test/battle_test.c
+@@ -391,7 +391,12 @@
+ /* WFIGHTTS's entry point: creates the battle test, though with 0 bytes for
+    its fields and for its children */
+ Task *WFIGHTTS_start(void) {
++#ifdef NATIVE
++    /* the port's tests (--field 1536 --arg 1): the room the test writes in, which the original never gave it */
++    return createTaskWithId(WFIGHTTS_battleTest, sizeof(BattleTest), sizeof(BattleTestChildren), 0);
++#else
+     return createTaskWithId(WFIGHTTS_battleTest, 0, 0, 0);
++#endif
+ }
+ 
+ /* The fighter list: the partners on the right and the enemies on the left,
