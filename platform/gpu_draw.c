@@ -48,8 +48,8 @@ static void plot(int x, int y, int c, int semi) {
     if (x < g.x1 || x > g.x2 || y < g.y1 || y > g.y2) {
         return;
     }
-    p = &g_vram[(y & 511) * VRAM_W + (x & 1023)];
-    g_vram_dirty[(y & 511) >> 6] |= (uint16_t)(1u << ((x & 1023) >> 6));
+    p = &g_vram[(y & (VRAM_H - 1)) * VRAM_W + (x & 1023)];
+    g_vram_dirty[(y & (VRAM_H - 1)) >> 6] |= (uint16_t)(1u << ((x & 1023) >> 6));
     if (g.check_mask && (*p & 0x8000)) {
         return;
     }
@@ -70,13 +70,13 @@ static int texel(int u, int v, int clut) {
     v = (v & ~g.tw_mask_y) | (g.tw_off_y & g.tw_mask_y);
     switch (g.depth) {
     case 0:
-        w = g_vram[((g.ty + v) & 511) * VRAM_W + ((g.tx + u / 4) & 1023)];
+        w = g_vram[((g.ty + v) & (VRAM_H - 1)) * VRAM_W + ((g.tx + u / 4) & 1023)];
         return g_vram[cy * VRAM_W + ((cx + (w >> (u % 4 * 4) & 15)) & 1023)];
     case 1:
-        w = g_vram[((g.ty + v) & 511) * VRAM_W + ((g.tx + u / 2) & 1023)];
+        w = g_vram[((g.ty + v) & (VRAM_H - 1)) * VRAM_W + ((g.tx + u / 2) & 1023)];
         return g_vram[cy * VRAM_W + ((cx + (w >> (u % 2 * 8) & 255)) & 1023)];
     default:
-        return g_vram[((g.ty + v) & 511) * VRAM_W + ((g.tx + u) & 1023)];
+        return g_vram[((g.ty + v) & (VRAM_H - 1)) * VRAM_W + ((g.tx + u) & 1023)];
     }
 }
 
@@ -102,7 +102,7 @@ static int rgb15(int r, int gg, int b, int d) {
 
 static void set_tpage(uint32_t w) {
     g.tx = (w & 15) * 64;
-    g.ty = (w >> 4 & 1) * 256;
+    g.ty = (w >> 4 & 1) * 256 + (w >> 11 & 1) * 512; /* bit 11: the second 512 rows, as with 2 MB */
     g.semi = w >> 5 & 3;
     g.depth = w >> 7 & 3;
     if (g.depth == 3) {
@@ -119,8 +119,8 @@ static void gp0_env(uint32_t w) {
         g.tw_off_x = (w >> 10 & 31) * 8;
         g.tw_off_y = (w >> 15 & 31) * 8;
         break;
-    case 0xE3: g.x1 = w & 1023; g.y1 = w >> 10 & 511; break;
-    case 0xE4: g.x2 = w & 1023; g.y2 = w >> 10 & 511; break;
+    case 0xE3: g.x1 = w & 1023; g.y1 = w >> 10 & (VRAM_H - 1); break;
+    case 0xE4: g.x2 = w & 1023; g.y2 = w >> 10 & (VRAM_H - 1); break;
     case 0xE5:
         g.ox = (int)(w << 21) >> 21;
         g.oy = (int)(w << 10) >> 21;
@@ -469,10 +469,10 @@ static void copy_px(int sx0, int sy0, int dx, int dy, int w, int h) {
     }
     for (j = 0; j < h; j++)
         for (i = 0; i < w; i++)
-            tmp[j * w + i] = g_vram[((sy0 + j) & 511) * VRAM_W + ((sx0 + i) & 1023)];
+            tmp[j * w + i] = g_vram[((sy0 + j) & (VRAM_H - 1)) * VRAM_W + ((sx0 + i) & 1023)];
     for (j = 0; j < h; j++)
         for (i = 0; i < w; i++)
-            g_vram[((dy + j) & 511) * VRAM_W + ((dx + i) & 1023)] = tmp[j * w + i];
+            g_vram[((dy + j) & (VRAM_H - 1)) * VRAM_W + ((dx + i) & 1023)] = tmp[j * w + i];
     gfx_vram_dirty(dx, dy, w, h);
 }
 
@@ -1025,13 +1025,13 @@ void gpu_gp0(const uint32_t *p, int n) {
         }
         for (j = 0; j < h; j++) {
             for (i = 0; i < w; i++) {
-                g_vram[((y + j) & 511) * VRAM_W + ((x + i) & 1023)] = (uint16_t)c;
+                g_vram[((y + j) & (VRAM_H - 1)) * VRAM_W + ((x + i) & 1023)] = (uint16_t)c;
             }
         }
         gfx_vram_dirty(x, y, w, h);
         gfx_refresh(x, y, w, h);
     } else if (cmd >= 0x80 && cmd < 0xA0) { /* VRAM to VRAM */
-        int sx0 = p[1] & 1023, sy0 = p[1] >> 16 & 511, dx = p[2] & 1023, dy = p[2] >> 16 & 511;
+        int sx0 = p[1] & 1023, sy0 = p[1] >> 16 & (VRAM_H - 1), dx = p[2] & 1023, dy = p[2] >> 16 & (VRAM_H - 1);
         int w = p[3] & 0xFFFF, h = p[3] >> 16;
 
         if (w == 0) w = 0x400;
@@ -1145,11 +1145,11 @@ static int packet_box(const uint32_t *p, int n, int *ox, int *oy, int *x1, int *
             xs[1] = xs[0] + w, ys[1] = ys[0] + h;
             nv = 2;
         } else if (cmd >= 0x80 && cmd < 0xA0) { /* a copy within VRAM: where it goes (the cursor's bar) */
-            xs[0] = (int)(p[2] & 1023) - *x1, ys[0] = (int)(p[2] >> 16 & 511) - *y1;
+            xs[0] = (int)(p[2] & 1023) - *x1, ys[0] = (int)(p[2] >> 16 & (VRAM_H - 1)) - *y1;
             xs[1] = xs[0] + (int)(p[3] & 0xFFFF), ys[1] = ys[0] + (int)(p[3] >> 16);
             nv = ys[0] >= 0 && ys[0] < 240 ? 2 : 0; /* the other buffer's copy goes with the first's */
         } else if (cmd == 0xE3) {
-            *x1 = p[0] & 1023, *y1 = p[0] >> 10 & 511;
+            *x1 = p[0] & 1023, *y1 = p[0] >> 10 & (VRAM_H - 1);
         } else if (cmd == 0xE5) {
             *ox = (int)(p[0] << 21) >> 21, *oy = (int)(p[0] << 10) >> 21;
         }

@@ -322,4 +322,4 @@ int gl_init(SDL_Window *window) {
 
 const struct Gfx GFX_GL = GFX_TABLE(gl, "OpenGL");
 
-struct GlState GLS = {.mask_box = {VRAM_W, VRAM_H, -1, -1}, .max_scale = 8, .semi = -1, .clip = {0, 0, 1023, 511}};
+struct GlState GLS = {.mask_box = {VRAM_W, VRAM_H, -1, -1}, .max_scale = 8, .semi = -1, .clip = {0, 0, VRAM_W - 1, VRAM_H - 1}};

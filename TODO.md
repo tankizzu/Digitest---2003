@@ -17,7 +17,8 @@ Priorità: P1 subito, P2 dopo, P3 più avanti. Obiettivo attuale: **prologo perf
 ## P1 — verticale, fase 1 (approvata il 17/11/2026): il campo a tutto schermo
 
 Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
-- [ ] 1. VRAM del port 1024×1280 (righe alte solo per il port), test che tutto il resto resti uguale.
+- [x] 1. VRAM del port 1024×1024 (come la GPU con 2 MB; righe ≥ 512 solo per il port). Verificato: menu e
+      caricamento identici pixel per pixel, campo regolare. Il backend Direct3D 12 (solo Windows) non è aggiornato.
 - [ ] 2. Campo con un buffer 320×640 a (0,512).
 - [ ] 3. Mappa: 27 immagini, 4×6 pezzi disegnati, stream 4×7.
 - [ ] 4. Telecamera centrata su 640 righe; stanze piccole ingrandite.

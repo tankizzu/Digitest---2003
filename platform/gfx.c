@@ -15,7 +15,7 @@ int g_soft_shadows;
 int g_vsync = 1; /* vsync, the menu */
 int g_battle_shadows = 1; /* battle_shadows, the menu (native.h) */
 int g_battle_sky;         /* battle_sky, the menu (native.h) */
-uint16_t g_vram_dirty[8]; /* 64x64 blocks of VRAM written since they were uploaded */
+uint16_t g_vram_dirty[VRAM_H / 64]; /* 64x64 blocks of VRAM written since they were uploaded */
 
 static const struct Gfx *s_gfx = &GFX_GL;
 static int s_picked;

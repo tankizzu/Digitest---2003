@@ -11,10 +11,10 @@ static void upload(int x, int y, int w, int h) {
 }
 
 /* The dirty blocks among `need` (a mask per block row), as runs of a row */
-static void upload_blocks(const uint16_t need[8]) {
+static void upload_blocks(const uint16_t need[VRAM_H / 64]) {
     int row, col;
 
-    for (row = 0; row < 8; row++) {
+    for (row = 0; row < VRAM_H / 64; row++) {
         uint16_t bits = need[row] & g_vram_dirty[row];
 
         for (col = 0; col < 16; col++) {
@@ -31,10 +31,10 @@ static void upload_blocks(const uint16_t need[8]) {
     }
 }
 
-static void need_rect(uint16_t need[8], int x, int y, int w, int h) {
+static void need_rect(uint16_t need[VRAM_H / 64], int x, int y, int w, int h) {
     int r, c;
 
-    for (r = (y & 511) >> 6; r <= ((y + h - 1) & 511) >> 6 && r < 8; r++) {
+    for (r = (y & (VRAM_H - 1)) >> 6; r <= ((y + h - 1) & (VRAM_H - 1)) >> 6 && r < VRAM_H / 64; r++) {
         for (c = (x & 1023) >> 6; c <= ((x + w - 1) & 1023) >> 6 && c < 16; c++) {
             need[r] |= (uint16_t)(1u << c);
         }
@@ -149,15 +149,18 @@ void gl_triangles(const GVtx *v, int n, int x1, int y1, int x2, int y2, int semi
     if (v[0].mode & 2) {
         /* the page and the CLUT as the card has them: what the CPU drew there
            since (a texture drawn to) goes up first */
-        uint16_t need[8] = {0};
+        uint16_t need[VRAM_H / 64] = {0};
+        int dirty = 0;
         int depth = v[0].mode >> 4 & 3;
 
         need_rect(need, v[0].tx, v[0].ty, 64 << depth, 256);
         need_rect(need, v[0].clut_x, v[0].clut_y, depth == 0 ? 16 : 256, 1);
         soft_read(v[0].tx, v[0].ty, 64 << depth, 256);
         soft_read(v[0].clut_x, v[0].clut_y, depth == 0 ? 16 : 256, 1);
-        if ((need[0] & g_vram_dirty[0]) | (need[1] & g_vram_dirty[1]) | (need[2] & g_vram_dirty[2]) | (need[3] & g_vram_dirty[3]) |
-            (need[4] & g_vram_dirty[4]) | (need[5] & g_vram_dirty[5]) | (need[6] & g_vram_dirty[6]) | (need[7] & g_vram_dirty[7])) {
+        for (int row = 0; row < VRAM_H / 64; row++) {
+            dirty |= need[row] & g_vram_dirty[row];
+        }
+        if (dirty) {
             gl_flush();
             upload_blocks(need);
         }
@@ -273,7 +276,7 @@ void gl_refresh(int x, int y, int w, int h) {
     }
     SDL_memcpy(GLS.batch, q, sizeof q);
     GLS.count = 6;
-    GLS.clip[0] = 0, GLS.clip[1] = 0, GLS.clip[2] = 1023, GLS.clip[3] = 511;
+    GLS.clip[0] = 0, GLS.clip[1] = 0, GLS.clip[2] = VRAM_W - 1, GLS.clip[3] = VRAM_H - 1;
     gl_flush();
 }
 

@@ -105,11 +105,13 @@ Cosa fa oggi il gioco (verificato nel codice):
 - La telecamera (camera.c) centra a (centro − 0xA0, centro − 0x8C) e tiene lo schermo dentro la mappa.
 
 Progetto (tela verticale 320×640, larga quanto l'originale, più alta di 400 righe):
-1. **VRAM del port più alta** (1024×1280): righe ≥ 512 solo per il port. Pagina texture: bit 11 = y 512 (come
+1. **VRAM del port più alta** (fatto: 1024×1024, come la GPU con 2 MB; E3/E4 a 10 bit, pagina con bit 11,
+   `g_vram_dirty[16]`, shader con `& 1023`; il backend D3D12 non è aggiornato) — progetto iniziale: 1024×1280: righe ≥ 512 solo per il port. Pagina texture: bit 11 = y 512 (come
    la GPU con 2 MB). Toccare: platform.h (VRAM_H), gpu.c, gpu_draw.c (maschere `& 511`), gl/ (texture della copia),
    state.c (dimensione degli stati), post.c (lettura dell'area mostrata). Con render_scale alto la copia GL
    diventa grande: limitare la scala in verticale (texture ≤ 4096).
-2. **Campo in verticale**: in modalità campo un solo buffer 320×640 a (0,512) (display.c / layer.c via patch,
+2. **Campo in verticale**: in modalità campo un solo buffer 320×640 a (0,384) (righe 384–1023; i vecchi
+   buffer sotto la riga 384 restano liberi per le immagini di mappa in più) (display.c / layer.c via patch,
    solo nel campo); i vecchi buffer 320×480 a (0,0) restano liberi.
 3. **Più immagini di mappa**: da 12 a 27 (le 15 in più nell'area dei vecchi buffer, x 0–319, y 0–479), e
    disegno di 4 colonne × fino a 6 righe; vicinato degli stream ridisposto 4 colonne × 7 righe (28 di 30) al
