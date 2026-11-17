@@ -19,6 +19,15 @@
   "MEMORY CARD N". La freccia Indietro esce senza salvare. Il nome (lettere, cifre, spazi, max 16) sta in
   `saves/gameN/name.txt` e compare nell'elenco degli slot, sopra le scelte dello slot e nella riga in alto quando si
   salva. Verificato su Linux in verticale (scrittura simulata, OK, elenco); in orizzontale non provato.
+- **Sì/No affiancati anche nelle schermate originali della memory card** (verticale): "Creare nuovo file?",
+  "Preparare la partita?", "Sovrascrittura dati precedenti. Vuoi procedere?" e "Vuoi salvare qui?" / "Vuoi caricare
+  questa partita?" hanno Sì e NO in due riquadri grandi del gioco sotto la cornice; un tocco risponde. Toccare una
+  delle tre memory card in alto ora la sceglie soltanto (Sì salva/carica). Un tocco altrove non risponde più (prima
+  confermava la scelta evidenziata). In orizzontale resta il riquadro piccolo del gioco, ma Sì e NO si toccano.
+- **Niente tasti PlayStation nei testi**: tolte le righe "Tasto ✕: conferma / Tasto △: indietro" e il "Sì NO"
+  scritto nel testo della formattazione (IT ed EN).
+- Verificati su Linux in verticale: Creare nuovo file → Sì, Vuoi salvare qui → Sì, salvataggio riuscito, di nuovo
+  Sì → Sovrascrittura → NO → ritorno. In orizzontale: nome e "Creare nuovo file?" (aspetto).
 - Salvando in verticale, "Nessun salvataggio in questo slot" e gli altri testi del gioco tornano dentro la cornice
   (prima finivano sotto, al posto della colonna degli slot).
 - Test: `DW3_SHEET_DUMP=cartella` salva ogni fotogramma dei fogli di sprite del titolo e dei menu (per scegliere la

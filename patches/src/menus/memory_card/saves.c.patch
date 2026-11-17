@@ -52,7 +52,7 @@
      } else {
          win->windows[4]->setVisible(win->windows[4], 0);
      }
-@@ -116,9 +155,595 @@
+@@ -116,9 +155,659 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          saves->choosing = 1;
          saves->substate++;
@@ -331,6 +331,70 @@
 +static s32 nativeBackTap(void) {
 +    native_touch_target(0x7A7E, NATIVE_BACK_X - 0x24, NATIVE_BACK_Y - 0x20, 0x48, 0x38);
 +    return native_touch_tap_id(0x7A7E) || PAD_PRESSED(PAD_TRIANGLE);
++}
++
++/* The game's own yes / no questions (save over a save, format the card, make the save file): upright, the two answers
++   in two big boxes side by side under the frame (STGMCARD_drawSaves), a tap answering; sideways its two rows in the
++   small box, a tap on one answering. A tap elsewhere no longer answers (it took the picked one) */
++#define NATIVE_YN_Y 0xF8
++static s32 nativeYesNoOn;
++
++static void nativeYesNoShow(MemCardSavesWindows *win) {
++    nativeYesNoOn = 1;
++    if (NATIVE_UP) {
++        win->cursor->setVisible(win->cursor, 0);
++        win->windows[2]->setDepth(win->windows[2], 0);
++        win->windows[3]->setDepth(win->windows[3], 0);
++        win->windows[2]->setPos(win->windows[2], NATIVE_BTN_X(0) + 58, NATIVE_YN_Y + 13);
++        win->windows[3]->setPos(win->windows[3], NATIVE_BTN_X(1) + 58, NATIVE_YN_Y + 13);
++    }
++}
++
++/* The answer tapped: 0 yes, 1 no, -1 none (upright the two boxes, sideways the two rows) */
++static s32 nativeYesNoTap(void) {
++    s32 i;
++
++    if (NATIVE_UP) {
++        for (i = 0; i < 2; i++) {
++            native_touch_target(0x7A74 + i, NATIVE_BTN_X(i) - 4, NATIVE_YN_Y - 6, NATIVE_BTN_W + 8, NATIVE_BTN_H + 12);
++        }
++    } else {
++        native_touch_target(0x7A74, 0xB8, 0xBA, 0x80, 14);
++        native_touch_target(0x7A75, 0xB8, 0xBA + 14, 0x80, 14);
++    }
++    native_touch_in_menu();
++    for (i = 0; i < 2; i++) {
++        if (native_touch_tap_id(0x7A74 + i)) {
++            return i;
++        }
++    }
++    return -1;
++}
++
++/* The boxes gone, the two windows back where the game has them */
++static void nativeYesNoDone(MemCardSavesWindows *win) {
++    nativeYesNoOn = 0;
++    win->windows[2]->setPos(win->windows[2], 207, 189);
++    win->windows[3]->setPos(win->windows[3], 207, 203);
++}
++
++/* 1 when answered (saves->choice the answer): a tap on one, or X */
++static s32 nativeYesNoInput(MemCardSaves *saves, MemCardSavesWindows *win) {
++    s32 tap = nativeYesNoTap(), answered = PAD_PRESSED(PAD_CROSS) != 0;
++
++    if (NATIVE_UP && (PAD_PRESSED(PAD_LEFT) || PAD_PRESSED(PAD_RIGHT))) {
++        saves->choice = PAD_PRESSED(PAD_RIGHT) ? 1 : 0;
++        SOUND.playSound(SOUND_CURSOR);
++    }
++    if (tap >= 0) {
++        saves->choice = tap;
++        answered = 1;
++    }
++    if (answered) {
++        nativeYesNoDone(win);
++        win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
++    }
++    return answered;
 +}
 +
 +static void nativePickSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -649,7 +713,7 @@
  
  /* Moves the port cursor: cross starts checking the card in that port, triangle
     leaves the screen */
-@@ -135,7 +760,7 @@
+@@ -135,7 +824,7 @@
          win->cursor->setPos(win->cursor, 0xC2, saves->port * 14 + 0xBD);
          SOUND.playSound(SOUND_CURSOR);
      }
@@ -658,16 +722,66 @@
          win->windows[0]->setString(win->windows[0], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 4);
          STGMCARD_showPort(saves, win, 1);
          win->windows[1]->setVisible(win->windows[1], 0);
-@@ -302,7 +927,7 @@
+@@ -292,6 +981,13 @@
+         win->info->refresh(win->info);
+         saves->nextSubstate(saves);
+         win->menu->substate = 6;
++#ifdef NATIVE
++        if (NATIVE_UP) { /* upright: Yes / No in the two boxes (a tap on a save picks it only) */
++            win->windows[2]->setString(win->windows[2], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x16);
++            win->windows[3]->setString(win->windows[3], FILE_CACHE.load(TEXT_FILE(TEXT_MEMORY_CARD)), 0x17);
++            nativeYesNoShow(win);
++        }
++#endif
+     }
+ }
+ 
+@@ -300,9 +996,22 @@
+    error */
+ static inline void STGMCARD_pickSlot(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 status;
++#ifdef NATIVE
++    s32 yesNo = NATIVE_UP && win->menu->substate == 6 ? nativeYesNoTap() : -1;
++
++    if (NATIVE_UP && win->menu->substate == 6 && (yesNo >= 0 || PAD_PRESSED(PAD_CROSS) || PAD_PRESSED(PAD_TRIANGLE))) {
++        win->windows[2]->setVisible(win->windows[2], 0); /* Yes: the overwrite question may show them again */
++        win->windows[3]->setVisible(win->windows[3], 0);
++        nativeYesNoDone(win);
++    }
++#endif
  
      if (win->menu->substate == 6) {
 -        if (PAD_PRESSED(PAD_CROSS)) {
++#ifdef NATIVE
++        if (NATIVE_UP ? yesNo == 0 || PAD_PRESSED(PAD_CROSS) : MC_CROSS()) {
++#else
 +        if (MC_CROSS()) {
++#endif
              SOUND.playSound(SOUND_MENU_CONFIRM);
              saves->substate = 400;
              win->menu->substate = 0;
-@@ -359,6 +984,12 @@
+@@ -316,13 +1025,20 @@
+                     win->cursor->setVisible(win->cursor, 1);
+                     saves->choosing = 1;
+                     win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
++#ifdef NATIVE
++                    nativeYesNoShow(win);
++#endif
+                 } else {
+                     saves->step = 50;
+                 }
+             } else {
+                 saves->step = 70;
+             }
++#ifdef NATIVE
++        } else if (PAD_PRESSED(PAD_TRIANGLE) || yesNo == 1) {
++#else
+         } else if (PAD_PRESSED(PAD_TRIANGLE)) {
++#endif
+             SOUND.playSound(SOUND_MENU_CANCEL);
+             win->menu->substate = 0;
+             saves->substate = 90;
+@@ -359,6 +1075,12 @@
  
  /* Slides the slots and header out before leaving the screen (601) */
  static inline void STGMCARD_closeSlotsToLeave(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -680,7 +794,7 @@
      if (win->menu->substate == 0) {
          if (win->menu->slid == 2) {
              win->info->hide(win->info);
-@@ -403,6 +1034,9 @@
+@@ -403,6 +1125,9 @@
                  STGMCARD_closeMenuForError(saves, win);
              } else {
                  GAME_SAVE = STGMCARD_funcs.dataBuf->save;
@@ -690,7 +804,7 @@
                  win->panel->start(win->panel, 2, 0x14);
                  saves->substate = 500;
                  win->menu->substate = 0;
-@@ -564,7 +1198,7 @@
+@@ -564,7 +1289,7 @@
  static inline void STGMCARD_confirmMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
      s32 check;
  
@@ -699,7 +813,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -595,7 +1229,7 @@
+@@ -595,7 +1320,7 @@
  /* Waits for cross on the loaded message, then waits for the card (400) and leaves
     the screen (600) */
  static inline void STGMCARD_waitLoadedMessage(MemCardSaves *saves, MemCardSavesWindows *win) {
@@ -708,16 +822,30 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->prompting = 0;
          saves->substate = saves->step;
-@@ -676,7 +1310,7 @@
+@@ -651,6 +1376,9 @@
+             win->cursor->setVisible(win->cursor, 1);
+             saves->choosing = 1;
+             win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
++#ifdef NATIVE
++            nativeYesNoShow(win);
++#endif
+         }
+     } else {
+         saves->prompting = 1;
+@@ -676,7 +1404,11 @@
              SOUND.playSound(SOUND_CURSOR);
              win->cursor->setPos(win->cursor, 0xC2, saves->choice * 14 + 0xBD);
          }
 -        if (PAD_PRESSED(PAD_CROSS)) {
++#ifdef NATIVE
++        if (nativeYesNoInput(saves, win)) {
++#else
 +        if (MC_CROSS()) {
++#endif
              SOUND.playSound(SOUND_SELECT);
              win->windows[0]->setVisible(win->windows[0], 0);
              win->windows[4]->setVisible(win->windows[4], 0);
-@@ -726,7 +1360,7 @@
+@@ -726,7 +1458,7 @@
                  STGMCARD_showError(saves, win);
              }
          }
@@ -726,7 +854,7 @@
          SOUND.playSound(SOUND_MENU_CONFIRM);
          saves->substate = 400;
          saves->prompting = 0;
-@@ -872,8 +1506,27 @@
+@@ -872,8 +1604,27 @@
          STGMCARD_slideInTitle(saves, win);
          break;
      case 2:
@@ -755,16 +883,20 @@
      case 10:
          STGMCARD_acceptCard(saves, win);
          break;
-@@ -921,7 +1574,7 @@
+@@ -921,7 +1672,11 @@
          break;
      case 40:
          STGMCARD_moveChoiceCursor(saves, win);
 -        if (PAD_PRESSED(PAD_CROSS)) {
++#ifdef NATIVE
++        if (nativeYesNoInput(saves, win)) {
++#else
 +        if (MC_CROSS()) {
++#endif
              STGMCARD_hideChoices(win);
              SOUND.playSound(SOUND_SELECT);
              /* match depends on the 400 going through status */
-@@ -1000,6 +1653,12 @@
+@@ -1000,6 +1755,12 @@
     waits for it, the list's frame and the box of the cursor's two choices */
  void STGMCARD_drawSaves(MemCardSaves *saves) {
      SpriteDrawer sprite;
@@ -777,7 +909,7 @@
  
      initSpriteDrawer(&sprite);
      sprite.setLayerId(saves->layer, 2);
-@@ -1017,6 +1676,60 @@
+@@ -1017,6 +1778,70 @@
      }
      sprite.setTexture(0x280, 0);
      sprite.setClutRow(0);
@@ -788,7 +920,8 @@
 +        /* upright: the frame as the game has it; under it the five slots in the game's small box (sprite 29) with the
 +           game's card (0x23, the picked one blinking); in the frame the two choices in the same boxes */
 +        sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 33, saves->origin[0] + saves->slide[0].value, saves->origin[1] + saves->slide[1].value);
-+        if (saves->choosing == 0) {
++        if (saves->choosing == 0 && !(nativeYesNoOn && saves->substate == 33)) { /* nothing to choose (picking a save:
++                                                                                    its Yes / No) */
 +            return;
 +        }
 +        if (saves->substate == 2 || saves->substate == 5 || saves->substate == 6 || saves->substate == 8) {
@@ -807,6 +940,15 @@
 +        }
 +        sprite.setLayerId(saves->layer, 1);
 +        if (saves->substate != 2 && saves->substate != 5 && saves->substate != 6 && saves->substate != 8) {
++            if (nativeYesNoOn && (saves->choosing || saves->substate == 33)) { /* yes / no: two big boxes side by side */
++                for (i = 0; i < 2; i++) {
++                    sprite.setScale(ONE * NATIVE_BTN_W / 117, ONE * NATIVE_BTN_H / 33, ONE);
++                    sprite.setPivot(NATIVE_BTN_X(i), NATIVE_YN_Y);
++                    sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 29, NATIVE_BTN_X(i), NATIVE_YN_Y);
++                }
++                sprite.setScale(ONE, ONE, ONE);
++                return;
++            }
 +            sprite.draw(FILE_CACHE.getEntry(FILE_GMCARD_SHEET << 16), 29, 188, 185); /* the game's own screens */
 +            return;
 +        }

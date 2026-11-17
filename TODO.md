@@ -47,7 +47,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Nome della memory card al primo salvataggio (tastiera del telefono, font del gioco). Da provare in orizzontale
       e sul telefono; manca un modo per rinominare (da chiedere all'utente se serve).
 - [ ] Salvataggi e Autosalvataggio: liste con immagine (screenshot al salvataggio) e dati.
-- [ ] Sì/No del gioco nelle schermate memory card originali (sovrascrittura, formattazione) affiancati.
+- [x] Sì/No del gioco nelle schermate memory card originali (sovrascrittura, formattazione, nuovo file, "salvare
+      qui") affiancati. Da provare sul telefono.
 - [ ] Eventuale orologio in sovraimpressione (l'utente: "nel caso").
 - [ ] Strada di Asuka all'inizio del prologo: ancora 4:3 (imposta lo schermo per conto suo? da trovare).
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).

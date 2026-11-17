@@ -29,6 +29,8 @@ typedef struct {
 static const Text IT[] = {
     {0x03, "MEMORY CARD #"},
     {0x04, "Controllo MEMORY CARD\nAttendi"},
+    {0x06, "Vuoi salvare qui."},              /* without the PlayStation buttons' line (touch: the Yes / No boxes) */
+    {0x10, "Vuoi caricare questa partita."},
     {0x05, "Controllo del file\nAttendi"},
     {0x08, "Salvataggio\nAttendi"},
     {0x0A, "Nessuna MEMORY CARD salvata"},
@@ -36,7 +38,7 @@ static const Text IT[] = {
     {0x0C, "Nessun salvataggio\nin questo slot"},
     {0x0D, "Spazio insufficiente"},
     {0x11, "Caricamento\nAttendi"},
-    {0x19, "Preparare la partita.\n|20|01|6F|01|01|01|0F|01|01|1B|1C"}, /* the yes / no line, as it was */
+    {0x19, "Preparare la partita."}, /* formatting a new game's card; the yes / no in the boxes (the line dropped) */
     {0x1B, "Slot MEMORY CARD non disponibile"},
     {0x1D, "Scegli lo slot MEMORY CARD"},
     {0x1E, "Preparazione\nAttendi"},
@@ -60,6 +62,8 @@ static const Text IT[] = {
 static const Text EN[] = {
     {0x03, "MEMORY CARD #"},
     {0x04, "Checking MEMORY CARD\nPlease wait"},
+    {0x06, "Save here."},
+    {0x10, "Load this game."},
     {0x05, "Checking file\nPlease wait"},
     {0x08, "Saving\nPlease wait"},
     {0x0A, "No saved MEMORY CARD"},
@@ -67,7 +71,7 @@ static const Text EN[] = {
     {0x0C, "No saves\nin this slot"},
     {0x0D, "Not enough space"},
     {0x11, "Loading\nPlease wait"},
-    {0x19, "Prepare the game.\n|26|12|20|01|01|01|0F|01|01|1B|1C"},
+    {0x19, "Prepare the game."},
     {0x1B, "MEMORY CARD slot not available"},
     {0x1D, "Choose MEMORY CARD slot"},
     {0x1E, "Preparing\nPlease wait"},

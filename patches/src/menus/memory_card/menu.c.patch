@@ -1,12 +1,12 @@
 --- a/src/menus/memory_card/menu.c
 +++ b/src/menus/memory_card/menu.c
-@@ -118,6 +118,29 @@
+@@ -118,6 +118,31 @@
              }
              break;
          case 6:
 +#ifdef NATIVE
 +        {
-+            /* touch: the three saves; one tapped is picked and opened (X once the cursor is there) */
++            /* touch: the three saves; one tapped is picked and, sideways, opened (X once the cursor is there) */
 +            s32 tapped;
 +
 +            native_touch_in_menu();
@@ -22,7 +22,9 @@
 +                    STGMCARD_moveSlotCursor(menu);
 +                    SOUND.playSound(SOUND_MENU_MOVE);
 +                }
-+                native_touch_hold(PAD_CROSS, 9);
++                if (!native_portrait()) { /* upright the Yes box saves (memory_card/saves.c) */
++                    native_touch_hold(PAD_CROSS, 9);
++                }
 +                break;
 +            }
 +        }

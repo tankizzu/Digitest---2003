@@ -78,7 +78,10 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 - **5 slot MEMORY CARD al massimo** (17/11/2026, prima erano 10): una colonna di riquadri grandi del gioco con
   l'icona della memory card, nome e data. Toccando uno slot: Carica / Elimina; Carica → Automatico / Salvataggi.
   Una partita nuova va nel primo slot libero; **con tutti pieni si chiede quale sostituire**.
-- **Tutti i Sì/No affiancati** (17/11/2026).
+- **Tutti i Sì/No affiancati** (17/11/2026): anche quelli originali della memory card (in verticale due riquadri del
+  gioco sotto la cornice). Nella scelta del salvataggio toccare una memory card la seleziona soltanto, Sì conferma
+  (accompagnare il giocatore: niente conferme per sbaglio). In orizzontale resta il riquadro piccolo del gioco con
+  le righe toccabili.
 - **Indietro a tema** (17/11/2026): la freccia arancione dei fumetti del gioco girata a sinistra; nella memory card
   dentro il riquadro di metallo appeso (al posto di "CARICA").
 - **Impostazioni a tema** (17/11/2026, proposta in attesa della scelta dell'utente): l'ingranaggio del gioco

@@ -61,6 +61,13 @@
 - **Nome della memory card**: `saves/game<N>/name.txt` (games.c: `native_game_name`, `native_game_named`,
   `native_game_set_name`, `native_game_label` già codificato per le finestre). saves.c substate 8 = scrittura del
   nome (prima di `nativeStartCheck` quando si salva e il file non c'è); testi MEMCRD 0x31 (domanda) e 0x32 (OK).
+- **Sì/No del gioco nella memory card**: windows[2] (0x16 Sì) e windows[3] (0x17 NO) con il cursore a (0xC2,
+  0xBD + 14·scelta), riquadro piccolo sprite 29 a (188,185). Domande: substate 40 (sovrascrittura, testo 7), 101
+  (errore: 0x19 formattazione = "Preparare la partita", 0x1A nuovo file), 33 (scelta del salvataggio, testo 6 / 0x10;
+  il menu delle tre memory card è menu.c substate 6). Con NATIVE: `nativeYesNoShow` / `nativeYesNoTap` /
+  `nativeYesNoInput` / `nativeYesNoDone`, in verticale due riquadri a NATIVE_YN_Y (0xF8) sotto la cornice.
+- Il salvataggio del test di prova sta in `saves/game5` e `game9`: dopo una prova che salva, rimettere card.mcd e
+  togliere name.txt (copia di riserva fuori dal repository).
 - I test di caricamento cambiano `saves/prefs.txt` (`game = N`): rimetterlo a 9 prima del confronto con i
   riferimenti in orizzontale (altrimenti l'elenco parte da un'altra riga).
 - Partite: `saves/game<N>/card.mcd` + `auto_a.sav` / `auto_b.sav`; `prefs.txt` (language, auto_text, game).
