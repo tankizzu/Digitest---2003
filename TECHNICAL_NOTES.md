@@ -339,8 +339,11 @@ dopo il riscontro sulla 2.0.
 - Fatti anche: equipaggiamento (equip_panel.c: titolo, caselle, oggetto della casella, lista, aiuto; lo `unk70` di
   StatsScreen dice a Stato di non spostare il TP mentre l'aiuto lo copre), digievoluzioni (digivolve_panel.c: titolo,
   caselle o domanda, statistiche che scorrono, aiuto), Tecniche (tech_screen.c: come Ordina più la lista).
-- Negozio: fatta la prima schermata (shop.c: COMPRA/VENDI ×2, aiuto col tasto nascosto). Da fare: categorie e lista
-  (trade.c, item_list.c, info.c, equip.c), laboratorio, palestra.
+- Negozio: fatta la prima schermata (shop.c: COMPRA/VENDI ×2, aiuto col tasto nascosto) e i tipi da vendere
+  (trade.c: panels[0] ×2, il messaggio panels[4] ×1,5). Resta un pezzetto di cornice a destra (circa x 290-320,
+  y 130-150 del gioco) accanto al messaggio: da capire di quale sprite è. Da fare: lista (item_list.c, due colonne
+  con L1/R1 a schermo), quantità e conferma (trade.c), informazioni (info.c), equip.c; percorso di prova
+  `--field 3840 --party 0`, `250:start,700:t160y358` (VENDI), poi `t160y374` (Protezioni). Poi laboratorio, palestra.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 

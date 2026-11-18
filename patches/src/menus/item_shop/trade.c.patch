@@ -1,9 +1,10 @@
 --- a/src/menus/item_shop/trade.c
 +++ b/src/menus/item_shop/trade.c
-@@ -3,6 +3,18 @@
+@@ -2,6 +2,18 @@
+    the purchase or the sale */
  
  #include "menus/item_shop.h"
- 
++
 +#ifdef NATIVE
 +/* The disc's Spanish has "Buy" and "Sell" in English: those two are the port's own (native.h) */
 +#define LANGUAGE_SPANISH 6
@@ -15,10 +16,9 @@
 +#else
 +#define SHOP_VERB(window, index, own) (window)->setString((window), FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), (index))
 +#endif
-+
+ 
  /* Creates the buying dialog's windows: the quantity, the total with its yes and
     no, and the cursor */
- void STITSHOP_createBuyWindows(ShopBuy *buy, ShopBuyWindows *win) {
 @@ -35,7 +47,7 @@
      if (show) {
          win->total->setString(win->total, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x12);
@@ -28,7 +28,61 @@
          win->no->setString(win->no, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x14);
      } else {
          win->total->setVisible(win->total, 0);
-@@ -903,7 +915,7 @@
+@@ -710,9 +722,27 @@
+ }
+ 
+ /* Draws the selling screen's frames, and the quantity's blinking arrows */
++#ifdef NATIVE
++/* Upright, for the finger: the four kinds of items to sell twice as big, where Buy and Sell were (shop.c) */
++#define NATIVE_SELL_TYPES_Y 288
++static void nativeSellLayout(ShopSell *sell) {
++    if (sell->panels[0].level != 0) {
++        NATIVE_MENU_PIECE(sell->layer, 160, 30, 165, 76, 0, NATIVE_SELL_TYPES_Y, 330, 152);
++    }
++    if (sell->panels[4].level != 0) { /* the message ("Don't have ..."), 1.5 times under them */
++        NATIVE_MENU_PIECE(sell->layer, 115, 120, 215, 50, 6, NATIVE_SELL_TYPES_Y + 152, 323, 75);
++    }
++}
++#endif
++
+ void STITSHOP_drawSell(ShopSell *sell, ShopSellWindows *win) {
+     SpriteDrawer sprite;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeSellLayout(sell);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setTexture(0x280, 0x100);
+     if (sell->panels[3].level != 0) {
+@@ -796,6 +826,25 @@
+     s32 old;
+ 
+     old = sell->type;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the kind tapped is listed (X) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++        for (i = 0; i < 4; i++) {
++            native_touch_target(i, 0, NATIVE_SELL_TYPES_Y + (14 + i * 14) * 2 - top, 320, 28);
++        }
++        t = native_touch_tap();
++        if (t >= 0) {
++            if (t != sell->type) {
++                sell->type = t;
++                SOUND.playSound(SOUND_CURSOR);
++                win->cursor->setPos(win->cursor, 0xB0, sell->type * 0xE + 0x2F);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         if (--sell->type < 0) {
+             sell->type = 0;
+@@ -903,7 +952,7 @@
      if (STITSHOP_funcs.updateFade(&sell->panels[2]) != 0) {
          win->total->setString(win->total, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x12);
          win->total->setNumber(win->total, 1, ITEM_FUNCS.get(sell->item)->sellPrice * sell->quantity);
