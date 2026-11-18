@@ -50,6 +50,7 @@ int g_field_party; /* --party N: the starter set (0-2) given when there is no pa
 void applyAction(int code, int value); /* main/game/events.c */
 void setParty(int set);                /* main/game/party.c */
 #define GAME_PARTY 0x70
+#define GAME_MONEY 0x6C
 #define GAME_PROGRESS 0x263C
 #define GAME_MODE 0x26C4 /* EU */
 #define MODE_TITLE 0xE00
@@ -381,6 +382,10 @@ void state_frame(void) {
         }
         for (int i = 0; i < g_field_set_count; i++) {
             applyAction(g_field_sets[i][0], g_field_sets[i][1]);
+        }
+        if (SDL_getenv("DW3_MONEY") != NULL) { /* tests: the money to start with */
+            int32_t money = SDL_atoi(SDL_getenv("DW3_MONEY"));
+            memcpy(GAME + GAME_MONEY, &money, 4);
         }
         /* as if from the title: from another mode the field puts the player
            back where a field was left (GAME.fieldPos, 0, 0 here), not at

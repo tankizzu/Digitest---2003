@@ -788,8 +788,9 @@ static void rect(int x, int y, int w, int h, int col, int textured, int raw, int
     if (w > 0 && h > 0 && textured && (bit = controls_glyph(g.tx, g.ty, g.depth, u0, v0, w, h)) >= 0 &&
         controls_game_icon(bit, &img, &tex)) {
         float c = s_map_a + (x + w / 2.0f - s_map_a) * s_map_s + s_map_d;
+        float y0 = s_map_b + (y - s_map_b) * s_map_t + s_map_e, sh = h * s_map_t; /* moved as the text (layouts) */
 
-        gfx_image(img, tex, c - h / 2.0f, (float)y, c + h / 2.0f, (float)(y + h), 0, CLIP);
+        gfx_image(img, tex, c - sh / 2.0f, y0, c + sh / 2.0f, y0 + sh, 0, CLIP);
     } else if (w > 0 && h > 0) {
         gl_rect(x, y, w, h, col & 255, col >> 8 & 255, col >> 16 & 255,
                 (textured ? 2 : 0) | (textured && raw ? 4 : 0) | (semi ? 8 : 0) | (soft ? 512 : 0), u0, v0, clut);

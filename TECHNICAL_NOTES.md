@@ -117,6 +117,7 @@
   da 0xD7, accessori da 0x124). Percorso in verticale: `250:start,900:start,1100:t160y390,1400:t100y57,1700:t100y151`
   (Stato, Kotemon, Equipaggiamento), poi `t100y463` (Destra). Lo `unk70` di StatsScreen (che il gioco azzera soltanto)
   dice a Stato che l'aiuto dell'equipaggiamento copre il TP.
+- `DW3_MONEY=5000`: col `--field`, il denaro di partenza (per provare i negozi).
 - `DW3_ENEMY_HP=1`: a ogni turno del giocatore gli HP dei nemici scendono a quel valore (battaglia vinta al primo
   colpo: per arrivare al resoconto). `--field 5120` (il resoconto da solo) resta nero: senza una battaglia non ha
   niente da mostrare.
@@ -343,8 +344,10 @@ dopo il riscontro sulla 2.0.
   (trade.c: panels[0] ×2, il messaggio panels[4] ×1,5).
   Lista per comprare (item_list.c, `selling == 0`, 8 per pagina): un pezzo per oggetto (la sua riga nella sua
   colonna, sorgente alta 16) alla riga i ×2, nell'ordine naturale; cornice allungata, pagina sotto, L1/R1 nascosti,
-  dettagli ×1 sotto; tocchi in `nativeShopListTouch` (righe, frecce 20/21 → L1/R1). Difetto: un «●» compare nella
-  terza riga (sorgente circa (31, 55)), assente in orizzontale: da capire di chi è. Resta un pezzetto di cornice a destra (circa x 290-320,
+  dettagli ×1 sotto; tocchi in `nativeShopListTouch` (righe, frecce 20/21 → L1/R1, suggerimento 9 → cerchio).
+  Acquisto (trade.c `nativeBuyLayout`): quantità panels[0] ×1,8, totale e messaggi panels[1-3] ×1,5, dettagli come
+  con la lista. Le icone dei tasti nei testi (gpu_draw.c `rect`, controls_glyph) ora seguono anche la y della
+  disposizione (prima solo la x: il ● restava al posto originale). Resta un pezzetto di cornice a destra (circa x 290-320,
   y 130-150 del gioco) accanto al messaggio: da capire di quale sprite è. Da fare: lista (item_list.c, due colonne
   con L1/R1 a schermo), quantità e conferma (trade.c), informazioni (info.c), equip.c; percorso di prova
   `--field 3840 --party 0`, `250:start,700:t160y358` (VENDI), poi `t160y374` (Protezioni). Poi laboratorio, palestra.

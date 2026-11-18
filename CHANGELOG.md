@@ -33,8 +33,12 @@
   (si torna indietro col pulsante dell'app). Vendere: i quattro tipi (Oggetti, Armi, Protezioni, Accessori) il doppio
   più grandi, un tocco sceglie; il messaggio «Non hai ...» grande sotto. Comprare: la lista degli oggetti del negozio in
   una colonna di 8 righe il doppio più grandi (un tocco sceglie e mostra i dettagli, un secondo compra), la pagina
-  cambia toccando le frecce, senza le scritte L1 / R1. Verificato su Linux. Ancora originali: la quantità, la
-  conferma, la lista per vendere, i dettagli (piccoli) e la scritta «Button: Effects».
+  cambia toccando le frecce, senza le scritte L1 / R1. Poi la quantità 1,8 volte (toccando la metà alta delle frecce
+  uno in più, la bassa uno in meno, il resto del riquadro va avanti) e il totale con Compra / No 1,5 volte; un tocco
+  sul suggerimento dei dettagli gira la loro pagina. Verificato su Linux un acquisto intero (3 spade). Ancora
+  originali: la domanda «Equipaggiare?», la lista per vendere, i dettagli (piccoli) e la scritta «Button: Effects».
+- Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
+  spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque

@@ -28,7 +28,90 @@
          win->no->setString(win->no, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x14);
      } else {
          win->total->setVisible(win->total, 0);
-@@ -710,9 +722,27 @@
+@@ -46,9 +58,36 @@
+ 
+ /* Draws the buying screen's frames, the quantity's blinking arrows and the
+    marker over a partner */
++#ifdef NATIVE
++/* Upright, for the finger, buying: the quantity 1.8 times, the total with Yes and No (and the messages) 1.5 times,
++   where the list was (item_list.c); the item's details under them as with the list (gpu_draw.c's layout) */
++#define NATIVE_BUY_Y 300
++static void nativeBuyLayout(ShopBuy *buy) {
++    if (buy->panels[0].level != 0) {
++        NATIVE_MENU_PIECE(buy->layer, 150, 45, 175, 62, 0, NATIVE_BUY_Y, 315, 112);
++    }
++    if (buy->panels[1].level != 0 || buy->panels[2].level != 0 || buy->panels[3].level != 0) {
++        NATIVE_MENU_PIECE(buy->layer, 115, 30, 210, 90, 0, NATIVE_BUY_Y, 315, 135);
++    }
++    if (buy->panels[0].level != 0 || buy->panels[1].level != 0) {
++        NATIVE_MENU_PIECE(buy->layer, 0, 110, 320, 130, 0, NATIVE_BUY_Y + 254, 320, 130); /* the details */
++    }
++}
++
++/* Upright: a tap on the details' page hint turns their page (circle); the target is id 9 */
++static void nativeBuyHintTarget(void) {
++    native_touch_target(9, 0, NATIVE_BUY_Y + 254 + 18 - (native_field_h() - SCREEN_HEIGHT) / 2, 160, 22);
++}
++#endif
++
+ void STITSHOP_drawBuy(ShopBuy *buy, ShopBuyWindows *win) {
+     SpriteDrawer sprite;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeBuyLayout(buy);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(buy->layer, buy->depth);
+     sprite.setTexture(0x280, 0x100);
+@@ -116,6 +155,21 @@
+     u16 price;
+ 
+     old = buy->quantity;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the arrows' side, its top half one more, its bottom half one less; the
++                                rest of the panel goes on (X); the details' hint turns their page (circle) */
++        s32 top = NATIVE_BUY_Y - (native_field_h() - SCREEN_HEIGHT) / 2, t;
++
++        native_touch_target(0, 230, top + 40, 90, 34);
++        native_touch_target(1, 230, top + 74, 90, 38);
++        native_touch_target(2, 0, top, 230, 112);
++        nativeBuyHintTarget();
++        t = native_touch_tap();
++        if (t >= 0) {
++            native_touch_hold(t == 0 ? PAD_UP : t == 1 ? PAD_DOWN : t == 2 ? PAD_CROSS : PAD_CIRCLE, 3);
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         buy->quantity++;
+         if (buy->quantity > buy->max) {
+@@ -201,6 +255,23 @@
+     s32 old;
+ 
+     old = buy->choice;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: Yes or No tapped is answered (X); the details' hint (circle) */
++        s32 top = NATIVE_BUY_Y - (native_field_h() - SCREEN_HEIGHT) / 2, t;
++
++        native_touch_target(0, 0, top + 58, 320, 24);
++        native_touch_target(1, 0, top + 82, 320, 24);
++        nativeBuyHintTarget();
++        t = native_touch_tap();
++        if (t == 9) {
++            native_touch_hold(PAD_CIRCLE, 3);
++        } else if (t >= 0) {
++            buy->choice = t;
++            win->cursor->setPos(win->cursor, 0xB8, buy->choice * 0x10 + 0x49);
++            native_touch_hold(PAD_CROSS, 3);
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP)) {
+         buy->choice = 0;
+     } else if (PAD_PRESSED(PAD_DOWN)) {
+@@ -710,9 +781,27 @@
  }
  
  /* Draws the selling screen's frames, and the quantity's blinking arrows */
@@ -56,7 +139,7 @@
      initSpriteDrawer(&sprite);
      sprite.setTexture(0x280, 0x100);
      if (sell->panels[3].level != 0) {
-@@ -796,6 +826,25 @@
+@@ -796,6 +885,25 @@
      s32 old;
  
      old = sell->type;
@@ -82,7 +165,7 @@
      if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
          if (--sell->type < 0) {
              sell->type = 0;
-@@ -903,7 +952,7 @@
+@@ -903,7 +1011,7 @@
      if (STITSHOP_funcs.updateFade(&sell->panels[2]) != 0) {
          win->total->setString(win->total, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x12);
          win->total->setNumber(win->total, 1, ITEM_FUNCS.get(sell->item)->sellPrice * sell->quantity);
