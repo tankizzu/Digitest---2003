@@ -79,7 +79,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Negozio, laboratorio, palestra, album e negozio delle carte a tutto schermo in verticale (2.4).
 - [x] Editor del mazzo a tutto schermo (2.4).
 - [x] Menu del campo e oggetti col dito, righe grandi (2.5).
-- [ ] Col dito anche: Ordina, Stato, Tecniche; poi negozio, laboratorio, palestra, carte (stesso meccanismo:
+- [x] Ordina col dito (2.5).
+- [ ] Col dito anche: Stato, Tecniche; poi negozio, laboratorio, palestra, carte (stesso meccanismo:
       TECHNICAL_NOTES "Menu col dito").
 - [ ] Battaglia a carte (CARDGAME) in verticale: un solo layer (0x100, fondo grigio). Aperta da sola (`--field 1792`)
       va in crash (manca il mazzo/avversario): per provarla serve una partita a carte vera da un salvataggio.

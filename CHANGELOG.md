@@ -11,6 +11,8 @@
   secondo tocco lo usa; trascinare a destra o a sinistra cambia pagina, niente più L1 / R1). Verificato su Linux il
   menu, le categorie, la scelta del partner e l'uso di un oggetto; il tocco sulle righe della lista e il trascinamento
   solo sul telefono (su Linux non si simulano).
+- **Ordina col dito**: i partner grandi in alto, le frecce dello scambio accanto; si tocca il primo, poi quello con
+  cui scambiarlo. Verificato su Linux.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque

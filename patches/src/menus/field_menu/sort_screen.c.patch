@@ -1,0 +1,94 @@
+--- a/src/menus/field_menu/sort_screen.c
++++ b/src/menus/field_menu/sort_screen.c
+@@ -100,11 +100,49 @@
+ 
+ /* Draws the cursors, the partners' portraits and frames, the two being
+    swapped squashed by the fade, and the swap's arrow */
++#ifdef NATIVE
++/* Upright, for the finger: the partners' panels big at the top as in the item screen (item_screen.c), the swap's
++   arrows beside them, the title under them, the help at the bottom (gpu_draw.c's layout) */
++static void nativeSortLayout(SortScreen *screen) {
++    s32 i;
++
++    for (i = 0; i < screen->count; i++) {
++        if (screen->pageFades[i].level != 0) {
++            NATIVE_MENU_PIECE(screen->layer, 0, 15 + i * 46, 150, 48, 0, 24 + i * 68, 210, 67);
++        }
++    }
++    if (screen->arrowShown) {
++        NATIVE_MENU_PIECE(screen->layer, 145, 30, 30, 123, 203, 46, 42, 182); /* the swap's arrows, under the title */
++    }
++    if (screen->fades[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 30, 10, 290, 28, -54, 232, 348, 34); /* the title */
++    }
++    if (screen->fades[1].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 190, 320, 48, 0, 572, 320, 48); /* the help */
++    }
++}
++
++/* Upright, the finger on the partners' panels (nativeSortLayout): the one tapped, -1 if none */
++static s32 nativeSortTap(SortScreen *screen) {
++    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, m;
++
++    for (m = 0; m < screen->count; m++) {
++        native_touch_target(m, 0, 24 + m * 68 - top, 210, 67);
++    }
++    return native_touch_tap();
++}
++#endif
++
+ void STSTATUS_drawSortScreen(SortScreen *screen) {
+     SpriteDrawer sprite;
+     s32 id;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeSortLayout(screen);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(screen->layer, screen->depth);
+     STSTATUS_stepSortCursor(screen);
+@@ -281,6 +319,20 @@
+ static inline void STSTATUS_chooseFirstToSwap(SortScreen *screen, SortScreenWindows *windows) {
+     s32 old;
+ 
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the partner tapped is the first of the swap (X) */
++        s32 t = nativeSortTap(screen);
++
++        if (t >= 0) {
++            if (t != screen->cursor) {
++                screen->cursor = t;
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     old = screen->cursor;
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->cursor--;
+@@ -320,6 +372,20 @@
+ static inline void STSTATUS_chooseSecondToSwap(SortScreen *screen, SortScreenWindows *windows) {
+     s32 old;
+ 
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the other partner tapped swaps with the first (X) */
++        s32 t = nativeSortTap(screen);
++
++        if (t >= 0 && t != screen->first) {
++            if (t != screen->second) {
++                screen->second = t;
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     old = screen->second;
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         do {
