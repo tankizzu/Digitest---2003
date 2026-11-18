@@ -28,30 +28,35 @@
                  return;
              }
              win->r1Label->setVisible(win->r1Label, 0);
-@@ -72,6 +87,66 @@
+@@ -72,6 +87,75 @@
  }
  
  /* Draws the list's frame, the items' icons and the blinking page arrows */
 +#ifdef NATIVE
-+/* Upright, for the finger, the shop's items (buying): one item per row, in their order, twice as big, the frame
++/* Upright, for the finger, the shop's items or the bag's: one item per row, in their order, bigger, the frame
 +   stretched behind them, the page and its arrows under them without the shoulder buttons' labels,
 +   then the item's details as they are (gpu_draw.c's layout) */
-+#define NATIVE_SHOPLIST_Y 300
++/* Buying, 8 items a page: twice as big from y 300; selling, 14 (and everything 40 lower): 1.6 times from y 280 */
++#define NATIVE_SHOPLIST_Y(l) ((l)->selling ? 280 : 300)
++#define NATIVE_SHOPLIST_STEP(l) ((l)->selling ? 22 : 28)          /* a row's height */
++#define NATIVE_SHOPLIST_PAGE(l) ((l)->pageSize * NATIVE_SHOPLIST_STEP(l)) /* the rows' height */
++#define NATIVE_SHOPLIST_DETAILS(l) (NATIVE_SHOPLIST_Y(l) + NATIVE_SHOPLIST_PAGE(l) + 30)
 +static void nativeShopListLayout(ShopItemList *list) {
-+    if (list->panel.level == 0 || list->selling) {
++    s32 y = NATIVE_SHOPLIST_Y(list), step = NATIVE_SHOPLIST_STEP(list), k = list->selling ? 16 : 20; /* tenths */
++    s32 low = list->selling * 0x28, rows = NATIVE_SHOPLIST_PAGE(list), i;
++
++    if (list->panel.level == 0) {
 +        return;
 +    }
-+    s32 i;
-+
-+    for (i = 0; i < 8; i++) { /* item i: its row in the two columns, to row i */
++    for (i = 0; i < list->pageSize; i++) { /* item i: its row in the two columns, to row i */
 +        NATIVE_MENU_PIECE(list->layer, (i % 2) * 131 + 18, 34 + (i / 2) * 14, 137 + (i % 2) * 14, 16, -2,
-+                          NATIVE_SHOPLIST_Y + i * 28 - 2, 274 + (i % 2) * 28, 32);
++                          y + i * step - 2, (137 + (i % 2) * 14) * k / 10, 16 * k / 10);
 +    }
-+    NATIVE_MENU_PIECE(list->layer, 0, 28, 320, 84, 0, NATIVE_SHOPLIST_Y - 10, 320, 264);     /* the frame */
-+    NATIVE_MENU_PIECE(list->layer, 0, 90, 320, 22, 0, NATIVE_SHOPLIST_Y + 230, 320, 22);     /* the page */
-+    NATIVE_MENU_HIDE(list->layer, 43, 90, 24, 16);  /* "L1" */
-+    NATIVE_MENU_HIDE(list->layer, 256, 90, 24, 16); /* "R1" */
-+    NATIVE_MENU_PIECE(list->layer, 0, 110, 320, 130, 0, NATIVE_SHOPLIST_Y + 254, 320, 130); /* the details */
++    NATIVE_MENU_PIECE(list->layer, 0, 28, 320, 84 + low * 5 / 4, 0, y - 10, 320, rows + 40); /* the frame */
++    NATIVE_MENU_PIECE(list->layer, 0, 90 + low, 320, 22, 0, y + rows + 6, 320, 22);  /* the page */
++    NATIVE_MENU_HIDE(list->layer, 43, 90 + low, 24, 16);  /* "L1" */
++    NATIVE_MENU_HIDE(list->layer, 256, 90 + low, 24, 16); /* "R1" */
++    NATIVE_MENU_PIECE(list->layer, 0, 110 + low, 320, 130 - low, 0, NATIVE_SHOPLIST_DETAILS(list), 320, 130 - low);
 +}
 +
 +/* Upright, the finger on the list (nativeShopListLayout): a row tapped is chosen, tapped again bought (X); the page's
@@ -59,13 +64,17 @@
 +static s32 nativeShopListTouch(ShopItemList *list, ShopItemListWindows *win) {
 +    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, first = list->page * list->pageSize, i, t, item;
 +
++    s32 y = NATIVE_SHOPLIST_Y(list) - top, step = NATIVE_SHOPLIST_STEP(list), rows = NATIVE_SHOPLIST_PAGE(list);
++
 +    for (i = 0; i < list->pageSize && first + i < list->count; i++) {
-+        native_touch_target(i, 10, NATIVE_SHOPLIST_Y + i * 28 - top, 290, 28);
++        native_touch_target(i, 10, y + i * step, 290, step);
 +    }
-+    native_touch_target(9, 0, NATIVE_SHOPLIST_Y + 254 + 18 - top, 160, 22); /* the details' page hint */
++    if (!list->selling) { /* the details' page hint (selling has none) */
++        native_touch_target(9, 0, NATIVE_SHOPLIST_DETAILS(list) + 18 - top, 160, 22);
++    }
 +    if (list->pages >= 2) {
-+        native_touch_target(20, 0, NATIVE_SHOPLIST_Y + 222 - top, 90, 38);
-+        native_touch_target(21, 230, NATIVE_SHOPLIST_Y + 222 - top, 90, 38);
++        native_touch_target(20, 0, y + rows - 2, 90, 38);
++        native_touch_target(21, 230, y + rows - 2, 90, 38);
 +    }
 +    t = native_touch_tap();
 +    if (t == 20 || t == 21) {
@@ -95,7 +104,7 @@
  void STITSHOP_drawItemList(ShopItemList *list) {
      SpriteDrawer sprite;
      s32 index;
-@@ -80,6 +155,11 @@
+@@ -80,6 +164,11 @@
      s32 y;
      s32 i;
  
@@ -107,12 +116,12 @@
      initSpriteDrawer(&sprite);
      sprite.setLayerId(list->layer, list->depth);
      sprite.setTexture(0x280, 0x100);
-@@ -193,6 +273,12 @@
+@@ -193,6 +282,12 @@
          break;
      case TASK_DONE:
          if (list->active) {
 +#ifdef NATIVE
-+            if (native_portrait() && !list->selling && nativeShopListTouch(list, win)) {
++            if (native_portrait() && nativeShopListTouch(list, win)) {
 +                STITSHOP_drawItemList(list);
 +                break;
 +            }
@@ -120,7 +129,7 @@
              page = list->page;
              if ((!PAD_HELD(PAD_R1) && PAD_PRESSED(PAD_L1)) || (!PAD_HELD(PAD_R1) && PAD_REPEATED(PAD_L1))) {
                  if (--list->page < 0) {
-@@ -227,11 +313,17 @@
+@@ -227,11 +322,17 @@
                      if (list->selection < first) {
                          list->selection = first;
                      }

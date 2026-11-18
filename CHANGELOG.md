@@ -37,7 +37,8 @@
   uno in più, la bassa uno in meno, il resto del riquadro va avanti) e il totale con Compra / No 1,5 volte; un tocco
   sul suggerimento dei dettagli gira la loro pagina; «Equipaggiare?» Sì / No e poi il partner si toccano (i dettagli
   restano in basso). Verificato su Linux un acquisto intero (3 spade, poi equipaggiate a Kotemon). Ancora
-  originali: la lista per vendere, i dettagli (piccoli) e la scritta «Button: Effects».
+  originali: i dettagli (piccoli) e la scritta «Button: Effects». Vendere: la lista in una colonna di 14 righe 1,6 volte,
+  poi quantità e totale grandi come per comprare; verificata su Linux la vendita di una spada.
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che

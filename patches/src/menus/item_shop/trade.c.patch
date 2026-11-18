@@ -152,7 +152,7 @@
      if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
          do {
              if (--buy->partner < 0) {
-@@ -710,9 +808,27 @@
+@@ -710,9 +808,37 @@
  }
  
  /* Draws the selling screen's frames, and the quantity's blinking arrows */
@@ -165,6 +165,16 @@
 +    }
 +    if (sell->panels[4].level != 0) { /* the message ("Don't have ..."), 1.5 times under them */
 +        NATIVE_MENU_PIECE(sell->layer, 115, 120, 215, 50, 6, NATIVE_SELL_TYPES_Y + 152, 323, 75);
++    }
++    /* the quantity and the total as when buying, where the list was; the details as with the list (item_list.c) */
++    if (sell->panels[1].level != 0) {
++        NATIVE_MENU_PIECE(sell->layer, 150, 45, 175, 62, 0, NATIVE_BUY_Y, 315, 112);
++    }
++    if (sell->panels[2].level != 0) {
++        NATIVE_MENU_PIECE(sell->layer, 115, 30, 210, 90, 0, NATIVE_BUY_Y, 315, 135);
++    }
++    if (sell->panels[0].level == 0) {
++        NATIVE_MENU_PIECE(sell->layer, 0, 150, 320, 90, 0, 618, 320, 90);
 +    }
 +}
 +#endif
@@ -180,7 +190,7 @@
      initSpriteDrawer(&sprite);
      sprite.setTexture(0x280, 0x100);
      if (sell->panels[3].level != 0) {
-@@ -796,6 +912,25 @@
+@@ -796,6 +922,25 @@
      s32 old;
  
      old = sell->type;
@@ -206,7 +216,27 @@
      if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
          if (--sell->type < 0) {
              sell->type = 0;
-@@ -903,7 +1038,7 @@
+@@ -842,6 +987,19 @@
+     s32 old;
+ 
+     old = sell->quantity;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger, as when buying (STITSHOP_chooseBuyQuantity) */
++        s32 top = NATIVE_BUY_Y - (native_field_h() - SCREEN_HEIGHT) / 2, t;
++
++        native_touch_target(0, 230, top + 40, 90, 34);
++        native_touch_target(1, 230, top + 74, 90, 38);
++        native_touch_target(2, 0, top, 230, 112);
++        t = native_touch_tap();
++        if (t >= 0) {
++            native_touch_hold(t == 0 ? PAD_UP : t == 1 ? PAD_DOWN : PAD_CROSS, 3);
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         sell->quantity++;
+         if (sell->quantity > sell->max) {
+@@ -903,7 +1061,7 @@
      if (STITSHOP_funcs.updateFade(&sell->panels[2]) != 0) {
          win->total->setString(win->total, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x12);
          win->total->setNumber(win->total, 1, ITEM_FUNCS.get(sell->item)->sellPrice * sell->quantity);
@@ -215,3 +245,24 @@
          win->no->setString(win->no, FILE_CACHE.load(TEXT_FILE(TEXT_ITEM_SHOP)), 0x14);
          sell->choice = 0;
          win->cursor->setPos(win->cursor, 0xB8, 0x49);
+@@ -918,6 +1076,20 @@
+     s32 old;
+ 
+     old = sell->choice;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: Yes or No tapped is answered (X) */
++        s32 top = NATIVE_BUY_Y - (native_field_h() - SCREEN_HEIGHT) / 2, t;
++
++        native_touch_target(0, 0, top + 58, 320, 24);
++        native_touch_target(1, 0, top + 82, 320, 24);
++        t = native_touch_tap();
++        if (t >= 0) {
++            sell->choice = t;
++            win->cursor->setPos(win->cursor, 0xB8, sell->choice * 0x10 + 0x49);
++            native_touch_hold(PAD_CROSS, 3);
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP)) {
+         sell->choice = 0;
+     } else if (PAD_PRESSED(PAD_DOWN)) {
