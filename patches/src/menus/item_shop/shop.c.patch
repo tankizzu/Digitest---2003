@@ -1,6 +1,35 @@
 --- a/src/menus/item_shop/shop.c
 +++ b/src/menus/item_shop/shop.c
-@@ -52,6 +52,16 @@
+@@ -18,9 +18,28 @@
+ 
+ /* Draws the shop's four frames as they open by scaling, and the background,
+    which scrolls one pixel every other frame, wrapping at 96 */
++#ifdef NATIVE
++/* Upright, for the finger: Buy and Sell twice as big under the title; the help (a PlayStation button's "Back") hidden:
++   the port's back button does it (gpu_draw.c's layout) */
++#define NATIVE_SHOP_Y 300
++static void nativeShopLayout(ItemShop *shop) {
++    if (shop->panels[2].level != 0) {
++        NATIVE_MENU_PIECE(shop->layer, 160, 30, 165, 46, 0, NATIVE_SHOP_Y - 12, 330, 92);
++    }
++    if (shop->panels[3].level != 0) {
++        NATIVE_MENU_HIDE(shop->layer, 180, 185, 145, 50);
++    }
++}
++#endif
++
+ void STITSHOP_drawShop(ItemShop *shop, ItemShopWindows *win) {
+     SpriteDrawer sprite;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeShopLayout(shop);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(shop->layer, 1);
+     sprite.setTexture(0x280, 0x100);
+@@ -52,6 +71,16 @@
          shop->bgTick = 1;
      }
      sprite.setScale(ONE, ONE, ONE);
@@ -17,3 +46,24 @@
      sprite.draw(FILE_CACHE.getEntry(FILE_SHOP_SPRITES << 16), 0x14, shop->bgScroll, shop->bgScroll);
  }
  
+@@ -91,6 +120,20 @@
+         break;
+     case 3:
+         choice = shop->choice;
++#ifdef NATIVE
++        if (native_portrait()) { /* the finger: Buy or Sell tapped is chosen (X) */
++            s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++            for (i = 0; i < 2; i++) {
++                native_touch_target(i, 0, NATIVE_SHOP_Y + (8 + i * 14) * 2 - top, 320, 28);
++            }
++            t = native_touch_tap();
++            if (t >= 0) {
++                shop->choice = t;
++                native_touch_hold(PAD_CROSS, 3);
++            }
++        }
++#endif
+         if (PAD_PRESSED(PAD_UP)) {
+             shop->choice = 0;
+         } else if (PAD_PRESSED(PAD_DOWN)) {

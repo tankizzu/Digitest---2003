@@ -29,6 +29,9 @@
   tecniche), sotto la lista delle tecniche 1,4 volte (un tocco sceglie, un secondo la usa; per una cura si tocca il
   partner da curare), l'aiuto; i messaggi si chiudono con un tocco. Verificato su Linux la scelta del partner e il
   messaggio «non ha imparato tecniche»; la lista **non verificata** (i partner di prova non hanno tecniche da campo).
+- **Negozio, prima schermata**: COMPRA e VENDI il doppio più grandi, un tocco sceglie; tolta la scritta «Button: Back»
+  (si torna indietro col pulsante dell'app). Verificato su Linux. Le schermate dopo (categorie, lista, quantità) sono
+  ancora quelle originali.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque

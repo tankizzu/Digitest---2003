@@ -336,7 +336,11 @@ dopo il riscontro sulla 2.0.
   sua linea interna nascosta, L1/R1 nascosti; tocchi con `native_touch_list`).
 - Fatti anche: Ordina (sort_screen.c: partner, frecce, titolo, aiuto; tocchi sui partner), Stato (status_screen.c:
   partner, EXP, TP, scelte, statistiche, digievoluzioni, equipaggiamento; tocchi su partner e scelte).
-- Da fare: equip_panel.c, digivolve_panel.c, tech_screen.c, negozio, laboratorio, palestra.
+- Fatti anche: equipaggiamento (equip_panel.c: titolo, caselle, oggetto della casella, lista, aiuto; lo `unk70` di
+  StatsScreen dice a Stato di non spostare il TP mentre l'aiuto lo copre), digievoluzioni (digivolve_panel.c: titolo,
+  caselle o domanda, statistiche che scorrono, aiuto), Tecniche (tech_screen.c: come Ordina più la lista).
+- Negozio: fatta la prima schermata (shop.c: COMPRA/VENDI ×2, aiuto col tasto nascosto). Da fare: categorie e lista
+  (trade.c, item_list.c, info.c, equip.c), laboratorio, palestra.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 
