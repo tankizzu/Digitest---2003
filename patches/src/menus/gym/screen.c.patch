@@ -1,0 +1,19 @@
+--- a/src/menus/gym/screen.c
++++ b/src/menus/gym/screen.c
+@@ -324,6 +324,16 @@
+     } else {
+         screen->bgTick = 1;
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = screen->bgScroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry(STGTRAIN_SPRITES), screen->bgSprite, screen->bgScroll, y);
++        }
++        return;
++    }
++#endif
+     sprite.draw(FILE_CACHE.getEntry(STGTRAIN_SPRITES), screen->bgSprite, screen->bgScroll, screen->bgScroll);
+ }
+ 

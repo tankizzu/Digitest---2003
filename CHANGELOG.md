@@ -17,6 +17,8 @@
 - **Negozio degli oggetti a tutto schermo** (verticale): stesso schema. Verificato su Linux (Asuka Armory, compra).
   Restano le scritte coi tasti PlayStation ("Button: Back", "R1"), da rifare coi tocchi.
 - **Laboratorio Digi-Lab a tutto schermo** (verticale): stesso schema. Verificato su Linux (menu, cambio Digimon).
+- **Palestra (allenamento) a tutto schermo** (verticale): i tre layer sulla tela alta. Verificato su Linux (scelta del
+  Digimon e dell'allenamento); la finestrella dell'allenamento non provata (la squadra di prova non ha TP).
 - **Dissolvenze in verticale**: quella del titolo (dai bordi verso il centro) e quella comune a memory card,
   negozi, laboratorio e altri menu ora scuriscono tutto lo schermo, non solo le 240 righe centrali. Verificato su
   Linux (titolo → memory card); orizzontale identico.

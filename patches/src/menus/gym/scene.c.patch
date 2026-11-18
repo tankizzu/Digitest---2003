@@ -1,0 +1,39 @@
+--- a/src/menus/gym/scene.c
++++ b/src/menus/gym/scene.c
+@@ -17,6 +17,36 @@
+         rect.y = 0;
+         rect.w = 0x140;
+         rect.h = 0xF0;
++#ifdef NATIVE
++        if (native_portrait()) { /* upright: the three layers on the tall screen, the gym's 320x240 in its middle */
++            s32 top = (native_field_h() - SCREEN_HEIGHT) / 2;
++
++            GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, native_field_h());
++            rect.y = NATIVE_FIELD_Y;
++            rect.h = native_field_h();
++            layer = GFX.funcs.createLayer(&rect, 3, SCREEN_LAYER);
++            layer->setBgColor(layer, 0, 0, 0);
++            layer->setOffset(layer, 0, top);
++            rect.x = 0x7B;
++            rect.y = NATIVE_FIELD_Y + top + 0x53;
++            rect.w = 0xA8;
++            rect.h = 0x58;
++            layer = GFX.funcs.createLayer(&rect, 3, 0x1001);
++            layer->setOffset(layer, 0, top);
++            GFX.funcs.moveLayer(0x1001, 0x1000, 1);
++            rect.x = 0;
++            rect.y = NATIVE_FIELD_Y;
++            rect.w = 0x140;
++            rect.h = native_field_h();
++            layer = GFX.funcs.createLayer(&rect, 3, 0x1002);
++            layer->setOffset(layer, 0, top);
++            GFX.funcs.moveLayer(0x1002, 0x1001, 1);
++            native_touch_origin(top);
++            children[0] = STGTRAIN_createScreen();
++            task->nextState(task);
++            break;
++        }
++#endif
+         layer = GFX.funcs.createLayer(&rect, 3, SCREEN_LAYER);
+         layer->setBgColor(layer, 0, 0, 0);
+         rect.x = 0x7B;
