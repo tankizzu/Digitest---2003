@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Ultimo aggiornamento: 18/11/2026 — versione **2.4** (versionCode 27) pronta, non ancora mandata (2.3 mandata); l'ultima
+Ultimo aggiornamento: 18/11/2026 — versione **2.4** (versionCode 27) mandata il 18/11; in preparazione la 2.5; l'ultima
 provata dall'utente sul telefono è precedente alla 1.9.
 
 ## Obiettivo attuale
@@ -47,13 +47,7 @@ titolo).
 
 - **Impostazioni**: tre proposte (A icona sola, B icona nel pannellino — quella attiva —, C pannello sotto
   CONTINUA). `DW3_SETTINGS_LOOK=1/2/3` per vederle.
-- **Strada di Asuka**: l'utente la vuole a tutto schermo come le altre (la mappa è alta solo 384 pixel). Piano in
-  TECHNICAL_NOTES e prototipo funzionante su Linux, **spento** (`DW3_ZOOM_MAP=1`): ingrandisce di 1,85 solo la scena
-  (mappa e personaggi), i dialoghi seguono i personaggi. Serve l'approvazione per accenderlo (anche nell'APK).
 - Rinominare una memory card dopo il primo salvataggio (oggi non si può).
-- **Battaglia in verticale, inquadrature ravvicinate** (entrata di un partner): la telecamera mostra i bordi del set
-  3D, sopra il muro e sotto il pavimento c'è il nero (in orizzontale restava fuori). Lasciarlo (come il nero oltre la
-  mappa del campo) o avvicinare la telecamera solo in quelle inquadrature (si perde un po' ai lati).
 - Fascia alta: scelte di partenza (sopra la mappa, solo col giocatore in controllo, prima di Genji solo i
   partner); OPZIONI quando ci sarà la schermata impostazioni.
 
@@ -61,9 +55,7 @@ titolo).
 
 - **Senza tocchi** (sul telefono si usa solo Indietro): le schermate interne del menu del campo (oggetti, ordina,
   tecniche, stato; il menu principale invece sì), negozio, laboratorio, palestra, album/negozio/editor delle carte.
-  Due strade da decidere con l'utente: un tocco generico che porta il cursore del gioco sulla riga toccata e conferma
-  (vale per tutte, ma è un cambio del modo di comandare), oppure bersagli schermata per schermata, magari con righe più
-  grandi disposte con una demo come per la battaglia.
+  Deciso (18/11): righe grandi disposte dall'utente con demo, schermata per schermata.
 
 - Tutto ciò che è dalla 1.3 in poi non è stato provato sul telefono (immersivo, area sicura, verticale).
 - Costo sul telefono della cattura delle immagini (ogni ~4 s il GPU software disegna un fotogramma).
@@ -72,11 +64,10 @@ titolo).
 
 ## Da dove ripartire
 
-1. Quando l'utente chiede il resoconto: mandargli la 2.4 (APK in `build-android/dw2003.apk`, solo a lui) e le
-   novità (CHANGELOG 2.4), più la proposta della strada di Asuka (immagine prima/dopo) da approvare. Riscontro sulla
-   2.3/2.4: battaglia in verticale, trascinamento nelle liste.
-2. Strada di Asuka a tutto schermo: prototipo pronto e spento, da far vedere all'utente (immagine prima/dopo) e
-   accendere se approva.
+1. Riscontro dell'utente sulla 2.4 (mandata il 18/11): battaglia in verticale, trascinamento nelle liste, schermate
+   a tutto schermo.
+2. Demo per disporre le schermate dei menu con righe grandi (prima oggetti, tecniche, stato, ordina del menu del
+   campo), poi applicarle coi tocchi.
 3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.
 4. Le scelte qui sopra.
 5. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); OPZIONI

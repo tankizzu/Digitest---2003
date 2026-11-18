@@ -314,7 +314,7 @@ void native_draw_ot(void *ot, int len);
 void native_field_zoom(float s, float cx, float cy, int top);
 /* a point of the field's screen (its layers' coordinates) moved where the zoomed scene has it; as it is without zoom */
 void native_field_zoom_point(int *x, int *y);
-/* 1 where the field fills the tall screen with its scene zoomed: DW3_ZOOM_MAP=1 while this is a proposal (portrait.c) */
+/* 1 where the field fills the tall screen with its scene zoomed, upright (portrait.c; DW3_ZOOM_MAP=0 turns it off) */
 int native_field_zoom_on(void);
 /* the next ordering table drawn belongs to a menu against the left (0) or
    right (320) edge, in a widescreen battle (the cursor's bar, fightstg/cursor.c) */

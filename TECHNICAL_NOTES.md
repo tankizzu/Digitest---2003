@@ -216,7 +216,7 @@ Passi proposti:
 Rischi: pezzi della mappa e attori che non combaciano dopo l'ingrandimento (righe di un pixel tra i pezzi da 128),
 qualità più bassa (la scena è 1,85 volte più grossa).
 
-**Prototipo** (17/11/2026, spento: si accende con `DW3_ZOOM_MAP=1`, `native_field_zoom_on` in portrait.c):
+**Acceso** dal 18/11/2026 (approvato; `DW3_ZOOM_MAP=0` lo spegne nelle prove, `native_field_zoom_on` in portrait.c):
 - camera.c: nella strada (`GAME.funcs.getMode() == MODE_NEW_GAME`, mappa più bassa della tela) la y della telecamera
   mette il centro della mappa a metà tela e chiama `native_field_zoom(H / altezza, 160, H / 2, NATIVE_FIELD_Y)`;
   altrimenti `native_field_zoom(0, ...)`. `resetGraphics` (display.c) lo spegne a ogni cambio di schermata.

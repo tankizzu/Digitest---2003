@@ -59,9 +59,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
       riquadri = 640×384 px; in verticale se ne vede tutta l'altezza, sopra e sotto nero come deciso per le stanze
       piccole). **Chiedere all'utente**: lasciare il nero (A), ingrandire x1,4 (B) o fino a riempire (C) solo nelle
       mappe basse (anteprima da screenshot reale; contraddice la decisione "dove la mappa finisce resta il nero").
-- [ ] Strada di Asuka a tutto schermo (richiesta dell'utente): prototipo spento (`DW3_ZOOM_MAP=1`), verificato su
-      Linux. Da approvare; poi accenderlo, provare scelte Sì/No e fumetto nella strada, la miniatura del salvataggio
-      (GPU software senza ingrandimento).
+- [x] Strada di Asuka a tutto schermo: approvata e accesa (2.5). Da provare ancora: scelte Sì/No e fumetto nella
+      strada, la miniatura del salvataggio (GPU software senza ingrandimento).
 - [ ] Volume nelle impostazioni (schermata impostazioni con la grafica del gioco).
 - [x] Lingua a tutto schermo (sfondo su tutta l'altezza; righe alte 31 px: ingrandirle se l'utente le trova piccole).
 - [x] Nome, kit, conferma a tutto schermo (sfondo a esagoni ripetuto in altezza). Verificato su Linux.
@@ -80,7 +79,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Negozio, laboratorio, palestra, album e negozio delle carte a tutto schermo in verticale (2.4).
 - [x] Editor del mazzo a tutto schermo (2.4).
 - [ ] **Tocchi** nelle schermate interne del menu del campo, negozio, laboratorio, palestra, carte (oggi solo
-      Indietro): decidere con l'utente fra tocco generico sul cursore e bersagli per schermata (PROJECT_STATE).
+      Indietro): deciso (18/11) righe grandi con demo da disporre. Prima le schermate più usate: oggetti, tecniche,
+      stato, ordina del menu del campo; poi negozio, laboratorio, palestra, carte.
 - [ ] Battaglia a carte (CARDGAME) in verticale: un solo layer (0x100, fondo grigio). Aperta da sola (`--field 1792`)
       va in crash (manca il mazzo/avversario): per provarla serve una partita a carte vera da un salvataggio.
 - [ ] Testi coi tasti PlayStation ancora a schermo in negozio ("Button: Back", "Button: Effects", "R1"), album,
@@ -97,7 +97,7 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Lampo bianco a tutto schermo; digievoluzione su tutta l'altezza (2.4; la digievoluzione non provata).
 - [x] Resoconto di fine battaglia (STFGTREP) a tutto schermo: sfondo su tutta l'altezza, contenuto al centro (2.4).
       Se l'utente lo vuole più grande o ridisposto: una demo da disporre come per la battaglia.
-- [ ] Inquadrature ravvicinate: nero oltre il set 3D (vedi PROJECT_STATE, da decidere).
+- [x] Inquadrature ravvicinate: resta il nero oltre il set 3D (deciso dall'utente).
 - [ ] Inizio e fine battaglia (transizione, risultati, resoconto STFGTREP) a tutto schermo.
 
 ## P3

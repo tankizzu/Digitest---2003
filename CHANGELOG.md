@@ -2,6 +2,12 @@
 
 ## Android (Digimon World 2003 per Android)
 
+### 2.5 (in preparazione)
+
+- **Strada di Asuka a tutto schermo** (approvata): in verticale la scena del prologo si ingrandisce (≈ 1,85) fino a
+  riempire lo schermo, i dialoghi seguono i personaggi; testi e pulsanti restano della loro grandezza. Verificato su
+  Linux.
+
 ### 2.4
 
 - Battaglia in verticale: il **lampo bianco** (entrata di un partner, alcuni colpi) copriva solo le prime 240 righe

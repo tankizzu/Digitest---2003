@@ -100,6 +100,14 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## App
 
+- **Strada di Asuka ingrandita** (18/11/2026, approvata dall'utente): in verticale la strada del prologo (mappa alta
+  384) riempie lo schermo ingrandendo solo la scena di H / 384 (≈ 1,85); i dialoghi seguono i personaggi. Eccezione
+  alla regola "dove la mappa finisce resta il nero", solo per questa mappa.
+- **Inquadrature ravvicinate in battaglia** (18/11/2026, utente): resta il nero oltre il set 3D, come nel campo.
+- **Tocchi nei menu** (18/11/2026, utente): righe grandi disposte con demo (come per la battaglia), schermata per
+  schermata; niente tocco generico sul cursore.
+- **Menu e resoconto a tutto schermo** (18/11/2026, utente): va bene il contenuto originale al centro, grandezza
+  originale, con lo sfondo del gioco ripetuto sopra e sotto.
 - **Battaglia in verticale, disposizione dell'utente** (17/11/2026, dalle demo "Disposizione battaglia"): i pezzi
   dove l'utente li ha messi nel db della demo (tabella NATIVE_XF); le statistiche non più affiancate in cima ma
   nemico sopra e partner sotto accanto al volto, come nella sua disposizione. Nelle liste **niente L1 / R1**: si

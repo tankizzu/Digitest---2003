@@ -17,7 +17,7 @@
          }
      }
 +#ifdef NATIVE
-+    /* upright, the prologue's street in Asuka City (a proposal, DW3_ZOOM_MAP=1): lower than the tall screen, the map
++    /* upright, the prologue's street in Asuka City (native_field_zoom_on): lower than the tall screen, the map
 +       fills it, its scene zoomed about the screen's middle (gpu_draw.c), the map's middle there */
 +    if (native_field_zoom_on() && GAME.funcs.getMode() == MODE_NEW_GAME && task->hasBounds &&
 +        task->bounds.y < native_field_h()) {
