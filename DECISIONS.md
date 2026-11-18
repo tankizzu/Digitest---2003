@@ -100,6 +100,9 @@ Ogni voce: la decisione, il motivo, le alternative scartate. Le decisioni si cam
 
 ## App
 
+- **Autosalvataggio** (18/11/2026, dopo che l'utente non riusciva a caricare): ogni 2 minuti di gioco (scene e
+  dialoghi compresi), al primo momento col giocatore libero; all'uscita dall'app l'ultimo momento libero. Nel
+  prologo il menu del campo (SALVA) non c'è ancora: l'autosalvataggio è l'unico modo di salvare.
 - **Strada di Asuka ingrandita** (18/11/2026, approvata dall'utente): in verticale la strada del prologo (mappa alta
   384) riempie lo schermo ingrandendo solo la scena di H / 384 (≈ 1,85); i dialoghi seguono i personaggi. Eccezione
   alla regola "dove la mappa finisce resta il nero", solo per questa mappa.

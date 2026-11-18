@@ -4,6 +4,12 @@
 
 ### 2.5 (in preparazione)
 
+- **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
+  non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
+  personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque
+  (scene comprese) e il salvataggio arriva al primo momento libero dopo due minuti di gioco; uscendo dall'app si salva
+  l'ultimo momento in cui il personaggio era libero, anche nel mezzo di una scena. Verificato su Linux il salvataggio
+  a tempo; quello all'uscita dall'app solo sul telefono.
 - **Strada di Asuka a tutto schermo** (approvata): in verticale la scena del prologo si ingrandisce (≈ 1,85) fino a
   riempire lo schermo, i dialoghi seguono i personaggi; testi e pulsanti restano della loro grandezza. Verificato su
   Linux.

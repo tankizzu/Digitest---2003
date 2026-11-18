@@ -197,7 +197,11 @@ void touch_saved(void);                           /* touch.c: the "saved" sign *
 void native_thumb_autosave(int game, int slot);   /* thumbs.c */
 void native_thumb_field(int mode);
 
-static int s_auto_last = -1, s_point_at = -1000, s_point[4];
+static int s_auto_last = -1, s_point[4];
+/* The game as it was the last frame the player was in control (native_autosave_point), which the app going to the
+   background saves even in the middle of a scene; s_snap_at when it was taken, s_written_at the last one written */
+static uint8_t s_snap[GAME_SAVE_SIZE];
+static int s_snap_point[4], s_snap_at = -1, s_written_at = -1;
 
 static void auto_path(int game, int slot, char *path, size_t n) {
     char dir[1100];
@@ -271,8 +275,9 @@ int native_autosave_read_slot(int game, int which, void *buf) {
     return save_time(path, buf) != 0 ? slot : -1;
 }
 
-/* GAME as a save, with the field and place the player is at, into the slot not written last */
-static void autosave(void) {
+/* `game` (GAME_SAVE_SIZE bytes of GAME) as a save, with the field and place `point` (where the player was in
+   control), into the slot not written last */
+static void write_autosave(const uint8_t *state, const int *point) {
     static uint8_t buf[GAME_SAVE_SIZE];
     int game = native_game_current(), newest;
     char path[1200], tmp[1210];
@@ -281,8 +286,8 @@ static void autosave(void) {
     if (game == 0) {
         return;
     }
-    memcpy(buf, GAME, GAME_SAVE_SIZE);
-    memcpy(buf + GAME_FIELD_MODE, s_point, sizeof s_point);
+    memcpy(buf, state, GAME_SAVE_SIZE);
+    memcpy(buf + GAME_FIELD_MODE, point, 4 * sizeof *point);
     buf[2] = SAVE_VERSION;
     buf[0] = computeChecksum(buf + 4, GAME_SAVE_SIZE - 4);
     newest = newest_autosave(game);
@@ -298,12 +303,20 @@ static void autosave(void) {
     s_auto_last = VSync(-1);
 }
 
-/* The app is about to go to the background (SDL's event pump, on the game's thread): a save if the player was in
-   control a moment ago */
+/* GAME now, the player in control */
+static void autosave(void) {
+    write_autosave(GAME, s_point);
+    s_written_at = s_snap_at;
+}
+
+/* The app is about to go to the background (SDL's event pump, on the game's thread): the game as it was the last
+   time the player was in control, if that wasn't saved yet (in a scene or a dialog too: the prologue has few
+   minutes in control) */
 static bool SDLCALL on_lifecycle(void *data, SDL_Event *e) {
     (void)data;
-    if (e->type == SDL_EVENT_WILL_ENTER_BACKGROUND && VSync(-1) - s_point_at < 10) {
-        autosave();
+    if (e->type == SDL_EVENT_WILL_ENTER_BACKGROUND && s_snap_at >= 0 && s_snap_at != s_written_at) {
+        write_autosave(s_snap, s_snap_point);
+        s_written_at = s_snap_at;
     }
     return true;
 }
@@ -320,10 +333,14 @@ void native_autosave_point(int mode, int x, int y, int dir) {
     }
     s_point[0] = mode, s_point[1] = x, s_point[2] = y, s_point[3] = dir;
     native_thumb_field(mode); /* a picture of the field now and then, for a save's (thumbs.c) */
-    if (s_auto_last < 0 || VSync(-1) - s_point_at > 30) {
-        s_auto_last = VSync(-1); /* back in control after a while: the count starts again */
+    memcpy(s_snap, GAME, GAME_SAVE_SIZE); /* what the background save writes */
+    memcpy(s_snap_point, s_point, sizeof s_point);
+    s_snap_at = VSync(-1);
+    if (s_auto_last < 0) {
+        s_auto_last = VSync(-1); /* the first time in control: the count starts */
     }
-    s_point_at = VSync(-1);
+    /* every few minutes of play, scenes and dialogs included: at the first moment in control once it is due (the
+       prologue seldom leaves the player two minutes in control in a row) */
     if (VSync(-1) - s_auto_last >= every) {
         autosave();
     }
