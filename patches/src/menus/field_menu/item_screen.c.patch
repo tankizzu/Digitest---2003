@@ -1,0 +1,101 @@
+--- a/src/menus/field_menu/item_screen.c
++++ b/src/menus/field_menu/item_screen.c
+@@ -275,11 +275,46 @@
+ }
+ 
+ /* Draws the partners' portraits and frames, the item, the cursor and the help arrow */
++#ifdef NATIVE
++/* Upright, for the finger: the partners' panels big at the top (to tap the one an item goes to), the title under them,
++   the categories big (rows to tap), the BIT, the chosen item and the help at the bottom, as the item list has them
++   (item_list.c); gpu_draw.c's layout */
++static void nativeItemScreenLayout(ItemScreen *screen) {
++    s32 i;
++
++    for (i = 0; i < screen->count; i++) {
++        if (screen->pageFades[i].level != 0) {
++            NATIVE_MENU_PIECE(screen->layer, 0, 15 + i * 46, 150, 48, 0, 24 + i * 68, 210, 67);
++        }
++    }
++    if (screen->fades[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 30, 10, 290, 28, -54, 232, 348, 34); /* the title */
++    }
++    if (screen->fades2[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 166, 38, 154, 86, 1, 268, 354, 198); /* the categories */
++    }
++    if (screen->fades2[1].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 155, 112, 24, 0, 474, 112, 24); /* the BIT */
++    }
++    if (screen->fade.level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 8, 160, 316, 36, 6, 534, 316, 36); /* the chosen item */
++    }
++    if (screen->fades[1].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 190, 320, 48, 0, 572, 320, 48); /* the help */
++    }
++}
++#endif
++
+ void STSTATUS_drawItemScreen(ItemScreen *screen) {
+     SpriteDrawer sprite;
+     s32 id;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeItemScreenLayout(screen);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(screen->layer, screen->depth);
+     STSTATUS_animateItemPortraits(screen);
+@@ -478,6 +513,26 @@
+ static inline void STSTATUS_chooseItemList(ItemScreen *screen, ItemScreenWindows *windows) {
+     s32 old;
+ 
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a tap on a category picks it and opens it (X) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, o, t;
++
++        for (o = 0; o < 5; o++) {
++            native_touch_target(o, 1, 268 + (7 + o * 14) * 23 / 10 - top, 300, 32);
++        }
++        t = native_touch_tap();
++        if (t >= 0) {
++            if (t != screen->option) {
++                screen->option = t;
++                SOUND.playSound(SOUND_CURSOR);
++                windows->help->setString(windows->help, FILE_CACHE.load(TEXT_FILE(TEXT_STATUS)), screen->option + 0x1B);
++                windows->optionCursor->setPos(windows->optionCursor, 0xB0, screen->option * 0xE + 0x31);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     old = screen->option;
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->option--;
+@@ -606,6 +661,24 @@
+ static inline void STSTATUS_chooseItemMember(ItemScreen *screen, ItemScreenWindows *windows) {
+     s32 old;
+ 
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a tap on a partner's panel gives it the item (X) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, m, t;
++
++        for (m = 0; m < screen->count; m++) {
++            native_touch_target(m, 0, 24 + m * 68 - top, 210, 67);
++        }
++        t = native_touch_tap();
++        if (t >= 0) {
++            if (t != screen->member) {
++                screen->member = t;
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     old = screen->member;
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->member--;

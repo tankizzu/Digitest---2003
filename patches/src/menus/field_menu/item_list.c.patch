@@ -1,6 +1,84 @@
 --- a/src/menus/field_menu/item_list.c
 +++ b/src/menus/field_menu/item_list.c
-@@ -142,11 +142,17 @@
+@@ -2,6 +2,12 @@
+    panels (STSTATUS_createItemList): its rodata starts at 0x80082B90 (USA). */
+ 
+ #include "menus/field_menu.h"
++
++#ifdef NATIVE
++/* Upright: the item list's rows, one column on the tall screen (nativeItemListLayout) */
++#define NATIVE_LIST_TOP 60
++#define NATIVE_LIST_ROW 28
++#endif
+ 
+ /* Creates the item list's windows: its title, two columns of 8 items, the page
+    number, the page arrows and the cursor */
+@@ -102,6 +108,52 @@
+     windows->pageCount->setRightAlign(windows->pageCount, 1);
+ }
+ 
++#ifdef NATIVE
++/* Upright, the finger on the list (nativeItemListLayout's rows): a tap on a row picks its item (its help shows), a
++   tap on the picked one is X; a drag of 36 pixels left turns to the next page (R1), right to the one before (L1).
++   1 if it picked one */
++static s32 nativeItemListTouch(ItemList *panel, ItemListWindows *windows) {
++    static s32 accX, idle;
++    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y, dy, dx, ev, row, idx;
++
++    native_touch_list(0, NATIVE_LIST_TOP - top, 300, 16 * NATIVE_LIST_ROW);
++    ev = native_touch_list_event(&y, &dy);
++    dx = native_touch_list_dx();
++    if (dx == 0) {
++        if (++idle > 8) {
++            accX = 0; /* the finger off or still: a new drag starts from nothing */
++        }
++    } else {
++        idle = 0;
++        accX += dx;
++    }
++    if (accX <= -36 || accX >= 36) {
++        native_touch_hold(accX < 0 ? PAD_R1 : PAD_L1, 3);
++        accX = 0;
++        return 0;
++    }
++    if (ev != 1) {
++        return 0;
++    }
++    row = (y - (NATIVE_LIST_TOP - top)) / NATIVE_LIST_ROW;
++    idx = panel->page * 16 + row;
++    if (row < 0 || row >= 16 || idx > panel->count - 1) {
++        return 0;
++    }
++    if (idx == panel->cursor) {
++        native_touch_hold(PAD_CROSS, 3); /* the game's own X: its sound and what comes next */
++        return 0;
++    }
++    panel->cursor = idx;
++    SOUND.playSound(SOUND_CURSOR);
++    windows->cursor->setPos(windows->cursor, (panel->cursor % 2) * 0x83 + 0x1E, (panel->cursor % 16) / 2 * 14 + 0x25);
++    panel->screen->item = panel->items[panel->cursor];
++    STSTATUS_showChosenItem(panel->screen, 1);
++    STSTATUS_showItemHelp(panel->screen, 1);
++    return 1;
++}
++#endif
++
+ /* Moves the item list's cursor: L1 and R1 turn the pages; returns whether
+    it moved */
+ s32 STSTATUS_moveItemListCursor(ItemList *panel, ItemListWindows *windows) {
+@@ -110,6 +162,11 @@
+     s32 first;
+     s32 last;
+ 
++#ifdef NATIVE
++    if (native_portrait() && nativeItemListTouch(panel, windows)) {
++        return 1;
++    }
++#endif
+     page = panel->page;
+     cursor = panel->cursor;
+     if ((!PAD_HELD(PAD_R1) && PAD_PRESSED(PAD_L1)) || (!PAD_HELD(PAD_R1) && PAD_REPEATED(PAD_L1))) {
+@@ -142,11 +199,17 @@
          if (panel->cursor < first) {
              panel->cursor = first;
          }
@@ -18,7 +96,49 @@
      }
      if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
          if (!PAD_HELD(PAD_DOWN)) {
-@@ -367,3 +373,928 @@
+@@ -239,6 +302,29 @@
+     }
+ }
+ 
++#ifdef NATIVE
++/* Upright, for the finger (the user's layout demo, "Oggetti: lista"): the page's 16 items in one column of rows
++   twice as big, left then right of each row in the game's order (gpu_draw.c's layout); the frame stretched behind
++   them; the page number under them; L1 / R1 and the page arrows hidden (a drag turns the page) */
++static void nativeItemListLayout(ItemList *panel) {
++    s32 i, j;
++
++    for (i = 0; i < 8; i++) {
++        for (j = 0; j < 2; j++) {
++            NATIVE_MENU_PIECE(panel->layer, j ? 159 : 28, 36 + i * 14, j ? 133 : 131, 14, 0,
++                              NATIVE_LIST_TOP + (i * 2 + j) * NATIVE_LIST_ROW, j ? 266 : 262, NATIVE_LIST_ROW);
++        }
++    }
++    NATIVE_MENU_PIECE(panel->layer, 10, 15, 140, 22, 6, 24, 182, 29);                     /* the title */
++    NATIVE_MENU_PIECE(panel->layer, 140, 150, 60, 16, 132, NATIVE_LIST_TOP + 16 * NATIVE_LIST_ROW + 10, 60, 16);
++    NATIVE_MENU_HIDE(panel->layer, 18, 146, 72, 24);                                         /* L1, the arrow */
++    NATIVE_MENU_HIDE(panel->layer, 236, 146, 84, 24);                                        /* R1, the arrow */
++    /* the frame, its top line (31) over the first row and its bottom under the page number */
++    NATIVE_MENU_PIECE(panel->layer, 0, 24, 330, 156, 0, NATIVE_LIST_TOP - 29, 330, 510);
++    NATIVE_MENU_HIDE(panel->layer, 0, 147, 330, 6); /* the line under the rows, if apart: it would cross them */
++}
++#endif
++
+ /* Draws the item list's icons, page arrows and frames */
+ void STSTATUS_drawItemList(ItemList *panel) {
+     SpriteDrawer sprite;
+@@ -247,6 +333,11 @@
+     s32 i;
+     s32 j;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeItemListLayout(panel);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setTexture(0x280, 0x100);
+     sprite.setLayerId(panel->layer, panel->depth);
+@@ -367,3 +458,928 @@
      panel->list = list;
      return panel;
  }

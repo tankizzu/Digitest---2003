@@ -314,6 +314,21 @@ void native_draw_ot(void *ot, int len);
 void native_field_zoom(float s, float cx, float cy, int top);
 /* a point of the field's screen (its layers' coordinates) moved where the zoomed scene has it; as it is without zoom */
 void native_field_zoom_point(int *x, int *y);
+/* Upright menus laid out bigger (gpu_draw.c), this frame only (native_layout_end_frame, display.c, after the layers
+   are drawn): layer `layer`'s packets at OT depths under `depth` lying in (sx, sy, sw, sh) are drawn into
+   (dx, dy, dw, dh), all in the layer's own coordinates; dw or dh 0 hides them. The smallest piece that holds a
+   packet wins */
+void native_layout_piece(int layer, int depth, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh);
+void native_layout_end_frame(void);
+/* a point where the layout shows it (the layer's coordinates) back where the game has it; 0 if in no piece */
+int native_layout_unmap(int layer, int *x, int *y);
+/* A piece of an upright menu's layout from the game's 320x240 (sx, sy, sw, sh) to the tall screen (dx, dy, dw, dh:
+   its rows from its top), on a layer offset to put the 320x240 in the middle (shared/update_scene.inc.c's upright
+   scenes); the screen's background at OT depth 7 stays as it is */
+#define NATIVE_MENU_PIECE(layer, sx, sy, sw, sh, dx, dy, dw, dh)                                                     \
+    native_layout_piece((layer), 7, (sx), (sy), (sw), (sh), (dx), (dy) - (native_field_h() - SCREEN_HEIGHT) / 2, (dw), \
+                        (dh))
+#define NATIVE_MENU_HIDE(layer, sx, sy, sw, sh) native_layout_piece((layer), 7, (sx), (sy), (sw), (sh), 0, 0, 0, 0)
 /* 1 where the field fills the tall screen with its scene zoomed, upright (portrait.c; DW3_ZOOM_MAP=0 turns it off) */
 int native_field_zoom_on(void);
 /* the next ordering table drawn belongs to a menu against the left (0) or

@@ -1,6 +1,6 @@
 --- a/src/engine/menu/field_menu.c
 +++ b/src/engine/menu/field_menu.c
-@@ -141,6 +141,126 @@
+@@ -141,6 +141,168 @@
  
  s32 FIELD_MENU_SPRITES[6] = { 29, 30, 31, 32, 33, 34 };
  
@@ -69,6 +69,43 @@
 +    win->cursor->setPos(win->cursor, 0xB0, task->cursor * 14 + 0x31);
 +}
 +
++/* Upright, for the finger (the user's layout demo, "Menu"): the options big (rows about 29 pixels high), the partners'
++   panels small side by side over them, the title over those, the money under the options (gpu_draw.c's layout). The
++   field's menu (its layer's 320x240 at the screen's top) and the field menu screens' (STSTATUS: in the middle) alike */
++#define NATIVE_OPT_K 208 /* the options' scale, in hundredths */
++#define NATIVE_OPT_X 9
++#define NATIVE_OPT_Y 239
++static s32 nativeMenuTop(FieldMenu *task) {
++    return task->layerId == 0x1000 ? (native_field_h() - SCREEN_HEIGHT) / 2 : 0; /* STSTATUS's SCREEN_LAYER: centred */
++}
++
++static void nativeMenuPiece(FieldMenu *task, s32 sx, s32 sy, s32 sw, s32 sh, s32 dx, s32 dy, s32 dw, s32 dh) {
++    /* the field's menu is on its map layer at depths 0-2 (the map's pieces from 3), STSTATUS's background at 7 */
++    native_layout_piece(task->layerId, task->layerId == 0x1000 ? 7 : 3, sx, sy, sw, sh, dx, dy - nativeMenuTop(task),
++                        dw, dh);
++}
++
++static void nativeFieldMenuLayout(FieldMenu *task) {
++    s32 i;
++
++    for (i = 0; i < 3; i++) {
++        if (task->panels[i].level != 0) {
++            nativeMenuPiece(task, 0, 15 + i * 46, 118, 48, 7 + i * 105, 195, 100, 41);
++        }
++    }
++    if (task->panels[0].level != 0) {
++        nativeMenuPiece(task, 30, 8, 300, 30, -25, 159, 300, 30); /* the title */
++    }
++    if (task->panels[1].level != 0) {
++        nativeMenuPiece(task, 166, 38, 170, 112 + (task->count > 7 ? (task->count - 7) * 14 : 0), NATIVE_OPT_X,
++                        NATIVE_OPT_Y, 170 * NATIVE_OPT_K / 100,
++                        (112 + (task->count > 7 ? (task->count - 7) * 14 : 0)) * NATIVE_OPT_K / 100);
++    }
++    if (task->panels[2].level != 0) {
++        nativeMenuPiece(task, 0, 155, 112, 24, 0, 492, 112, 24); /* the money */
++    }
++}
++
 +/* touch: a row of the menu tapped picks it and confirms (X) */
 +static s32 tapCross;
 +static void tapRows(FieldMenu *task, FieldMenuWindows *win, s32 rows) {
@@ -76,6 +113,11 @@
 +
 +    native_touch_in_menu();
 +    for (i = 0; i < rows; i++) {
++        if (native_portrait()) { /* upright: where the layout shows the row (nativeFieldMenuLayout) */
++            native_touch_target(i, 0, NATIVE_OPT_Y + (0x30 + i * 14 - 38) * NATIVE_OPT_K / 100 - nativeMenuTop(task), 320,
++                                14 * NATIVE_OPT_K / 100);
++            continue;
++        }
 +        native_touch_target(i, 0xAC, 0x30 + i * 14, 132, 14);
 +    }
 +    tapped = native_touch_tap();
@@ -127,7 +169,7 @@
  /* Starts the field menu: opens the panels and the windows, with the extra option
     when the player has item 0x192 and option 2 only in a field zone */
  static inline void openFieldMenu(FieldMenu *task, FieldMenuWindows *win) {
-@@ -156,6 +276,23 @@
+@@ -156,6 +318,23 @@
          FIELD_MENU_CHOICE.extra = 0;
      }
      task->count = task->extraOption + 5;
@@ -151,7 +193,7 @@
      if (getFieldZone() >= 0) {
          task->option2Enabled = 1;
      } else {
-@@ -168,6 +305,10 @@
+@@ -168,6 +347,10 @@
  static inline void showFieldMenuOptions(FieldMenu *task, FieldMenuWindows *win) {
      showPartnerPage(task, win, 1, 1);
      for (task->counter = 0; task->counter < task->count; task->counter++) {
@@ -162,7 +204,7 @@
          win->options[task->counter]->setString(win->options[task->counter], FILE_CACHE.load(TEXT_FILE(TEXT_STATUS)),
                                    FIELD_MENU_OPTIONS[task->extraOption][task->counter]);
      }
-@@ -194,16 +335,33 @@
+@@ -194,16 +377,33 @@
      s32 prev;
      s32 done;
  
@@ -196,7 +238,7 @@
      }
      if (prev != task->cursor) {
          SOUND.playSound(SOUND_CURSOR);
-@@ -211,11 +369,22 @@
+@@ -211,11 +411,22 @@
          return;
      }
      done = 0;
@@ -219,7 +261,7 @@
          done = 1;
          if (GAME.funcs.getMode() == MODE_STATUS) {
              task->step = 1;
-@@ -223,6 +392,11 @@
+@@ -223,6 +434,11 @@
              task->step = 0;
          }
          FIELD_MENU_CHOICE.option = task->cursor;
@@ -231,7 +273,7 @@
      } else if (PAD_PRESSED(PAD_TRIANGLE)) {
          SOUND.playSound(SOUND_MENU_CANCEL);
          done = 1;
-@@ -232,6 +406,9 @@
+@@ -232,6 +448,9 @@
              task->step = 1;
          }
      }
@@ -241,7 +283,7 @@
      if (done) {
          startPanel(&task->panels[0], 0);
          startPanel(&task->panels[1], 0);
-@@ -283,6 +460,19 @@
+@@ -283,6 +502,19 @@
          }
          break;
      case 6:
@@ -261,7 +303,7 @@
          if (GAME.funcs.getMode() == MODE_STATUS) {
              GAME.funcs.requestMode(GAME.fieldMode, 0);
          } else {
-@@ -319,6 +509,64 @@
+@@ -319,6 +551,64 @@
          obj2.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), FIELD_MENU_SPRITES[j], 0, 0);
      }
  }
@@ -326,7 +368,19 @@
  
  /* Runs the field menu: opens its panels, moves the cursor and switches mode on a choice */
  void updateFieldMenu(FieldMenu *task, FieldMenuWindows *win) {
-@@ -406,6 +654,13 @@
+@@ -387,6 +677,11 @@
+             }
+             break;
+         }
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativeFieldMenuLayout(task);
++        }
++#endif
+         initSpriteDrawer(&obj);
+         obj.setTexture(0x140, 0);
+         obj.setLayerId(task->layerId, task->depth);
+@@ -406,6 +701,13 @@
          }
          if (task->panels[1].level != 0) {
              STRETCH_SPRITE(obj, task->panels[1].level, 0x140, 0x52);
@@ -340,3 +394,15 @@
              obj.draw(FILE_CACHE.getEntry(FILE_MENU_SPRITES << 16), 0x1C - task->extraOption, 0xA8, 0x28);
          }
          if (task->panels[2].level != 0) {
+@@ -414,6 +716,11 @@
+         }
+         break;
+     case 2:
++#ifdef NATIVE
++        if (native_portrait()) {
++            nativeFieldMenuLayout(task);
++        }
++#endif
+         stepFieldMenuFade(task);
+         drawFieldMenuFade(task);
+         break;

@@ -270,7 +270,7 @@ static int too_big(const Vtx *a, const Vtx *b, const Vtx *c) {
 #define WIDE_PARTNER_LAYER 0x1009 /* fightstg/partner_view.c's, the partner's picture */
 #define WIDE_MENUS_LAYER 0x1005 /* fightstg/types.h's BATTLE_LAYER_MENUS: the HUD, the menus, the messages */
 static float s_map_a, s_map_s = 1, s_map_d; /* x to a + (x - a) * s + d on the card (widescreen) */
-static float s_map_b, s_map_t = 1;          /* and y to b + (y - b) * t (the upright field's zoom) */
+static float s_map_b, s_map_t = 1, s_map_e;  /* and y to b + (y - b) * t + e (the upright field's zoom, layouts) */
 static float s_clip_a, s_clip_s = 1;          /* and the drawing area's x to a + (x - a) * s */
 int g_draw_layer;
 
@@ -289,7 +289,7 @@ static GVtx gvtx(float x, float y, int r, int gg, int b, int u, int v, int clut,
     GVtx o;
 
     o.x = s_map_a + (x - s_map_a) * s_map_s + s_map_d;
-    o.y = s_map_b + (y - s_map_b) * s_map_t;
+    o.y = s_map_b + (y - s_map_b) * s_map_t + s_map_e;
     o.u = (float)u;
     o.v = (float)v;
     o.r = (uint8_t)r;
@@ -1264,10 +1264,78 @@ void native_field_zoom_point(int *x, int *y) {
     }
 }
 
+/* Upright menus laid out bigger (native.h native_layout_piece): this frame, the packets of one layer whose box lies
+   in a piece's rectangle (the layer's own coordinates) are drawn moved and scaled into its target, or not at all
+   (hide); the smallest piece that holds a packet wins. Only OT depths under `depth` (the screen's background lies at
+   the deepest); a packet in no piece is drawn as it is */
+#define LAYOUT_MAX 64
+typedef struct {
+    int layer, depth, hide;
+    float sx, sy, sw, sh, dx, dy, kx, ky;
+} LayoutPiece;
+static LayoutPiece s_lay[LAYOUT_MAX];
+static int s_lay_n;
+
+void native_layout_piece(int layer, int depth, int sx, int sy, int sw, int sh, int dx, int dy, int dw, int dh) {
+    LayoutPiece *l;
+
+    if (s_lay_n >= LAYOUT_MAX || sw <= 0 || sh <= 0) {
+        return;
+    }
+    l = &s_lay[s_lay_n++];
+    l->layer = layer, l->depth = depth, l->hide = dw <= 0 || dh <= 0;
+    l->sx = (float)sx, l->sy = (float)sy, l->sw = (float)sw, l->sh = (float)sh;
+    l->dx = (float)dx, l->dy = (float)dy, l->kx = l->hide ? 1 : (float)dw / sw, l->ky = l->hide ? 1 : (float)dh / sh;
+}
+
+void native_layout_end_frame(void) {
+    s_lay_n = 0;
+}
+
+int native_layout_unmap(int layer, int *x, int *y) {
+    for (int i = 0; i < s_lay_n; i++) {
+        LayoutPiece *l = &s_lay[i];
+        float dw = l->sw * l->kx, dh = l->sh * l->ky;
+
+        if (l->layer == layer && !l->hide && *x >= l->dx && *x < l->dx + dw && *y >= l->dy && *y < l->dy + dh) {
+            *x = (int)(l->sx + (*x - l->dx) / l->kx);
+            *y = (int)(l->sy + (*y - l->dy) / l->ky);
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* The piece of the packet (its box in the layer's coordinates): the smallest that holds it (a row's text inside the
+   frame behind the rows goes with the row), or NULL */
+static LayoutPiece *layout_find(const uint32_t *p, int n, int depth) {
+    int ox = 0, oy = 0, x1 = 0, y1 = 0, box[4];
+    LayoutPiece *best = NULL;
+
+    if (!packet_box(p, n, &ox, &oy, &x1, &y1, box)) {
+        return NULL;
+    }
+    for (int i = 0; i < s_lay_n; i++) {
+        LayoutPiece *l = &s_lay[i];
+
+        if (l->layer == g_draw_layer && depth < l->depth && box[0] >= l->sx - 2 && box[2] <= l->sx + l->sw + 2 &&
+            box[1] >= l->sy - 2 && box[3] <= l->sy + l->sh + 2 && (best == NULL || l->sw * l->sh < best->sw * best->sh)) {
+            best = l;
+        }
+    }
+    return best;
+}
+
 /* Walks an ordering table: each tag is {next address: 24, words: 8}, then the words */
 void DrawOTag(uint32_t *p) {
     int guard = 0, wide = gte_widescreen() && g_draw_layer == WIDE_MENUS_LAYER, k = 0, drawn = 0;
     int zoom = s_zoom > 0 && !gte_in_battle() && g_draw_layer == FIELD_MAP_LAYER && g_draw_ot != NULL;
+    int layout = 0, depth = 0;
+
+    for (int i = 0; i < s_lay_n; i++) {
+        layout |= s_lay[i].layer == g_draw_layer;
+    }
+    layout = layout && g_draw_ot != NULL;
 
     perf_begin(PF_DRAW);
     gfx_sync(0);
@@ -1293,21 +1361,35 @@ void DrawOTag(uint32_t *p) {
             s_map_a = on ? s_zoom_cx : 0, s_map_s = on ? s_zoom : 1;
             s_map_b = on ? s_zoom_top + s_zoom_cy : 0, s_map_t = on ? s_zoom : 1;
         }
+        if (layout && p >= g_draw_ot && p < g_draw_ot + g_draw_ot_len) {
+            depth = (int)(p - g_draw_ot);
+        }
         if (n) {
             if (wide && k < s_wide_n) {
                 s_map_a = s_wide[k].a, s_map_s = s_wide[k].s;
                 k++;
             }
+            if (layout) {
+                LayoutPiece *l = layout_find(p + 1, n, depth);
+
+                if (l != NULL && l->hide) {
+                    goto next;
+                }
+                /* the layer's coordinates plus its offset (g.ox, g.oy, set by its DRAWENV first) are the card's */
+                s_map_a = l ? l->sx + g.ox : 0, s_map_s = l ? l->kx : 1, s_map_d = l ? l->dx - l->sx : 0;
+                s_map_b = l ? l->sy + g.oy : 0, s_map_t = l ? l->ky : 1, s_map_e = l ? l->dy - l->sy : 0;
+            }
             gpu_packet(p + 1, n);
             drawn++;
         }
+    next:
         if ((tag & 0xFFFFFF) == 0xFFFFFF) {
             break;
         }
         p = (uint32_t *)(uintptr_t)(tag & 0xFFFFFF);
     }
     s_map_a = 0, s_map_s = 1, s_map_d = 0;
-    s_map_b = 0, s_map_t = 1;
+    s_map_b = 0, s_map_t = 1, s_map_e = 0;
     s_clip_a = 0, s_clip_s = 1;
     gfx_shadows_resolve();
     if (gte_in_battle() && g_draw_layer == 0x1002) { /* BATTLE_LAYER_STAGE: its depth, for the props (stagefx.c) */
