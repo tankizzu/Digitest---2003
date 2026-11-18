@@ -20,7 +20,7 @@
 - **Palestra (allenamento) a tutto schermo** (verticale): i tre layer sulla tela alta. Verificato su Linux (scelta del
   Digimon e dell'allenamento); la finestrella dell'allenamento non provata (la squadra di prova non ha TP).
 - **Album e negozio delle carte a tutto schermo** (verticale): stesso schema. Verificato su Linux (aperti con
-  `--field 4608` e `4864`). L'editor del mazzo e la battaglia a carte non ancora.
+  `--field 4608` e `4864`). Anche l'editor del mazzo (`--field 1024`). La battaglia a carte non ancora.
 - **Dissolvenze in verticale**: quella del titolo (dai bordi verso il centro) e quella comune a memory card,
   negozi, laboratorio e altri menu ora scuriscono tutto lo schermo, non solo le 240 righe centrali. Verificato su
   Linux (titolo → memory card); orizzontale identico.

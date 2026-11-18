@@ -1,0 +1,18 @@
+--- a/src/cardgame/deck_editor/screen.c
++++ b/src/cardgame/deck_editor/screen.c
+@@ -66,6 +66,15 @@
+     } else {
+         task->tick = 1;
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = task->scroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry(STCRDDEK_SPRITES), 8, task->scroll, y);
++        }
++    } else
++#endif
+     sprite.draw(FILE_CACHE.getEntry(STCRDDEK_SPRITES), 8, task->scroll, task->scroll);
+     sprite.setLayerId(task->layer, task->depth - 1);
+     if (task->panels[0].level != 0) {

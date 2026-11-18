@@ -304,6 +304,14 @@ dopo il riscontro sulla 2.0.
 - Dissolvenza comune (src/shared/draw_fader.inc.c, usata da memory card, negozi, laboratorio, album...): se il layer
   è sulla tela alta (clip.y ≥ NATIVE_FIELD_Y) copre `-offset` + tutto il clip invece di 320×256.
 - Titolo (edge_fade.c): i quattro triangoli dal centro ai bordi, scalati sul clip del layer.
+- Schermate con `shared/update_scene.inc.c`: basta `#define SCENE_UPRIGHT` (dentro `#ifdef NATIVE`) prima
+  dell'include (tela alta, offset (0, (H − 240) / 2), origine del tocco), più lo sfondo che scorre (periodo 96)
+  ridisegnato ogni 192 righe su tutta l'altezza. Fatto: memory card, menu del campo (card_screen.c + menu.c), negozio
+  (scene.c + shop.c), laboratorio (scene.c + lab.c), album (album.c), negozio delle carte (scene.c + shop.c), editor
+  del mazzo (scene.c + screen.c). La palestra (gym/scene.c) crea i suoi tre layer da sé: patch a mano.
+- Per provarle: `--field` col numero della modalità (`--party 0`): 0x400 1024 editor del mazzo, 0xA00 2560
+  palestra, 0xD00 3328 laboratorio, 0xF00 3840 negozio (`--arg` il negozio), 0x1200 4608 album, 0x1300 4864 negozio
+  delle carte; il menu del campo dalla fascia (`--field 515 --progress 5`, Start).
 - Battaglia: white_flash.c (lampo bianco) alto quanto la tela; digimon_change.c (digievoluzione) con CHANGE_H /
   CHANGE_STEP al posto di 240 e della velocità; sprite_effect.c sposta di (H − 240) / 2 gli effetti del layer FRONT.
 
