@@ -1,6 +1,24 @@
 --- a/src/battle/battle_mode/player_turn.c
 +++ b/src/battle/battle_mode/player_turn.c
-@@ -97,7 +97,12 @@
+@@ -6,6 +6,17 @@
+ /* Opens the command menu with the HUD, the partner view and the shot camera,
+    then goes to the menu of the command picked */
+ static inline void runCommandMenu(PlayerTurn *task, PlayerTurnChild *children) {
++#ifdef NATIVE
++    if (native_test_enemy_hp() > 0) { /* tests (DW3_ENEMY_HP): the enemies all but beaten */
++        s32 i;
++
++        for (i = 0; i < 3; i++) {
++            if (FIGHTSTG_battle.state.fighters[1][i].hp > native_test_enemy_hp()) {
++                FIGHTSTG_battle.state.fighters[1][i].hp = native_test_enemy_hp();
++            }
++        }
++    }
++#endif
+     switch (task->counter) {
+     case 0:
+     default:
+@@ -97,7 +108,12 @@
          case -1:
              break;
          case -2:
@@ -13,7 +31,7 @@
              break;
          default:
              task->action = 3;
-@@ -209,6 +214,11 @@
+@@ -209,6 +225,11 @@
              task->action = 0;
              task->setSubstate(task, 0);
              break;
@@ -25,7 +43,7 @@
          default:
              task->action = -1;
              task->setSubstate(task, 0);
-@@ -261,8 +271,9 @@
+@@ -261,8 +282,9 @@
  
  /* The player's turn: substate 2 opens the command menu (runCommandMenu)
     and then the menu of its command (runDigivolveMenu, runItemMenu,
@@ -37,7 +55,7 @@
     and goes back to substate 0, which closes the children. The match depends on the menus'
     results being switches with case -1 first and on each of the two endings
     of the command menu's last step being written out. */
-@@ -325,6 +336,11 @@
+@@ -325,6 +347,11 @@
          case 4:
              runKnockOutSwitchMenu(task, children);
              break;

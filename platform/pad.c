@@ -222,6 +222,19 @@ int native_test_layer_hidden(int id) {
     return SDL_strcasestr(env, hex) != NULL;
 }
 
+/* DW3_ENEMY_HP=1: tests only, the enemies' HP brought down to that much at each player turn, for a battle won at once
+   (FIGHTSTG player_turn.c); 0 when unset */
+int native_test_enemy_hp(void) {
+    static int hp = -1;
+
+    if (hp < 0) {
+        const char *env = SDL_getenv("DW3_ENEMY_HP");
+
+        hp = env != NULL ? SDL_max(SDL_atoi(env), 0) : 0;
+    }
+    return hp;
+}
+
 int native_test_save(void) {
     int t = s_test_save;
 
