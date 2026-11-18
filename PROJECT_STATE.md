@@ -59,6 +59,12 @@ titolo).
 
 ## Problemi aperti
 
+- **Senza tocchi** (sul telefono si usa solo Indietro): le schermate interne del menu del campo (oggetti, ordina,
+  tecniche, stato; il menu principale invece sì), negozio, laboratorio, palestra, album/negozio/editor delle carte.
+  Due strade da decidere con l'utente: un tocco generico che porta il cursore del gioco sulla riga toccata e conferma
+  (vale per tutte, ma è un cambio del modo di comandare), oppure bersagli schermata per schermata, magari con righe più
+  grandi disposte con una demo come per la battaglia.
+
 - Tutto ciò che è dalla 1.3 in poi non è stato provato sul telefono (immersivo, area sicura, verticale).
 - Costo sul telefono della cattura delle immagini (ogni ~4 s il GPU software disegna un fotogramma).
 - Dialoghi automatici che si fermano con più dialoghi di fila: non riprodotto su Linux.
