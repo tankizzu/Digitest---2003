@@ -76,7 +76,9 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 ## P2 — altro
 
 - [ ] Verificare sul telefono il salvataggio automatico quando l'app va in secondo piano.
-- [ ] Schermate del menu del campo (squadra, oggetti, tecniche, mappa), negozi, laboratorio.
+- [x] Menu del campo a tutto schermo in verticale (2.4): contenuto al centro, sfondo ripetuto.
+- [ ] Negozi, laboratorio, album e negozio delle carte, allenamento in verticale: stesso schema (SCENE_UPRIGHT dove
+      usano shared/update_scene.inc.c, più lo sfondo ripetuto).
 
 ## P1 — battaglia in verticale (2.2 prima versione, 2.3 disposizione dell'utente)
 

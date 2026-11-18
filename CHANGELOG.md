@@ -11,6 +11,9 @@
 - **Resoconto di fine battaglia a tutto schermo** (verticale): lo sfondo a griglia del gioco su tutta l'altezza, i
   pannelli dei partner e i messaggi al centro. Verificato su Linux (vittoria nel Settore Sud: EXP, livello,
   digievoluzione imparata, BIT).
+- **Menu del campo a tutto schermo** (verticale): oggetti, ordina, mappa, tecniche, stato, salva sulla tela alta, lo
+  sfondo del gioco su tutta l'altezza e il contenuto al centro. Verificato su Linux (tutte le schermate aperte, tocco su
+  MAPPA).
 - **Dissolvenze in verticale**: quella del titolo (dai bordi verso il centro) e quella comune a memory card,
   negozi, laboratorio e altri menu ora scuriscono tutto lo schermo, non solo le 240 righe centrali. Verificato su
   Linux (titolo → memory card); orizzontale identico.

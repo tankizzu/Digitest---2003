@@ -30,6 +30,7 @@ tutto schermo** (modalità principale); poi la battaglia.
 | Battaglia in verticale con la disposizione dell'utente (HUD, volto, messaggi, Tecniche, Oggetti, DV, Tag) e pallino del cursore (2.3) | sì | no |
 | Liste della battaglia: trascinare per cambiare pagina (2.3) | no (non si simula) | no |
 | Battaglia verticale: lampo bianco a tutto schermo, menu di entrata del partner (2.4) | sì | no |
+| Menu del campo (oggetti, mappa, tecniche, stato...) a tutto schermo (2.4) | sì | no |
 | Resoconto di fine battaglia a tutto schermo; dissolvenze del titolo e dei menu su tutta la tela (2.4) | sì | no |
 | Digievoluzione in battaglia su tutta l'altezza (2.4) | no (la squadra di prova non digievolve) | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
