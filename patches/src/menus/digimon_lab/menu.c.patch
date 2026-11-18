@@ -1,0 +1,121 @@
+--- a/src/menus/digimon_lab/menu.c
++++ b/src/menus/digimon_lab/menu.c
+@@ -143,10 +143,32 @@
+ }
+ 
+ /* Up and down pick a screen; cross goes on to the party, triangle leaves the lab */
++#ifdef NATIVE
++#define NATIVE_LAB_MENU_Y 300 /* the choices, upright (nativeLabMenuLayout) */
++#endif
+ static inline void pickMenuOption(LabMenu *menu, LabMenuWindows *windows) {
+     s32 old;
+ 
+     old = menu->choice;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the choice tapped is opened (X) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++        for (i = 0; i < 3; i++) {
++            native_touch_target(i, 0, NATIVE_LAB_MENU_Y + (8 + i * 14) * 7 / 4 - top, 320, 24);
++        }
++        t = native_touch_tap();
++        if (t >= 0) {
++            if (t != menu->choice) {
++                menu->choice = t;
++                SOUND.playSound(SOUND_CURSOR);
++                windows->cursor->setPos(windows->cursor, 0x9A, menu->choice * 0xE + 0x31);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         if (--menu->choice < 0) {
+             menu->choice = 0;
+@@ -179,6 +201,25 @@
+     s32 old;
+ 
+     old = menu->lab->member;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a capsule tapped shows its member, tapped again opens the screen (X); the
++                                entries' hint opens the member's entries (circle) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++        for (i = 0; i < menu->memberCount; i++) {
++            native_touch_target(i, 40 + i * 84, 365 - top, 84, 158);
++        }
++        native_touch_target(8, 0, 365 + 170 - top, 210, 39);
++        t = native_touch_tap();
++        if (t == 8) {
++            native_touch_hold(PAD_CIRCLE, 3);
++        } else if (t >= 0 && t == menu->lab->member) {
++            native_touch_hold(PAD_CROSS, 3);
++        } else if (t >= 0) {
++            menu->lab->member = t; /* shown below */
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
+         if (--menu->lab->member < 0) {
+             menu->lab->member = menu->memberCount - 1;
+@@ -422,6 +463,43 @@
+ }
+ 
+ /* Draws the main menu's frames and the party's animations */
++#ifdef NATIVE
++/* Upright, for the finger: the title 1.5 times, the three choices 1.75 times under it; the help (a PlayStation
++   button's "Back") hidden: the port's back button does it (gpu_draw.c's layout) */
++static void nativeLabMenuLayout(LabMenu *menu) {
++    if (menu->panels[0].level != 0) {
++        NATIVE_MENU_PIECE(menu->layer, 140, 10, 180, 28, 50, NATIVE_LAB_MENU_Y - 50, 270, 42);
++    }
++    if (menu->panels[1].level != 0) {
++        NATIVE_MENU_PIECE(menu->layer, 140, 38, 190, 60, 5, NATIVE_LAB_MENU_Y, 332, 105);
++    }
++    if (menu->panels[2].level != 0) {
++        NATIVE_MENU_HIDE(menu->layer, 180, 185, 145, 50);
++    }
++}
++
++/* Upright, the member's page: the member's panel 1.5 times at the top, the title and the party's capsules 1.75 times
++   under it, the entries' hint (Switch Digimon) under them; the label naming a PlayStation button hidden */
++#define NATIVE_LAB_PICK_Y 365
++static void nativeLabPageLayout(LabMenu *menu) {
++    if (menu->panels[3].level != 0) {
++        NATIVE_MENU_PIECE(menu->layer, 0, 15, 142, 50, 0, 240, 213, 75);
++    }
++    if (menu->panels[4].level != 0) {
++        NATIVE_MENU_HIDE(menu->layer, 140, 10, 182, 26);
++    }
++    if (menu->panels[5].level != 0) {
++        NATIVE_MENU_PIECE(menu->layer, 140, 62, 180, 24, 50, NATIVE_LAB_PICK_Y - 40, 270, 36);
++    }
++    if (menu->panels[6].level != 0 || menu->panels[7].level != 0) {
++        NATIVE_MENU_PIECE(menu->layer, 140, 92, 180, 90, 5, NATIVE_LAB_PICK_Y, 315, 158);
++    }
++    if (menu->panels[8].level != 0) {
++        NATIVE_MENU_PIECE(menu->layer, 0, 74, 140, 26, 0, NATIVE_LAB_PICK_Y + 170, 210, 39);
++    }
++}
++#endif
++
+ void STGDGLAB_drawMenu(LabMenu *menu, void *children) {
+     SpriteDrawer sprite;
+     PartnerAnim *anim;
+@@ -430,6 +508,15 @@
+     s32 i;
+ 
+     initSpriteDrawer(&sprite);
++#ifdef NATIVE
++    if (native_portrait()) {
++        if (menu->substate < 10) {
++            nativeLabMenuLayout(menu);
++        } else {
++            nativeLabPageLayout(menu);
++        }
++    }
++#endif
+     if (menu->substate < 10) {
+         sprite.setTexture(0x280, 0x100);
+         sprite.setLayerId(menu->layer, menu->depth);

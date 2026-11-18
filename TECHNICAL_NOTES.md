@@ -353,6 +353,10 @@ dopo il riscontro sulla 2.0.
   y 130-150 del gioco) accanto al messaggio: da capire di quale sprite è. Da fare: lista (item_list.c, due colonne
   con L1/R1 a schermo), quantità e conferma (trade.c), informazioni (info.c), equip.c; percorso di prova
   `--field 3840 --party 0`, `250:start,700:t160y358` (VENDI), poi `t160y374` (Protezioni). Poi laboratorio, palestra.
+- Laboratorio (`--field 3328 --party 0`, `250:start`, poi `1100:t160y330` Scambia / `t160y345` Digievolvi):
+  menu.c `nativeLabMenuLayout` (titolo ×1,5, voci ×1,75, aiuto nascosto) e `nativeLabPageLayout` (pannello del
+  partner, titolo, capsule ×1,75 da y 365, suggerimento delle voci; l'etichetta panels[4] nascosta). Da fare:
+  slot_screen.c, party_screen.c, entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 

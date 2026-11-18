@@ -39,6 +39,11 @@
   restano in basso). Verificato su Linux un acquisto intero (3 spade, poi equipaggiate a Kotemon). Ancora
   originali: i dettagli (piccoli) e la scritta «Button: Effects». Vendere: la lista in una colonna di 14 righe 1,6 volte,
   poi quantità e totale grandi come per comprare; verificata su Linux la vendita di una spada.
+- **Laboratorio, menu e scelta del partner**: le tre voci 1,75 volte e il titolo più grande, un tocco apre; tolta la
+  scritta «Button: Back». Poi il partner (pannello in alto 1,5 volte) e le capsule della squadra 1,75 volte: un tocco
+  mostra il partner, un secondo apre la schermata; il suggerimento delle voci si tocca. Nascosta «Button: Back to
+  Menu». Verificato su Linux. Le schermate dopo (scambio, digievoluzione, tabella) sono ancora quelle originali e la
+  scritta «Button: Details» è ancora a schermo.
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
