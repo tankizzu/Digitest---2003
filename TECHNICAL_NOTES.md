@@ -330,7 +330,9 @@ dopo il riscontro sulla 2.0.
   schermate STSTATUS al centro), schermata oggetti (item_screen.c: partner, titolo, categorie, BIT, oggetto scelto,
   aiuto; tocchi su categorie e partner), lista oggetti (item_list.c: 16 righe in una colonna, cornice allungata, la
   sua linea interna nascosta, L1/R1 nascosti; tocchi con `native_touch_list`).
-- Da fare: Ordina (sort_screen.c), Stato (status_screen.c), Tecniche (tech_screen.c), negozio, laboratorio, palestra.
+- Fatti anche: Ordina (sort_screen.c: partner, frecce, titolo, aiuto; tocchi sui partner), Stato (status_screen.c:
+  partner, EXP, TP, scelte, statistiche, digievoluzioni, equipaggiamento; tocchi su partner e scelte).
+- Da fare: equip_panel.c, digivolve_panel.c, tech_screen.c, negozio, laboratorio, palestra.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 

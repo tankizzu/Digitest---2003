@@ -1,0 +1,116 @@
+--- a/src/menus/field_menu/status_screen.c
++++ b/src/menus/field_menu/status_screen.c
+@@ -376,6 +376,49 @@
+ 
+ /* Draws the partners' portraits and frames, the chosen one's, its equipment
+    and the panels' frames */
++#ifdef NATIVE
++/* Upright, for the finger: the partners' panels as in the item screen (item_screen.c); once one is chosen, its panel
++   at the top with the EXP and the TP beside it, the two choices (digivolutions, equipment) big under it, the stats,
++   then the digivolutions' and the equipment's panels bigger (gpu_draw.c's layout) */
++#define NATIVE_STATUS_CHOICE_Y 100
++#define NATIVE_STATUS_CHOICE_K 183 /* hundredths */
++static void nativeStatusLayout(StatsScreen *screen) {
++    s32 i;
++
++    for (i = 0; i < screen->count; i++) {
++        if (screen->pageFades[i].level != 0) {
++            NATIVE_MENU_PIECE(screen->layer, 0, 15 + i * 46, 150, 48, 0, 24 + i * 68, 210, 67);
++        }
++    }
++    if (screen->panelFades[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 15, 150, 48, 0, 24, 210, 67); /* the chosen partner */
++    }
++    if (screen->fades[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 30, 10, 290, 28, -54, 232, 348, 34); /* the title */
++    }
++    if (screen->panelFades[5].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 58, 112, 24, 212, 30, 108, 23); /* the EXP */
++    }
++    if (screen->panelFades[1].level != 0) { /* the choices */
++        NATIVE_MENU_PIECE(screen->layer, 145, 12, 185, 40, 0, NATIVE_STATUS_CHOICE_Y, 185 * NATIVE_STATUS_CHOICE_K / 100,
++                          40 * NATIVE_STATUS_CHOICE_K / 100);
++    }
++    if (screen->panelFades[2].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 82, 112, 112, 0, 180, 157, 157); /* the stats */
++        NATIVE_MENU_PIECE(screen->layer, 0, 192, 80, 30, 212, 60, 80, 30);   /* the TP */
++    }
++    if (screen->panelFades[3].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 156, 46, 176, 72, -3, 339, 264, 108); /* the digivolutions */
++    }
++    if (screen->panelFades[4].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 156, 112, 176, 114, -3, 446, 264, 171); /* the equipment */
++    }
++    if (screen->fades[1].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 190, 320, 48, 0, 616, 320, 48); /* the help */
++    }
++}
++#endif
++
+ void STSTATUS_drawStatusScreen(StatsScreen *screen) {
+     SpriteDrawer sprite;
+     PartnerStats *stats;
+@@ -383,6 +426,11 @@
+     s32 id;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeStatusLayout(screen);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(screen->layer, screen->depth);
+     if (GFX.funcs.getTime() - screen->frameTime >= 13) {
+@@ -547,6 +595,26 @@
+         }
+         break;
+     case 5:
++#ifdef NATIVE
++        if (native_portrait()) { /* the finger: a choice tapped is picked (X) */
++            s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, o, t;
++
++            for (o = 0; o < 2; o++) {
++                native_touch_target(o, 0, NATIVE_STATUS_CHOICE_Y + (4 + o * 14) * NATIVE_STATUS_CHOICE_K / 100 - top, 320,
++                                    14 * NATIVE_STATUS_CHOICE_K / 100);
++            }
++            t = native_touch_tap();
++            if (t >= 0) {
++                if (t != screen->option) {
++                    screen->option = t;
++                    SOUND.playSound(SOUND_CURSOR);
++                    windows->cursor->setPos(windows->cursor, 0x98, screen->option * 14 + 0x13);
++                }
++                native_touch_hold(PAD_CROSS, 3);
++                break;
++            }
++        }
++#endif
+         option = screen->option;
+         if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+             screen->option = 0;
+@@ -702,6 +770,24 @@
+ static inline void STSTATUS_chooseStatusMember(StatsScreen *screen) {
+     s32 member;
+ 
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the partner tapped is shown (X) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, m, t;
++
++        for (m = 0; m < screen->count; m++) {
++            native_touch_target(m, 0, 24 + m * 68 - top, 210, 67);
++        }
++        t = native_touch_tap();
++        if (t >= 0) {
++            if (t != screen->member) {
++                screen->member = t;
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     member = screen->member;
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->member--;

@@ -32,6 +32,8 @@ tutto schermo** (modalità principale); poi la battaglia.
 | Battaglia verticale: lampo bianco a tutto schermo, menu di entrata del partner (2.4) | sì | no |
 | Menu del campo (oggetti, mappa, tecniche, stato...) a tutto schermo (2.4) | sì | no |
 | Negozio, laboratorio, palestra, album e negozio delle carte a tutto schermo (2.4) | sì (aperti, menu) | no |
+| Menu del campo col dito: menu, oggetti (lista in una colonna), Ordina, Stato (2.5) | sì (lista: trascinamento no) | no |
+| Salvataggio automatico ogni 2 minuti di gioco e all'uscita dall'app (2.5) | a tempo sì | no |
 | Resoconto di fine battaglia a tutto schermo; dissolvenze del titolo e dei menu su tutta la tela (2.4) | sì | no |
 | Digievoluzione in battaglia su tutta l'altezza (2.4) | no (la squadra di prova non digievolve) | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
@@ -66,8 +68,9 @@ titolo).
 
 1. Riscontro dell'utente sulla 2.4 (mandata il 18/11): battaglia in verticale, trascinamento nelle liste, schermate
    a tutto schermo.
-2. Demo "Disposizione menu" pubblicata (https://claude.ai/artifact/BPppfTLQDz7YC1RCv7FwYG): aspettare che l'utente
-   disponga le schede, poi leggere il db (`layouts`) e applicare posizioni e tocchi alle schermate del menu del campo.
+2. Menu col dito (l'utente: "pulsanti grandi e liste da scorrere", libertà di migliorare la sua disposizione):
+   fatti menu, oggetti, Ordina, Stato; mancano equipaggiamento, digievoluzioni, Tecniche, poi negozio, laboratorio,
+   palestra (TECHNICAL_NOTES "Menu col dito").
 3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.
 4. Le scelte qui sopra.
 5. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); OPZIONI

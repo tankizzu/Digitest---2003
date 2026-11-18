@@ -13,6 +13,10 @@
   solo sul telefono (su Linux non si simulano).
 - **Ordina col dito**: i partner grandi in alto, le frecce dello scambio accanto; si tocca il primo, poi quello con
   cui scambiarlo. Verificato su Linux.
+- **Stato col dito**: si tocca il partner; poi il suo pannello in alto con EXP e TP, le scelte «Digievoluzioni» ed
+  «Equipaggiamento» grandi (un tocco le apre), le statistiche e i pannelli delle digievoluzioni e dell'equipaggiamento
+  più grandi. Verificato su Linux. Le schermate che si aprono da lì (cambio dell'equipaggiamento, digievoluzioni) sono
+  ancora quelle originali al centro.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque
