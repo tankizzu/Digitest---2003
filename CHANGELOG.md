@@ -14,6 +14,8 @@
 - **Menu del campo a tutto schermo** (verticale): oggetti, ordina, mappa, tecniche, stato, salva sulla tela alta, lo
   sfondo del gioco su tutta l'altezza e il contenuto al centro. Verificato su Linux (tutte le schermate aperte, tocco su
   MAPPA).
+- **Negozio degli oggetti a tutto schermo** (verticale): stesso schema. Verificato su Linux (Asuka Armory, compra).
+  Restano le scritte coi tasti PlayStation ("Button: Back", "R1"), da rifare coi tocchi.
 - **Dissolvenze in verticale**: quella del titolo (dai bordi verso il centro) e quella comune a memory card,
   negozi, laboratorio e altri menu ora scuriscono tutto lo schermo, non solo le 240 righe centrali. Verificato su
   Linux (titolo → memory card); orizzontale identico.

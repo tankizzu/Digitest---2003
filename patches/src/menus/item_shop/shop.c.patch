@@ -1,0 +1,19 @@
+--- a/src/menus/item_shop/shop.c
++++ b/src/menus/item_shop/shop.c
+@@ -52,6 +52,16 @@
+         shop->bgTick = 1;
+     }
+     sprite.setScale(ONE, ONE, ONE);
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = shop->bgScroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry(FILE_SHOP_SPRITES << 16), 0x14, shop->bgScroll, y);
++        }
++        return;
++    }
++#endif
+     sprite.draw(FILE_CACHE.getEntry(FILE_SHOP_SPRITES << 16), 0x14, shop->bgScroll, shop->bgScroll);
+ }
+ 
