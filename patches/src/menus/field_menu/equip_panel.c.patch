@@ -1,0 +1,113 @@
+--- a/src/menus/field_menu/equip_panel.c
++++ b/src/menus/field_menu/equip_panel.c
+@@ -139,6 +139,55 @@
+     }
+ }
+ 
++#ifdef NATIVE
++/* Upright, for the finger, under the status screen's stats (status_screen.c): the title and the six slots big; then
++   the slot's item, the list of the items that fit it big, the help at the bottom (gpu_draw.c's layout) */
++#define NATIVE_EQUIP_Y 345
++#define NATIVE_EQUIP_SLOTS_Y (NATIVE_EQUIP_Y + 38)
++#define NATIVE_EQUIP_LIST_Y (NATIVE_EQUIP_Y + 58)
++static void nativeEquipLayout(EquipPanel *panel) {
++    if (panel->panels[0].level != 0) {
++        NATIVE_MENU_PIECE(panel->layer, 30, 10, 290, 28, -54, NATIVE_EQUIP_Y, 348, 34); /* the title */
++    }
++    if (panel->panels[1].level != 0) { /* the slots, 1.8 times */
++        NATIVE_MENU_PIECE(panel->layer, 150, 36, 180, 104, 14, NATIVE_EQUIP_SLOTS_Y, 324, 187);
++    }
++    if (panel->panels[3].level != 0) { /* the slot's item, 1.5 times */
++        NATIVE_MENU_PIECE(panel->layer, 150, 8, 180, 44, 65, NATIVE_EQUIP_Y - 3, 270, 66);
++    }
++    if (panel->panels[2].level != 0) { /* the list, 1.5 times, and the help */
++        NATIVE_MENU_PIECE(panel->layer, 110, 52, 220, 138, 5, NATIVE_EQUIP_LIST_Y, 330, 207);
++        NATIVE_MENU_PIECE(panel->layer, 0, 190, 320, 48, 0, 616, 320, 48);
++    }
++    /* the help covers the status screen's TP, as on the PlayStation: that screen leaves it to this help's piece */
++    panel->screen->unk70 = panel->panels[2].level != 0;
++}
++
++/* Upright, the finger on the slots (nativeEquipLayout): the one tapped, -1 if none */
++static s32 nativeEquipSlotTap(void) {
++    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i;
++
++    for (i = 0; i < 6; i++) {
++        native_touch_target(i, 14, NATIVE_EQUIP_SLOTS_Y + (10 + i * 14) * 18 / 10 - top, 306, 25);
++    }
++    return native_touch_tap();
++}
++
++/* Upright, the finger on the list (nativeEquipLayout): a row (0-7), 8 the arrow up, 9 the arrow down, -1 if none */
++static s32 nativeEquipListTap(EquipPanel *panel) {
++    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i;
++
++    for (i = 0; i < 8 && panel->scroll + i < panel->count; i++) {
++        native_touch_target(i, 13, NATIVE_EQUIP_LIST_Y + (21 + i * 14) * 3 / 2 - top, 262, 21);
++    }
++    if (panel->count > 8) {
++        native_touch_target(8, 275, NATIVE_EQUIP_LIST_Y - top, 45, 40);
++        native_touch_target(9, 275, NATIVE_EQUIP_LIST_Y + 164 - top, 45, 40);
++    }
++    return native_touch_tap();
++}
++#endif
++
+ /* Draws the equipment panels: the partner's equipment, the list of items
+    that fit the slot and the slot's item */
+ void STSTATUS_drawEquipPanel(EquipPanel *panel) {
+@@ -149,6 +198,11 @@
+     s32 index;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeEquipLayout(panel);
++    }
++#endif
+     stats = GAME.funcs.getPartnerStats(panel->partner);
+     initSpriteDrawer(&sprite);
+     if (panel->panels[0].level != 0) {
+@@ -272,6 +326,21 @@
+     s32 i;
+ 
+     oldSlot = panel->slot;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the slot tapped is chosen and opened (X) */
++        s32 t = nativeEquipSlotTap();
++
++        if (t >= 0) {
++            if (t != panel->slot) {
++                panel->slot = t;
++                SOUND.playSound(SOUND_CURSOR);
++                windows->cursor->setPos(windows->cursor, 0xA5, panel->slot * 14 + 0x31);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         panel->slot--;
+         if (panel->slot < 0) {
+@@ -367,6 +436,20 @@
+ 
+     oldCursor = panel->cursor;
+     oldScroll = panel->scroll;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a row tapped shows its effect on the stats, tapped again it is equipped (X);
++                                the arrows turn the page (L1, R1) */
++        s32 t = nativeEquipListTap(panel);
++
++        if (t == 8 || t == 9) {
++            native_touch_hold(t == 8 ? PAD_L1 : PAD_R1, 3);
++        } else if (t == panel->cursor) {
++            native_touch_hold(PAD_CROSS, 3);
++        } else if (t >= 0) {
++            panel->cursor = t; /* the moves below show it */
++        }
++    }
++#endif
+     if (panel->count >= 9) {
+         if ((!PAD_HELD(PAD_R1) && PAD_PRESSED(PAD_L1)) || (!PAD_HELD(PAD_R1) && PAD_REPEATED(PAD_L1))) {
+             panel->scroll -= 8;

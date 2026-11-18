@@ -113,6 +113,10 @@
   (serve `build-linux/native.ini` con `save_anywhere = 1` solo per la riga del menu, non per questo).
 - Percorso di prova in verticale (H 710): `300:start,500:start,700:t160y509` (CONTINUA), `1000:t190y662` (slot 5),
   `1100:t84y375` (Carica), `1200:t84y375` (Automatico), `1400:cross` → campo verso 1700.
+- Equipaggiamento di prova: `--set 805C=1` ... `--set 806F=1` (armi, WEAPON_IDS in engine/game/items.c; protezioni
+  da 0xD7, accessori da 0x124). Percorso in verticale: `250:start,900:start,1100:t160y390,1400:t100y57,1700:t100y151`
+  (Stato, Kotemon, Equipaggiamento), poi `t100y463` (Destra). Lo `unk70` di StatsScreen (che il gioco azzera soltanto)
+  dice a Stato che l'aiuto dell'equipaggiamento copre il TP.
 - `DW3_ENEMY_HP=1`: a ogni turno del giocatore gli HP dei nemici scendono a quel valore (battaglia vinta al primo
   colpo: per arrivare al resoconto). `--field 5120` (il resoconto da solo) resta nero: senza una battaglia non ha
   niente da mostrare.

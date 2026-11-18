@@ -15,8 +15,11 @@
   centro dello schermo (richiesta dell'utente); si tocca il primo, poi quello con cui scambiarlo. Verificato su Linux.
 - **Stato col dito**: si tocca il partner; poi il suo pannello in alto con EXP e TP, le scelte «Digievoluzioni» ed
   «Equipaggiamento» grandi (un tocco le apre), le statistiche e i pannelli delle digievoluzioni e dell'equipaggiamento
-  più grandi. Verificato su Linux. Le schermate che si aprono da lì (cambio dell'equipaggiamento, digievoluzioni) sono
-  ancora quelle originali al centro.
+  più grandi. Verificato su Linux.
+- **Equipaggiamento col dito** (da Stato): il titolo e le sei caselle grandi sotto le statistiche (un tocco apre la
+  casella); poi l'oggetto della casella e la lista delle armi o protezioni grande (righe di 21 pixel): un tocco
+  sceglie e mostra l'effetto sulle statistiche, un secondo tocco equipaggia, le frecce su e giù della lista cambiano
+  pagina; l'aiuto in basso. Verificato su Linux (anche con 20 armi). Le digievoluzioni sono ancora quelle originali.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque

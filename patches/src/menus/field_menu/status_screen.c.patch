@@ -1,6 +1,6 @@
 --- a/src/menus/field_menu/status_screen.c
 +++ b/src/menus/field_menu/status_screen.c
-@@ -376,6 +376,49 @@
+@@ -376,6 +376,51 @@
  
  /* Draws the partners' portraits and frames, the chosen one's, its equipment
     and the panels' frames */
@@ -33,7 +33,9 @@
 +    }
 +    if (screen->panelFades[2].level != 0) {
 +        NATIVE_MENU_PIECE(screen->layer, 0, 82, 112, 112, 0, 180, 157, 157); /* the stats */
-+        NATIVE_MENU_PIECE(screen->layer, 0, 192, 80, 30, 212, 60, 80, 30);   /* the TP */
++        if (!screen->unk70) { /* else the equipment's help covers it (equip_panel.c) */
++            NATIVE_MENU_PIECE(screen->layer, 0, 192, 80, 30, 212, 60, 80, 30); /* the TP */
++        }
 +    }
 +    if (screen->panelFades[3].level != 0) {
 +        NATIVE_MENU_PIECE(screen->layer, 156, 46, 176, 72, -3, 339, 264, 108); /* the digivolutions */
@@ -50,7 +52,7 @@
  void STSTATUS_drawStatusScreen(StatsScreen *screen) {
      SpriteDrawer sprite;
      PartnerStats *stats;
-@@ -383,6 +426,11 @@
+@@ -383,6 +428,11 @@
      s32 id;
      s32 i;
  
@@ -62,7 +64,7 @@
      initSpriteDrawer(&sprite);
      sprite.setLayerId(screen->layer, screen->depth);
      if (GFX.funcs.getTime() - screen->frameTime >= 13) {
-@@ -547,6 +595,26 @@
+@@ -547,6 +597,26 @@
          }
          break;
      case 5:
@@ -89,7 +91,7 @@
          option = screen->option;
          if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
              screen->option = 0;
-@@ -702,6 +770,24 @@
+@@ -702,6 +772,24 @@
  static inline void STSTATUS_chooseStatusMember(StatsScreen *screen) {
      s32 member;
  
