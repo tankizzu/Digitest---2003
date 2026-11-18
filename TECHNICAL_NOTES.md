@@ -315,6 +315,23 @@ dopo il riscontro sulla 2.0.
 - Battaglia: white_flash.c (lampo bianco) alto quanto la tela; digimon_change.c (digievoluzione) con CHANGE_H /
   CHANGE_STEP al posto di 240 e della velocità; sprite_effect.c sposta di (H − 240) / 2 gli effetti del layer FRONT.
 
+## Menu col dito: la disposizione sulla scheda grafica (2.5)
+
+- `native_layout_piece(layer, depth, sx, sy, sw, sh, dx, dy, dw, dh)` (gpu_draw.c, native.h): in questo fotogramma
+  i pacchetti del layer, a profondità dell'OT sotto `depth`, la cui scatola sta (±2) nel rettangolo sorgente sono
+  disegnati spostati e scalati nel rettangolo d'arrivo (dw/dh 0: nascosti). Vince il pezzo **più piccolo** che li
+  contiene (il testo di una riga va con la riga, non con la cornice dietro). Coordinate del layer (quelle dei draw
+  del gioco). `native_layout_end_frame` (display.c dopo i layer) svuota la tabella: ogni task rimette i suoi pezzi
+  a ogni fotogramma, solo per gli elementi visibili. Solo la scheda grafica; il GPU software resta com'era.
+- `NATIVE_MENU_PIECE` / `NATIVE_MENU_HIDE` (native.h): per le schermate con lo schermo 320×240 al centro della tela
+  (SCENE_UPRIGHT), d'arrivo in righe della tela; profondità 7 = lo sfondo del menu resta fermo.
+- `native_layout_unmap` riporta un punto toccato alle coordinate del gioco (per i tocchi dove serve).
+- Fatti: menu del campo (engine/menu/field_menu.c: nel campo layer della mappa, profondità < 3, in alto; nelle
+  schermate STSTATUS al centro), schermata oggetti (item_screen.c: partner, titolo, categorie, BIT, oggetto scelto,
+  aiuto; tocchi su categorie e partner), lista oggetti (item_list.c: 16 righe in una colonna, cornice allungata, la
+  sua linea interna nascosta, L1/R1 nascosti; tocchi con `native_touch_list`).
+- Da fare: Ordina (sort_screen.c), Stato (status_screen.c), Tecniche (tech_screen.c), negozio, laboratorio, palestra.
+
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 
 - https://claude.ai/artifact/BPppfTLQDz7YC1RCv7FwYG — sei schede: Menu, Oggetti: categorie, Oggetti: lista, Oggetti: a

@@ -78,9 +78,9 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Menu del campo a tutto schermo in verticale (2.4): contenuto al centro, sfondo ripetuto.
 - [x] Negozio, laboratorio, palestra, album e negozio delle carte a tutto schermo in verticale (2.4).
 - [x] Editor del mazzo a tutto schermo (2.4).
-- [ ] **Tocchi** nelle schermate interne del menu del campo, negozio, laboratorio, palestra, carte (oggi solo
-      Indietro): deciso (18/11) righe grandi con demo da disporre. Prima le schermate più usate: oggetti, tecniche,
-      stato, ordina del menu del campo; poi negozio, laboratorio, palestra, carte.
+- [x] Menu del campo e oggetti col dito, righe grandi (2.5).
+- [ ] Col dito anche: Ordina, Stato, Tecniche; poi negozio, laboratorio, palestra, carte (stesso meccanismo:
+      TECHNICAL_NOTES "Menu col dito").
 - [ ] Battaglia a carte (CARDGAME) in verticale: un solo layer (0x100, fondo grigio). Aperta da sola (`--field 1792`)
       va in crash (manca il mazzo/avversario): per provarla serve una partita a carte vera da un salvataggio.
 - [ ] Testi coi tasti PlayStation ancora a schermo in negozio ("Button: Back", "Button: Effects", "R1"), album,

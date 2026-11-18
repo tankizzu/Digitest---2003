@@ -4,6 +4,13 @@
 
 ### 2.5 (in preparazione)
 
+- **Menu col dito** (verticale): il menu del campo ha le voci grandi (righe di circa 29 pixel, il doppio di prima)
+  e i partner in fila sopra, nel campo e nelle schermate dei menu; un tocco su una voce la apre. Oggetti: i tre
+  partner grandi in alto (un tocco dà l'oggetto a quello), le categorie grandi (un tocco le apre), la lista degli
+  oggetti in **una sola colonna di 16 righe grandi** (un tocco sceglie l'oggetto e mostra la sua descrizione, un
+  secondo tocco lo usa; trascinare a destra o a sinistra cambia pagina, niente più L1 / R1). Verificato su Linux il
+  menu, le categorie, la scelta del partner e l'uso di un oggetto; il tocco sulle righe della lista e il trascinamento
+  solo sul telefono (su Linux non si simulano).
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque
