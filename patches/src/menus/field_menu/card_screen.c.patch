@@ -1,0 +1,12 @@
+--- a/src/menus/field_menu/card_screen.c
++++ b/src/menus/field_menu/card_screen.c
+@@ -14,6 +14,9 @@
+ #define SCENE_CREATE OVL_NAME(createMenu)
+ #define SCENE_PRIM_BUFFERS 0x14000
+ #define SCENE_OT_SHIFT 3
++#ifdef NATIVE
++#define SCENE_UPRIGHT /* upright: the field menu's screens on the tall screen (shared/update_scene.inc.c) */
++#endif
+ #include "shared/update_scene.inc.c"
+ #include "shared/start.inc.c"
+ 

@@ -1,17 +1,17 @@
 --- a/src/menus/field_menu/menu.c
 +++ b/src/menus/field_menu/menu.c
-@@ -3,6 +3,11 @@
+@@ -2,6 +2,11 @@
+    the files it loads; and the panels' openings and moves */
  
  #include "menus/field_menu.h"
- 
++
 +#ifdef NATIVE
 +Task *STSTATUS_createJournal(FieldMenuScreen *menu, s32 extra); /* item_list.c */
 +extern s32 STSTATUS_journalMap;
 +#endif
-+
+ 
  #include "shared/set_scroll_bar_x.inc.c"
  #include "shared/set_scroll_bar_range.inc.c"
- #include "shared/set_scroll_bar_count.inc.c"
 @@ -20,6 +25,12 @@
      case 0:
      default:
@@ -41,3 +41,20 @@
              children->fieldMenu = createFieldMenu(menu->layer, FIELD_MENU_CHOICE.option);
              menu->setState(menu, TASK_DONE);
          }
+@@ -51,6 +71,16 @@
+     } else {
+         menu->bgTick = 1;
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = menu->bgScroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry(FILE_STATUS_SPRITES << 16), 0x1D, menu->bgScroll, y);
++        }
++        return;
++    }
++#endif
+     sprite.draw(FILE_CACHE.getEntry(FILE_STATUS_SPRITES << 16), 0x1D, menu->bgScroll, menu->bgScroll);
+ }
+ 
