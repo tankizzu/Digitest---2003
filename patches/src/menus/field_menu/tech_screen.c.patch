@@ -1,6 +1,91 @@
 --- a/src/menus/field_menu/tech_screen.c
 +++ b/src/menus/field_menu/tech_screen.c
-@@ -510,11 +510,17 @@
+@@ -304,11 +304,65 @@
+ }
+ 
+ /* Draws the partners' portraits and frames, the cursors and the help arrow */
++#ifdef NATIVE
++/* Upright, for the finger, in the middle of the screen as Sort (sort_screen.c): the title, the partners' panels big,
++   under them the technique list 1.4 times, the help (gpu_draw.c's layout) */
++#define NATIVE_TECH_X 55 /* the panels (210 wide) in the middle across */
++static s32 nativeTechTop(void) {
++    return (native_field_h() - 510) / 2; /* title 34, 8, panels 204, 8, list 200, 8, help 48 */
++}
++#define NATIVE_TECH_LIST_Y (nativeTechTop() + 254)
++
++static void nativeTechLayout(TechScreen *screen) {
++    s32 top = nativeTechTop(), i;
++
++    for (i = 0; i < screen->count; i++) {
++        if (screen->pageFades[i].level != 0) {
++            NATIVE_MENU_PIECE(screen->layer, 0, 15 + i * 46, 150, 48, NATIVE_TECH_X, top + 42 + i * 68, 210, 67);
++        }
++    }
++    if (screen->fades[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 30, 10, 290, 28, -54, top, 348, 34); /* the title */
++    }
++    if (screen->fade.level != 0) { /* the technique list */
++        NATIVE_MENU_PIECE(screen->layer, 140, 40, 180, 145, 34, NATIVE_TECH_LIST_Y, 252, 203);
++    }
++    if (screen->fades[1].level != 0) {
++        NATIVE_MENU_PIECE(screen->layer, 0, 190, 320, 48, 0, top + 462, 320, 48); /* the help */
++    }
++}
++
++/* Upright, the finger on the partners' panels (nativeTechLayout): the one tapped, -1 if none */
++static s32 nativeTechMemberTap(TechScreen *screen) {
++    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, m;
++
++    for (m = 0; m < screen->count; m++) {
++        native_touch_target(m, NATIVE_TECH_X, nativeTechTop() + 42 + m * 68 - top, 210, 67);
++    }
++    return native_touch_tap();
++}
++
++/* Upright, the finger on the technique list: the row tapped, -1 if none */
++static s32 nativeTechRowTap(TechScreen *screen) {
++    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, r;
++
++    for (r = 0; r < screen->rows[screen->member].techCount; r++) {
++        native_touch_target(r, 34, NATIVE_TECH_LIST_Y + (22 + r * 14) * 14 / 10 - top, 252, 20);
++    }
++    return native_touch_tap();
++}
++#endif
++
+ void STSTATUS_drawTechScreen(TechScreen *screen) {
+     SpriteDrawer sprite;
+     s32 id;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeTechLayout(screen);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(screen->layer, screen->depth);
+     STSTATUS_animateTechPortraits(screen);
+@@ -472,16 +526,36 @@
+     s32 member;
+ 
+     member = screen->member;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the partner tapped opens its techniques (X) */
++        s32 t = nativeTechMemberTap(screen);
++
++        if (t >= 0) {
++            if (t != screen->member) {
++                screen->member = t;
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->member--;
          if (screen->member < 0) {
              screen->member = 0;
          }
@@ -18,7 +103,35 @@
      }
      if (member != screen->member) {
          SOUND.playSound(SOUND_MENU_MOVE);
-@@ -588,11 +594,17 @@
+@@ -519,6 +593,11 @@
+ 
+ /* Cross takes the message away and goes back to choosing a member */
+ static inline void STSTATUS_closeNoFieldTechs(TechScreen *screen, TechScreenWindows *windows) {
++#ifdef NATIVE
++    if (native_portrait() && native_touch_anywhere()) {
++        native_touch_hold(PAD_CROSS, 3); /* the finger anywhere goes on */
++    }
++#endif
+     if (PAD_PRESSED(PAD_CROSS)) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         screen->memberShown = 1;
+@@ -550,16 +629,33 @@
+     s32 tech;
+ 
+     old = screen->cursor;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a technique tapped is chosen, tapped again it is used (X) */
++        s32 t = nativeTechRowTap(screen);
++
++        if (t >= 0 && t == screen->cursor) {
++            native_touch_hold(PAD_CROSS, 3);
++        } else if (t >= 0) {
++            screen->cursor = t; /* the move below shows it */
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->cursor--;
          if (screen->cursor < 0) {
              screen->cursor = 0;
          }
@@ -36,7 +149,26 @@
      }
      if (old != screen->cursor) {
          windows->cursor->setPos(windows->cursor, 0xA6, screen->cursor * 0xE + 0x41);
-@@ -648,11 +660,17 @@
+@@ -610,16 +706,36 @@
+     s32 old;
+ 
+     old = screen->target;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the partner tapped is healed (X) */
++        s32 t = nativeTechMemberTap(screen);
++
++        if (t >= 0) {
++            if (t != screen->target) {
++                screen->target = t;
++                SOUND.playSound(SOUND_MENU_MOVE);
++            }
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         screen->target--;
          if (screen->target < 0) {
              screen->target = 0;
          }
@@ -54,3 +186,27 @@
      }
      if (old != screen->target) {
          SOUND.playSound(SOUND_MENU_MOVE);
+@@ -650,6 +766,11 @@
+ 
+ /* Cross takes the short MP message away and goes back to the list */
+ static inline void STSTATUS_closeShortMp(TechScreen *screen, TechScreenWindows *windows) {
++#ifdef NATIVE
++    if (native_portrait() && native_touch_anywhere()) {
++        native_touch_hold(PAD_CROSS, 3);
++    }
++#endif
+     if (PAD_PRESSED(PAD_CROSS)) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         STSTATUS_showChosenTech(screen, windows, 1);
+@@ -663,6 +784,11 @@
+ /* Cross takes the technique's result away and goes back to where it was
+    chosen */
+ static inline void STSTATUS_closeTechUsed(TechScreen *screen, TechScreenWindows *windows) {
++#ifdef NATIVE
++    if (native_portrait() && native_touch_anywhere()) {
++        native_touch_hold(PAD_CROSS, 3);
++    }
++#endif
+     if (PAD_PRESSED(PAD_CROSS)) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         STSTATUS_showChosenTech(screen, windows, 1);

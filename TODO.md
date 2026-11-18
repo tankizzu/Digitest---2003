@@ -84,7 +84,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Stato col dito (2.5).
 - [x] Equipaggiamento col dito (2.5).
 - [x] Digievoluzioni col dito (2.5; caselle e domanda da provare con una partita che ha digievoluzioni).
-- [ ] Col dito anche: Tecniche (tech_screen.c); poi negozio, laboratorio, palestra, carte (stesso meccanismo:
+- [x] Tecniche col dito (2.5; la lista da provare con una partita che ha tecniche da campo).
+- [ ] Col dito anche: negozio, laboratorio, palestra, carte (stesso meccanismo:
       TECHNICAL_NOTES "Menu col dito").
 - [ ] Battaglia a carte (CARDGAME) in verticale: un solo layer (0x100, fondo grigio). Aperta da sola (`--field 1792`)
       va in crash (manca il mazzo/avversario): per provarla serve una partita a carte vera da un salvataggio.

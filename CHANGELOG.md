@@ -25,6 +25,10 @@
   le statistiche, un secondo tocco va avanti; le risposte alla domanda e le tecniche si toccano; nelle schermate che
   aspettano X basta un tocco. Verificato su Linux il percorso del partner (la sua tecnica); le caselle, la domanda e
   le tecniche di una digievoluzione **non verificati** (i salvataggi di prova non hanno digievoluzioni).
+- **Tecniche col dito**: come Ordina, al centro dello schermo: il titolo, i partner grandi (un tocco apre le sue
+  tecniche), sotto la lista delle tecniche 1,4 volte (un tocco sceglie, un secondo la usa; per una cura si tocca il
+  partner da curare), l'aiuto; i messaggi si chiudono con un tocco. Verificato su Linux la scelta del partner e il
+  messaggio «non ha imparato tecniche»; la lista **non verificata** (i partner di prova non hanno tecniche da campo).
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque

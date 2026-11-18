@@ -69,7 +69,7 @@ titolo).
 1. Riscontro dell'utente sulla 2.4 (mandata il 18/11): battaglia in verticale, trascinamento nelle liste, schermate
    a tutto schermo.
 2. Menu col dito (l'utente: "pulsanti grandi e liste da scorrere", libertà di migliorare la sua disposizione):
-   fatti menu, oggetti, Ordina (ora al centro dello schermo, come chiesto), Stato, equipaggiamento, digievoluzioni (caselle non provate: nessuna partita di prova ne ha); mancano Tecniche, poi negozio, laboratorio,
+   fatti menu, oggetti, Ordina (ora al centro dello schermo, come chiesto), Stato, equipaggiamento, digievoluzioni (caselle non provate: nessuna partita di prova ne ha), Tecniche (lista non provata); mancano negozio, laboratorio,
    palestra (TECHNICAL_NOTES "Menu col dito").
 3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.
 4. Le scelte qui sopra.
