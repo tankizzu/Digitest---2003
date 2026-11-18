@@ -11,8 +11,8 @@
   secondo tocco lo usa; trascinare a destra o a sinistra cambia pagina, niente più L1 / R1). Verificato su Linux il
   menu, le categorie, la scelta del partner e l'uso di un oggetto; il tocco sulle righe della lista e il trascinamento
   solo sul telefono (su Linux non si simulano).
-- **Ordina col dito**: i partner grandi in alto, le frecce dello scambio accanto; si tocca il primo, poi quello con
-  cui scambiarlo. Verificato su Linux.
+- **Ordina col dito**: i partner grandi, le frecce dello scambio accanto, il titolo sopra e l'aiuto sotto, tutto al
+  centro dello schermo (richiesta dell'utente); si tocca il primo, poi quello con cui scambiarlo. Verificato su Linux.
 - **Stato col dito**: si tocca il partner; poi il suo pannello in alto con EXP e TP, le scelte «Digievoluzioni» ed
   «Equipaggiamento» grandi (un tocco le apre), le statistiche e i pannelli delle digievoluzioni e dell'equipaggiamento
   più grandi. Verificato su Linux. Le schermate che si aprono da lì (cambio dell'equipaggiamento, digievoluzioni) sono

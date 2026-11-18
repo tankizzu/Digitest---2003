@@ -80,7 +80,7 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Editor del mazzo a tutto schermo (2.4).
 - [x] Menu del campo e oggetti col dito, righe grandi (2.5).
 - [x] Ordina col dito (2.5).
-- [ ] Ordina: centrare sullo schermo i pannelli dei Digimon e le parti del menu (richiesta utente, da fare quando dice di ripartire).
+- [x] Ordina: pannelli dei Digimon, frecce, titolo e aiuto al centro dello schermo (richiesta utente; verificato su Linux).
 - [x] Stato col dito (2.5).
 - [ ] Col dito anche: cambio equipaggiamento (equip_panel.c) e digievoluzioni (digivolve_panel.c) dallo Stato,
       Tecniche (tech_screen.c); poi negozio, laboratorio, palestra, carte (stesso meccanismo:

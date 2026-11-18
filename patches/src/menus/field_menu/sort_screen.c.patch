@@ -1,28 +1,33 @@
 --- a/src/menus/field_menu/sort_screen.c
 +++ b/src/menus/field_menu/sort_screen.c
-@@ -100,11 +100,49 @@
+@@ -100,11 +100,54 @@
  
  /* Draws the cursors, the partners' portraits and frames, the two being
     swapped squashed by the fade, and the swap's arrow */
 +#ifdef NATIVE
-+/* Upright, for the finger: the partners' panels big at the top as in the item screen (item_screen.c), the swap's
-+   arrows beside them, the title under them, the help at the bottom (gpu_draw.c's layout) */
++/* Upright, for the finger, all in the middle of the screen: the title, under it the partners' panels big as in the
++   item screen (item_screen.c) with the swap's arrows beside them, the help under them (gpu_draw.c's layout) */
++#define NATIVE_SORT_X 37 /* the panels and the arrows (245 wide) in the middle across */
++static s32 nativeSortTop(void) {
++    return (native_field_h() - 302) / 2; /* title 34, 8, panels 204, 8, help 48 */
++}
++
 +static void nativeSortLayout(SortScreen *screen) {
-+    s32 i;
++    s32 top = nativeSortTop(), i;
 +
 +    for (i = 0; i < screen->count; i++) {
 +        if (screen->pageFades[i].level != 0) {
-+            NATIVE_MENU_PIECE(screen->layer, 0, 15 + i * 46, 150, 48, 0, 24 + i * 68, 210, 67);
++            NATIVE_MENU_PIECE(screen->layer, 0, 15 + i * 46, 150, 48, NATIVE_SORT_X, top + 42 + i * 68, 210, 67);
 +        }
 +    }
-+    if (screen->arrowShown) {
-+        NATIVE_MENU_PIECE(screen->layer, 145, 30, 30, 123, 203, 46, 42, 182); /* the swap's arrows, under the title */
++    if (screen->arrowShown) { /* the swap's arrows */
++        NATIVE_MENU_PIECE(screen->layer, 145, 30, 30, 123, NATIVE_SORT_X + 203, top + 64, 42, 182);
 +    }
 +    if (screen->fades[0].level != 0) {
-+        NATIVE_MENU_PIECE(screen->layer, 30, 10, 290, 28, -54, 232, 348, 34); /* the title */
++        NATIVE_MENU_PIECE(screen->layer, 30, 10, 290, 28, -54, top, 348, 34); /* the title */
 +    }
 +    if (screen->fades[1].level != 0) {
-+        NATIVE_MENU_PIECE(screen->layer, 0, 190, 320, 48, 0, 572, 320, 48); /* the help */
++        NATIVE_MENU_PIECE(screen->layer, 0, 190, 320, 48, 0, top + 254, 320, 48); /* the help */
 +    }
 +}
 +
@@ -31,7 +36,7 @@
 +    s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, m;
 +
 +    for (m = 0; m < screen->count; m++) {
-+        native_touch_target(m, 0, 24 + m * 68 - top, 210, 67);
++        native_touch_target(m, NATIVE_SORT_X, nativeSortTop() + 42 + m * 68 - top, 210, 67);
 +    }
 +    return native_touch_tap();
 +}
@@ -50,7 +55,7 @@
      initSpriteDrawer(&sprite);
      sprite.setLayerId(screen->layer, screen->depth);
      STSTATUS_stepSortCursor(screen);
-@@ -281,6 +319,20 @@
+@@ -281,6 +324,20 @@
  static inline void STSTATUS_chooseFirstToSwap(SortScreen *screen, SortScreenWindows *windows) {
      s32 old;
  
@@ -71,7 +76,7 @@
      old = screen->cursor;
      if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
          screen->cursor--;
-@@ -320,6 +372,20 @@
+@@ -320,6 +377,20 @@
  static inline void STSTATUS_chooseSecondToSwap(SortScreen *screen, SortScreenWindows *windows) {
      s32 old;
  

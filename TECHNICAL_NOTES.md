@@ -102,7 +102,7 @@
 
 - `tools/shoot.sh OUTDIR SECONDI OGNI:DA:A "PRESS"` (copia in /home/user/feerdus95/tools): avvia con Xvfb e
   salva i fotogrammi; `sheet.png` li riassume.
-- `DW3_PRESS="250:start,700:t150y176,..."`: tasti o tocchi (`tXyY` in pixel PSX) a un dato fotogramma; `f5`/`f9`
+- `DW3_PRESS="250:start,700:t150y176,..."`: tasti o tocchi (`tXyY`: x in pixel PSX; y sulla tela alta 0..H quando la schermata ha un'origine del tocco, come i menu in verticale) a un dato fotogramma; `f5`/`f9`
   stato rapido (solo stessa build).
 - `DW3_TOUCH=1` attiva il touch (indispensabile per tocchi e levetta). `DW3_STICK="da:a:x:y,..."` simula la
   levetta. `DW3_TYPE="<<<<<<Marco"` scrive col "telefono" (`<` cancella, `|` Invio).
