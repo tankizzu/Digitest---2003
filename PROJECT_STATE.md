@@ -1,6 +1,6 @@
 # Stato del progetto
 
-Ultimo aggiornamento: 17/11/2026 — versione **2.3** (versionCode 26) pronta (2.0, 2.1 e 2.2 già mandate); l'ultima
+Ultimo aggiornamento: 18/11/2026 — versione **2.4** (versionCode 27) pronta, non ancora mandata (2.3 mandata); l'ultima
 provata dall'utente sul telefono è precedente alla 1.9.
 
 ## Obiettivo attuale
@@ -29,6 +29,9 @@ tutto schermo** (modalità principale); poi la battaglia.
 | Battaglia in verticale: scena alta, statistiche in alto, comandi 2×3 grandi (2.2) | sì | no |
 | Battaglia in verticale con la disposizione dell'utente (HUD, volto, messaggi, Tecniche, Oggetti, DV, Tag) e pallino del cursore (2.3) | sì | no |
 | Liste della battaglia: trascinare per cambiare pagina (2.3) | no (non si simula) | no |
+| Battaglia verticale: lampo bianco a tutto schermo, menu di entrata del partner (2.4) | sì | no |
+| Resoconto di fine battaglia a tutto schermo; dissolvenze del titolo e dei menu su tutta la tela (2.4) | sì | no |
+| Digievoluzione in battaglia su tutta l'altezza (2.4) | no (la squadra di prova non digievolve) | no |
 | Salvataggio automatico ogni 2 minuti mentre si cammina, posizioni alternate | sì | no |
 | Salvataggio quando l'app va in secondo piano | no (solo su telefono) | no |
 | Dialoghi: tocco, tenere premuto, automatici x1/x2/x3 (trattini della freccia) | sì | parziale |
@@ -61,8 +64,9 @@ titolo).
 
 ## Da dove ripartire
 
-1. Riscontro dell'utente sulla 2.3 (APK in `build-android/dw2003.apk`, da mandare solo a lui), soprattutto la
-   battaglia in verticale e il trascinamento nelle liste.
+1. Quando l'utente chiede il resoconto: mandargli la 2.4 (APK in `build-android/dw2003.apk`, solo a lui) e le
+   novità (CHANGELOG 2.4), più la proposta della strada di Asuka (immagine prima/dopo) da approvare. Riscontro sulla
+   2.3/2.4: battaglia in verticale, trascinamento nelle liste.
 2. Strada di Asuka a tutto schermo: prototipo pronto e spento, da far vedere all'utente (immagine prima/dopo) e
    accendere se approva.
 3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.

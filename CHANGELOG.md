@@ -2,7 +2,7 @@
 
 ## Android (Digimon World 2003 per Android)
 
-### 2.4 (in preparazione)
+### 2.4
 
 - Battaglia in verticale: il **lampo bianco** (entrata di un partner, alcuni colpi) copriva solo le prime 240 righe
   dello schermo; ora tutto. La **digievoluzione** (il vecchio Digimon che diventa reticolo e il nuovo che appare)
