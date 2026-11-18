@@ -1,0 +1,17 @@
+--- a/src/shared/draw_fader.inc.c
++++ b/src/shared/draw_fader.inc.c
+@@ -13,6 +13,14 @@
+     poly->x1 = poly->x3 = 320;
+     poly->y0 = poly->y1 = 0;
+     poly->y2 = poly->y3 = 256;
++#ifdef NATIVE
++    if (layer->env.clip.y >= NATIVE_FIELD_Y) { /* upright, a layer on the tall screen: all of it, past its offset */
++        poly->x0 = poly->x2 = -layer->offsetX;
++        poly->x1 = poly->x3 = poly->x0 + layer->env.clip.w;
++        poly->y0 = poly->y1 = -layer->offsetY;
++        poly->y2 = poly->y3 = poly->y0 + layer->env.clip.h;
++    }
++#endif
+     addPrim(ot, poly);
+     mode = (DR_TPAGE *)(poly + 1);
+     setlen(mode, 1);

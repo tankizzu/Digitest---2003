@@ -1,0 +1,23 @@
+--- a/src/battle/report/scene.c
++++ b/src/battle/report/scene.c
+@@ -19,7 +19,20 @@
+         rect.y = 0;
+         rect.w = 0x140;
+         rect.h = 0xF0;
++#ifdef NATIVE
++        if (native_portrait()) { /* upright: on the tall screen, its 320x240 in the middle (portrait.c) */
++            rect.y = NATIVE_FIELD_Y;
++            rect.h = native_field_h();
++            GFX.funcs.setDisplayArea(0, NATIVE_FIELD_Y, SCREEN_WIDTH, native_field_h());
++        }
++#endif
+         layer = GFX.funcs.createLayer(&rect, 3, SCREEN_LAYER);
++#ifdef NATIVE
++        if (native_portrait()) {
++            layer->setOffset(layer, 0, (native_field_h() - SCREEN_HEIGHT) / 2);
++            native_touch_origin((native_field_h() - SCREEN_HEIGHT) / 2);
++        }
++#endif
+         layer->setBgColor(layer, 0, 0, 0);
+         children[0] = STFGTREP_createScreen();
+         task->nextState(task);

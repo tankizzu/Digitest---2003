@@ -13,7 +13,23 @@
  
  /* Creates the report's text windows: the exp, its label and the two-line
     message */
-@@ -90,12 +96,12 @@
+@@ -42,6 +48,15 @@
+     } else {
+         report->bgSkip = 1;
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the grid over the whole height, in steps of its 96 (scene.c centres the rest) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = report->bgScroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry((FILE_FGTREP_SPRITES - 1) << 16), 0x1E, report->bgScroll, y);
++        }
++    } else
++#endif
+     sprite.draw(FILE_CACHE.getEntry((FILE_FGTREP_SPRITES - 1) << 16), 0x1E, report->bgScroll, report->bgScroll);
+     sprite.setLayerId(report->layer, report->depth - 1);
+     if (report->header.level != 0) {
+@@ -90,12 +105,12 @@
     arrow shows until cross, which plays the confirm sound */
  static inline void turnMessagePage(FightReport *report, FightReportChildren *children) {
      if (children->message->isWaitingForButton(children->message) != 0) {
@@ -28,7 +44,7 @@
          children->message->showPage(children->message);
      }
  }
-@@ -297,6 +303,9 @@
+@@ -297,6 +312,9 @@
          switch (report->substate) {
          case 0:
          default:
@@ -38,7 +54,7 @@
              STFGTREP_funcs.loadFiles();
              report->substate++;
              break;
-@@ -335,6 +344,17 @@
+@@ -335,6 +353,17 @@
                  break;
              }
              for (i = 0; i < report->count; i++) {
