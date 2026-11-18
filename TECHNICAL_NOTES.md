@@ -340,7 +340,12 @@ dopo il riscontro sulla 2.0.
   StatsScreen dice a Stato di non spostare il TP mentre l'aiuto lo copre), digievoluzioni (digivolve_panel.c: titolo,
   caselle o domanda, statistiche che scorrono, aiuto), Tecniche (tech_screen.c: come Ordina più la lista).
 - Negozio: fatta la prima schermata (shop.c: COMPRA/VENDI ×2, aiuto col tasto nascosto) e i tipi da vendere
-  (trade.c: panels[0] ×2, il messaggio panels[4] ×1,5). Resta un pezzetto di cornice a destra (circa x 290-320,
+  (trade.c: panels[0] ×2, il messaggio panels[4] ×1,5).
+  Lista per comprare (item_list.c, `selling == 0`, 8 per pagina): colonna sinistra poi destra una sotto l'altra ×2
+  (quindi l'ordine è 0, 2, 4, 6, 1, 3, 5, 7), cornice allungata, pagina sotto, L1/R1 nascosti, dettagli ×1 sotto;
+  tocchi in `nativeShopListTouch` (righe, frecce 20/21 → L1/R1). Difetti: un «●» resta nella riga 3 della colonna
+  sinistra (sorgente circa (31, 61), da capire) e un trattino nella pagina 2; l'ordine a colonne è da rendere
+  naturale (spostare le finestre di testo invece di mappare le colonne). Resta un pezzetto di cornice a destra (circa x 290-320,
   y 130-150 del gioco) accanto al messaggio: da capire di quale sprite è. Da fare: lista (item_list.c, due colonne
   con L1/R1 a schermo), quantità e conferma (trade.c), informazioni (info.c), equip.c; percorso di prova
   `--field 3840 --party 0`, `250:start,700:t160y358` (VENDI), poi `t160y374` (Protezioni). Poi laboratorio, palestra.
