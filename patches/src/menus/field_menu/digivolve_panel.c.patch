@@ -1,0 +1,156 @@
+--- a/src/menus/field_menu/digivolve_panel.c
++++ b/src/menus/field_menu/digivolve_panel.c
+@@ -287,6 +287,36 @@
+ }
+ 
+ /* Draws the panel's frames, the technique icons and the help arrow */
++#ifdef NATIVE
++/* Upright, for the finger, under the chosen partner's panel (status_screen.c): the title, the three slots (or the
++   question about one) 1.8 times, the stats 1.23 times across the screen, the help at the bottom (gpu_draw.c) */
++#define NATIVE_DV_SLOTS_Y 140
++#define NATIVE_DV_STATS_Y 262
++#define NATIVE_DV_SLOT_ROW(i) (NATIVE_DV_SLOTS_Y + (9 + (i) * 14) * 18 / 10)    /* a slot's row, 25 high */
++#define NATIVE_DV_OPTION_ROW(i) (NATIVE_DV_SLOTS_Y + (18 + (i) * 14) * 18 / 10) /* a question's answer */
++static void nativeDigivolveLayout(DigivolvePanel *panel) {
++    if (panel->fades[0].level != 0) {
++        NATIVE_MENU_PIECE(panel->layer, 30, 10, 290, 28, -54, 100, 348, 34); /* the title */
++    }
++    if (panel->fades[1].level != 0 || panel->fades[2].level != 0) { /* the slots, or the question */
++        NATIVE_MENU_PIECE(panel->layer, 160, 36, 170, 64, 14, NATIVE_DV_SLOTS_Y, 306, 115);
++    }
++    if (panel->fades[3].level != 0) { /* the stats, scrolled up for the techniques too */
++        NATIVE_MENU_PIECE(panel->layer, 60, 55, 260, 170, 0, NATIVE_DV_STATS_Y, 320, 209);
++    }
++    if (panel->fades[4].level != 0) {
++        NATIVE_MENU_PIECE(panel->layer, 0, 190, 320, 48, 0, 616, 320, 48); /* the help */
++    }
++}
++
++/* Upright, the finger: the target tapped (native_touch_target ids), -1 if none */
++static s32 nativeDigivolveTap(void) {
++    return native_touch_tap();
++}
++
++#define NATIVE_DV_TARGET(id, y, h) native_touch_target((id), 14, (y) - (native_field_h() - SCREEN_HEIGHT) / 2, 306, (h))
++#endif
++
+ void STSTATUS_drawDigivolvePanel(DigivolvePanel *panel) {
+     SpriteDrawer sprite;
+     PartnerEntry entry;
+@@ -295,6 +325,11 @@
+     s32 tech;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeDigivolveLayout(panel);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(panel->layer, panel->depth);
+     sprite.setTexture(0x280, 0x100);
+@@ -397,6 +432,36 @@
+ static inline void STSTATUS_chooseDigivolveSlot(DigivolvePanel *panel, DigivolvePanelWindows *windows) {
+     s32 slot;
+ 
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the partner's name or a slot shows its stats, tapped again it goes on (X) */
++        s32 i, t;
++
++        native_touch_target(8, 0, NATIVE_DV_STATS_Y + 18 - (native_field_h() - SCREEN_HEIGHT) / 2, 160, 34);
++        for (i = 0; i < panel->slotCount; i++) {
++            NATIVE_DV_TARGET(i, NATIVE_DV_SLOT_ROW(i), 25);
++        }
++        t = nativeDigivolveTap();
++        if (t == 8 && panel->fromEntry) {
++            panel->fromEntry = 0;
++            STSTATUS_showDigivolveStats(panel, windows, 1);
++            windows->slotCursor->setPos(windows->slotCursor, 0x50, 0x4D);
++            SOUND.playSound(SOUND_CURSOR);
++            return;
++        }
++        if (t >= 0 && t < 8 && (!panel->fromEntry || t != panel->slot)) {
++            panel->fromEntry = 1;
++            panel->slot = t;
++            STSTATUS_showDigivolveStats(panel, windows, 1);
++            windows->slotCursor->setPos(windows->slotCursor, 0xB0, panel->slot * 0xE + 0x31);
++            SOUND.playSound(SOUND_CURSOR);
++            return;
++        }
++        if (t >= 0) {
++            native_touch_hold(PAD_CROSS, 3);
++            return;
++        }
++    }
++#endif
+     if (panel->fromEntry) {
+         slot = panel->slot;
+         if (PAD_PRESSED(PAD_LEFT)) {
+@@ -476,6 +541,20 @@
+     s32 option;
+ 
+     option = panel->option;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the answer tapped is given (X) */
++        s32 o, t;
++
++        for (o = 0; o < 2; o++) {
++            NATIVE_DV_TARGET(o, NATIVE_DV_OPTION_ROW(o), 25);
++        }
++        t = nativeDigivolveTap();
++        if (t >= 0) {
++            panel->option = t;
++            native_touch_hold(PAD_CROSS, 3);
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+         panel->option = 0;
+     } else if (PAD_PRESSED(PAD_DOWN) || PAD_REPEATED(PAD_DOWN)) {
+@@ -569,6 +648,11 @@
+ 
+ /* Cross takes the message away */
+ static inline void STSTATUS_waitBattleMessage(DigivolvePanel *panel) {
++#ifdef NATIVE
++    if (native_portrait() && native_touch_anywhere()) {
++        native_touch_hold(PAD_CROSS, 3); /* the finger anywhere goes on */
++    }
++#endif
+     if (PAD_PRESSED(PAD_CROSS)) {
+         SOUND.playSound(SOUND_MENU_CONFIRM);
+         panel->blink = 0;
+@@ -722,6 +806,11 @@
+ 
+ /* Cross or triangle go back */
+ static inline void STSTATUS_waitPartnerTech(DigivolvePanel *panel) {
++#ifdef NATIVE
++    if (native_portrait() && native_touch_anywhere()) {
++        native_touch_hold(PAD_CROSS, 3); /* the finger anywhere goes back */
++    }
++#endif
+     if (PAD_PRESSED(PAD_CROSS)) {
+         SOUND.playSound(SOUND_SELECT);
+         panel->substate++;
+@@ -882,6 +971,22 @@
+                     }
+                 } while ((entry.skills[panel->tech] & SKILL_ID) <= 0);
+             }
++#ifdef NATIVE
++            if (native_portrait()) { /* the finger: a technique tapped shows its cost (back: the back button) */
++                s32 k, t;
++
++                for (k = 0; k < 6; k++) {
++                    if (entry.skills[k] & SKILL_ID) {
++                        native_touch_target(k, 40, NATIVE_DV_STATS_Y + (43 + k * 14) * 123 / 100 -
++                                                       (native_field_h() - SCREEN_HEIGHT) / 2, 270, 17);
++                    }
++                }
++                t = nativeDigivolveTap();
++                if (t >= 0) {
++                    panel->tech = t;
++                }
++            }
++#endif
+             if (old != panel->tech) {
+                 SOUND.playSound(SOUND_CURSOR);
+                 windows->listCursor->setPos(windows->listCursor, 0xA9, panel->tech * 0xE + 0x88 + panel->scroll.value);

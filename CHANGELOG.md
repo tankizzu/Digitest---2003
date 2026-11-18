@@ -19,7 +19,12 @@
 - **Equipaggiamento col dito** (da Stato): il titolo e le sei caselle grandi sotto le statistiche (un tocco apre la
   casella); poi l'oggetto della casella e la lista delle armi o protezioni grande (righe di 21 pixel): un tocco
   sceglie e mostra l'effetto sulle statistiche, un secondo tocco equipaggia, le frecce su e giù della lista cambiano
-  pagina; l'aiuto in basso. Verificato su Linux (anche con 20 armi). Le digievoluzioni sono ancora quelle originali.
+  pagina; l'aiuto in basso. Verificato su Linux (anche con 20 armi).
+- **Digievoluzioni col dito** (da Stato): il titolo, le tre caselle (o la domanda su una casella) 1,8 volte, le
+  statistiche grandi da un lato all'altro, l'aiuto in basso. Un tocco sul nome del partner o su una casella ne mostra
+  le statistiche, un secondo tocco va avanti; le risposte alla domanda e le tecniche si toccano; nelle schermate che
+  aspettano X basta un tocco. Verificato su Linux il percorso del partner (la sua tecnica); le caselle, la domanda e
+  le tecniche di una digievoluzione **non verificati** (i salvataggi di prova non hanno digievoluzioni).
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
   non c'era niente di salvato). Prima il salvataggio automatico scattava solo dopo due minuti *di fila* col
   personaggio libero, e ogni dialogo o scena azzerava il conto: nel prologo quasi mai. Ora il tempo conta comunque
