@@ -1,0 +1,19 @@
+--- a/src/menus/title/edge_fade.c
++++ b/src/menus/title/edge_fade.c
+@@ -36,6 +36,16 @@
+         poly->y1 = STDWTITL_edgeFadeLines[i].y1;
+         poly->x2 = STDWTITL_edgeFadeLines[i].x2;
+         poly->y2 = STDWTITL_edgeFadeLines[i].y2;
++#ifdef NATIVE
++        if (layer->env.clip.y >= NATIVE_FIELD_Y) { /* upright, the title on the tall screen: from its middle to its edges */
++            poly->x0 = -layer->offsetX + poly->x0 * layer->env.clip.w / SCREEN_WIDTH;
++            poly->x1 = -layer->offsetX + poly->x1 * layer->env.clip.w / SCREEN_WIDTH;
++            poly->x2 = -layer->offsetX + poly->x2 * layer->env.clip.w / SCREEN_WIDTH;
++            poly->y0 = -layer->offsetY + poly->y0 * layer->env.clip.h / SCREEN_HEIGHT;
++            poly->y1 = -layer->offsetY + poly->y1 * layer->env.clip.h / SCREEN_HEIGHT;
++            poly->y2 = -layer->offsetY + poly->y2 * layer->env.clip.h / SCREEN_HEIGHT;
++        }
++#endif
+         addPrim(ot, poly);
+         poly++;
+     }

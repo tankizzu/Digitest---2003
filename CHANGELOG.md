@@ -8,6 +8,13 @@
   dello schermo; ora tutto. La **digievoluzione** (il vecchio Digimon che diventa reticolo e il nuovo che appare)
   scorre su tutta l'altezza, e i suoi effetti a tutto schermo stanno a metà schermo invece che in alto. (Lampo:
   verificato su Linux, entrata di Renamon. Digievoluzione: non provata, la squadra di prova non può digievolvere.)
+- **Resoconto di fine battaglia a tutto schermo** (verticale): lo sfondo a griglia del gioco su tutta l'altezza, i
+  pannelli dei partner e i messaggi al centro. Verificato su Linux (vittoria nel Settore Sud: EXP, livello,
+  digievoluzione imparata, BIT).
+- **Dissolvenze in verticale**: quella del titolo (dai bordi verso il centro) e quella comune a memory card,
+  negozi, laboratorio e altri menu ora scuriscono tutto lo schermo, non solo le 240 righe centrali. Verificato su
+  Linux (titolo → memory card); orizzontale identico.
+- Prove: `DW3_ENEMY_HP=1` porta gli HP dei nemici a 1 a ogni turno (per arrivare al resoconto).
 - Proposta spenta (da approvare): strada di Asuka del prologo a tutto schermo, solo la scena ingrandita
   (`DW3_ZOOM_MAP=1`).
 

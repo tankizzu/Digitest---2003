@@ -87,8 +87,8 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 - [x] Menu di entrata del partner (quando uno va KO): statistiche dove l'utente ha messo quelle del DV, "Nome /
       Switch" in basso a destra. Verificato su Linux; con la tecnica di coppia (cornice MP) non provato.
 - [x] Lampo bianco a tutto schermo; digievoluzione su tutta l'altezza (2.4; la digievoluzione non provata).
-- [ ] Resoconto di fine battaglia (STFGTREP) in verticale: oggi in 4:3. Serve una vittoria nelle prove (Numemon nel
-      Settore Sud fugge o vince: provare un'altra zona o la prova di battaglia di debug), poi una demo da disporre.
+- [x] Resoconto di fine battaglia (STFGTREP) a tutto schermo: sfondo su tutta l'altezza, contenuto al centro (2.4).
+      Se l'utente lo vuole più grande o ridisposto: una demo da disporre come per la battaglia.
 - [ ] Inquadrature ravvicinate: nero oltre il set 3D (vedi PROJECT_STATE, da decidere).
 - [ ] Inizio e fine battaglia (transizione, risultati, resoconto STFGTREP) a tutto schermo.
 

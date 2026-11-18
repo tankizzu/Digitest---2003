@@ -296,6 +296,17 @@ dopo il riscontro sulla 2.0.
   dopo), in giù o a destra → L1 (pagina prima). L1/R1 a schermo sono nascosti. Il trascinamento non si può simulare
   su Linux (DW3_PRESS ha solo tocchi).
 
+## Altre schermate sulla tela alta (2.4)
+
+- Resoconto (STFGTREP, modalità 0x1400, overlay a sé dopo la battaglia): scene.c crea SCREEN_LAYER sulla tela alta
+  con offset (0, (H − 240) / 2) e l'origine del tocco; report.c ripete lo sfondo (fotogramma 0x1E, periodo 96) ogni
+  192 righe su tutta l'altezza. `--field 5120` da solo resta nero: serve una battaglia vinta (`DW3_ENEMY_HP=1`).
+- Dissolvenza comune (src/shared/draw_fader.inc.c, usata da memory card, negozi, laboratorio, album...): se il layer
+  è sulla tela alta (clip.y ≥ NATIVE_FIELD_Y) copre `-offset` + tutto il clip invece di 320×256.
+- Titolo (edge_fade.c): i quattro triangoli dal centro ai bordi, scalati sul clip del layer.
+- Battaglia: white_flash.c (lampo bianco) alto quanto la tela; digimon_change.c (digievoluzione) con CHANGE_H /
+  CHANGE_STEP al posto di 240 e della velocità; sprite_effect.c sposta di (H − 240) / 2 gli effetti del layer FRONT.
+
 ## Demo da disporre (artefatto "Disposizione battaglia")
 
 - https://claude.ai/artifact/3DVyDQZggmhr1isbDtUXnL — l'utente trascina e ridimensiona i pezzi veri della grafica
