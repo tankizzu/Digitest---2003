@@ -77,8 +77,10 @@ Progetto in TECHNICAL_NOTES ("Verticale, fase 1"). Passi:
 
 - [ ] Verificare sul telefono il salvataggio automatico quando l'app va in secondo piano.
 - [x] Menu del campo a tutto schermo in verticale (2.4): contenuto al centro, sfondo ripetuto.
-- [ ] Negozi, laboratorio, album e negozio delle carte, allenamento in verticale: stesso schema (SCENE_UPRIGHT dove
-      usano shared/update_scene.inc.c, più lo sfondo ripetuto).
+- [x] Negozio, laboratorio, palestra, album e negozio delle carte a tutto schermo in verticale (2.4).
+- [ ] Editor del mazzo e battaglia a carte in verticale.
+- [ ] Testi coi tasti PlayStation ancora a schermo in negozio ("Button: Back", "Button: Effects", "R1"), album,
+      negozio delle carte, laboratorio, palestra: rifarli quando quelle schermate avranno i loro tocchi.
 
 ## P1 — battaglia in verticale (2.2 prima versione, 2.3 disposizione dell'utente)
 

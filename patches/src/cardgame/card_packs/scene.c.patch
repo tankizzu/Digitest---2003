@@ -1,0 +1,11 @@
+--- a/src/cardgame/card_packs/scene.c
++++ b/src/cardgame/card_packs/scene.c
+@@ -7,5 +7,8 @@
+ #define SCENE_CREATE OVL_NAME(createShop)
+ #define SCENE_PRIM_BUFFERS 0xF000
+ #define SCENE_OT_SHIFT 3
++#ifdef NATIVE
++#define SCENE_UPRIGHT /* upright: the card shop on the tall screen (shared/update_scene.inc.c) */
++#endif
+ #include "shared/update_scene.inc.c"
+ #include "shared/start.inc.c"

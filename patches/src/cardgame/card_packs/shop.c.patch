@@ -1,0 +1,18 @@
+--- a/src/cardgame/card_packs/shop.c
++++ b/src/cardgame/card_packs/shop.c
+@@ -72,6 +72,15 @@
+     } else {
+         shop->scrollWait = 1;
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = shop->scroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry(FILE_CARDSHOP_SPRITES << 16), 8, shop->scroll, y);
++        }
++    } else
++#endif
+     sprite.draw(FILE_CACHE.getEntry(FILE_CARDSHOP_SPRITES << 16), 8, shop->scroll, shop->scroll);
+     sprite.setLayerId(shop->layer, shop->depth - 1);
+     if (shop->fades[0].level != 0) {

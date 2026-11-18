@@ -1,0 +1,28 @@
+--- a/src/cardgame/album/album.c
++++ b/src/cardgame/album/album.c
+@@ -246,6 +246,9 @@
+ #define SCENE_CREATE OVL_NAME(createAlbum)
+ #define SCENE_PRIM_BUFFERS 0xF000
+ #define SCENE_OT_SHIFT 3
++#ifdef NATIVE
++#define SCENE_UPRIGHT /* upright: the album on the tall screen (shared/update_scene.inc.c) */
++#endif
+ #include "shared/update_scene.inc.c"
+ #include "shared/start.inc.c"
+ 
+@@ -389,6 +392,15 @@
+     } else {
+         album->frameToggle = 1;
+     }
++#ifdef NATIVE
++    if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++        for (y = album->frame - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++            sprite.draw(FILE_CACHE.getEntry(STCRDABM_SPRITES), 8, album->frame, y);
++        }
++    } else
++#endif
+     sprite.draw(FILE_CACHE.getEntry(STCRDABM_SPRITES), 8, album->frame, album->frame);
+     sprite.setLayerId(album->layer, album->depth - 2);
+     if (album->fade.level != 0) {
