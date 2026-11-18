@@ -315,6 +315,17 @@ dopo il riscontro sulla 2.0.
 - Battaglia: white_flash.c (lampo bianco) alto quanto la tela; digimon_change.c (digievoluzione) con CHANGE_H /
   CHANGE_STEP al posto di 240 e della velocità; sprite_effect.c sposta di (H − 240) / 2 gli effetti del layer FRONT.
 
+## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
+
+- https://claude.ai/artifact/BPppfTLQDz7YC1RCv7FwYG — sei schede: Menu, Oggetti: categorie, Oggetti: lista, Oggetti: a
+  chi, Ordina, Stato. Stesso modello della battaglia (db `layouts`, un documento per scheda); i pannelli dei partner
+  sono della scheda «Oggetti: categorie» e in «A chi» / «Ordina» sono riferimenti.
+- Si ricostruisce con `tools/demo/build_disposizione_menu.py OUT.html` dalle catture in orizzontale (3×) mpA, mpB, mpE
+  (`--field 515 --progress 5`; oggetti di prova con `--set 802B=1` ... `--set 803C=1`: gli usabili partono da 0x2B,
+  ITEM_LISTS in engine/game/items.c) e dallo sfondo verticale di fm2. Mancano le liste delle tecniche (la squadra di
+  prova non ne ha) e la scheda "salva".
+- Poi: applicare le posizioni come per la battaglia (trasformazione per pezzo) e dare i tocchi alle righe.
+
 ## Demo da disporre (artefatto "Disposizione battaglia")
 
 - https://claude.ai/artifact/3DVyDQZggmhr1isbDtUXnL — l'utente trascina e ridimensiona i pezzi veri della grafica

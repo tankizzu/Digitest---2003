@@ -66,8 +66,8 @@ titolo).
 
 1. Riscontro dell'utente sulla 2.4 (mandata il 18/11): battaglia in verticale, trascinamento nelle liste, schermate
    a tutto schermo.
-2. Demo per disporre le schermate dei menu con righe grandi (prima oggetti, tecniche, stato, ordina del menu del
-   campo), poi applicarle coi tocchi.
+2. Demo "Disposizione menu" pubblicata (https://claude.ai/artifact/BPppfTLQDz7YC1RCv7FwYG): aspettare che l'utente
+   disponga le schede, poi leggere il db (`layouts`) e applicare posizioni e tocchi alle schermate del menu del campo.
 3. Menu di entrata del partner dopo Tag (switch_in_menu.c) e risultati della battaglia in verticale.
 4. Le scelte qui sopra.
 5. In coda: volume nelle impostazioni (serve una schermata impostazioni: da progettare con l'utente); OPZIONI
