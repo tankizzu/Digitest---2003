@@ -1,0 +1,12 @@
+--- a/src/menus/digimon_lab/scene.c
++++ b/src/menus/digimon_lab/scene.c
+@@ -7,6 +7,9 @@
+ #define SCENE_CREATE OVL_NAME(createLab)
+ #define SCENE_PRIM_BUFFERS 0xF000
+ #define SCENE_OT_SHIFT 3
++#ifdef NATIVE
++#define SCENE_UPRIGHT /* upright: the lab on the tall screen (shared/update_scene.inc.c) */
++#endif
+ #include "shared/update_scene.inc.c"
+ 
+ /* Starts the mode: creates its scene task */

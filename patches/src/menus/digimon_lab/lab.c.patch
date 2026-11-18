@@ -1,0 +1,19 @@
+--- a/src/menus/digimon_lab/lab.c
++++ b/src/menus/digimon_lab/lab.c
+@@ -98,6 +98,16 @@
+         } else {
+             lab->bgTick = 1;
+         }
++#ifdef NATIVE
++        if (native_portrait()) { /* upright: the background over the whole height, in steps of its 96 */
++            s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, y;
++
++            for (y = lab->bgScroll - (top + 95) / 96 * 96; y < SCREEN_HEIGHT + top; y += 192) {
++                sprite.draw(FILE_CACHE.getEntry(FILE_LAB_SPRITES << 16), 0x37, lab->bgScroll, y);
++            }
++            break;
++        }
++#endif
+         sprite.draw(FILE_CACHE.getEntry(FILE_LAB_SPRITES << 16), 0x37, lab->bgScroll, lab->bgScroll);
+         break;
+     case TASK_DONE:

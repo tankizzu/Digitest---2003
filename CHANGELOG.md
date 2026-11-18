@@ -16,6 +16,7 @@
   MAPPA).
 - **Negozio degli oggetti a tutto schermo** (verticale): stesso schema. Verificato su Linux (Asuka Armory, compra).
   Restano le scritte coi tasti PlayStation ("Button: Back", "R1"), da rifare coi tocchi.
+- **Laboratorio Digi-Lab a tutto schermo** (verticale): stesso schema. Verificato su Linux (menu, cambio Digimon).
 - **Dissolvenze in verticale**: quella del titolo (dai bordi verso il centro) e quella comune a memory card,
   negozi, laboratorio e altri menu ora scuriscono tutto lo schermo, non solo le 240 righe centrali. Verificato su
   Linux (titolo → memory card); orizzontale identico.
