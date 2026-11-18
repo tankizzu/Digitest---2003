@@ -35,8 +35,9 @@
   una colonna di 8 righe il doppio più grandi (un tocco sceglie e mostra i dettagli, un secondo compra), la pagina
   cambia toccando le frecce, senza le scritte L1 / R1. Poi la quantità 1,8 volte (toccando la metà alta delle frecce
   uno in più, la bassa uno in meno, il resto del riquadro va avanti) e il totale con Compra / No 1,5 volte; un tocco
-  sul suggerimento dei dettagli gira la loro pagina. Verificato su Linux un acquisto intero (3 spade). Ancora
-  originali: la domanda «Equipaggiare?», la lista per vendere, i dettagli (piccoli) e la scritta «Button: Effects».
+  sul suggerimento dei dettagli gira la loro pagina; «Equipaggiare?» Sì / No e poi il partner si toccano (i dettagli
+  restano in basso). Verificato su Linux un acquisto intero (3 spade, poi equipaggiate a Kotemon). Ancora
+  originali: la lista per vendere, i dettagli (piccoli) e la scritta «Button: Effects».
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
