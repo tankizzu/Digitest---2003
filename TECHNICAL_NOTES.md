@@ -362,6 +362,9 @@ dopo il riscontro sulla 2.0.
   `nativeSlotLayout` (fino al sottostato 40): partner, statistiche ×1,3, caselle ×1,4, titolo, scelte ×1,75 a y 488,
   messaggio. Il pannello del partner del menu (sprite 0x1E a (0,19)) è alto più di 50: il suo rettangolo deve essere
   (0,15,146,62), altrimenti resta fuori dalla disposizione e copre le statistiche al suo posto originale.
+- Palestra (`--field 2560 --party 0`, `250:start`, capsule a y 435-593, poi la griglia): screen.c `nativeGymLayout`
+  (partner, statistiche+TP ×1,3, aiuto nascosto, titolo, capsule ×1,75), menu.c `nativeGymMenuLayout` (titolo,
+  griglia ×1,7 da y 435, «R1»/«L1» nascosti, descrizione ×1,2). Da fare: session.c (TP da usare), result.c.
 - Per capire che cosa finisce in un pezzo: un `fprintf` temporaneo in `layout_find` (gpu_draw.c) con la scatola
   del pacchetto e la profondità, filtrato sul pezzo (non lasciarlo nel codice). Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 

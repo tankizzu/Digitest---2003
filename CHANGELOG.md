@@ -49,6 +49,10 @@
   messaggi si chiudono con un tocco. Verificato su Linux. Tabella: le frecce in basso si toccano per cambiare pagina (tolte le scritte L1 / R1), un Digimon conosciuto si tocca
   per sceglierlo e di nuovo per vederne il nome (non verificato: i Digimon della squadra di prova sono sconosciuti),
   un tocco chiude il nome; la tabella resta della sua misura. La lista delle forme è ancora quella originale; «Button: Details» è ancora a schermo (si tocca).
+- **Palestra**: il partner, le statistiche e i TP più grandi, le capsule della squadra 1,75 volte (un tocco mostra il
+  partner, un secondo lo allena); poi la griglia degli allenamenti 1,7 volte (un tocco mostra l'allenamento, un
+  secondo lo sceglie; la freccia della pagina si tocca) e la descrizione sotto. Nascoste le scritte «Button: Stop
+  training» e L1 / R1. Verificato su Linux. La scelta dei TP e l'allenamento sono ancora quelli originali.
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che

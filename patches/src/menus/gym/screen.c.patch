@@ -1,6 +1,46 @@
 --- a/src/menus/gym/screen.c
 +++ b/src/menus/gym/screen.c
-@@ -324,6 +324,16 @@
+@@ -220,10 +220,39 @@
+ }
+ 
+ /* Draws the screen: the panels, the party's sprites and the sign */
++#ifdef NATIVE
++/* Upright, for the finger, as the lab (digimon_lab/slot_screen.c): the partner, its stats and TP 1.3 times, the
++   prompt, the party's capsules 1.75 times; the help naming a PlayStation button hidden (gpu_draw.c's layout) */
++#define NATIVE_GYM_PARTY_Y 435
++static void nativeGymLayout(TrainScreen *screen) {
++    if (screen->panels[0].level != 0) {
++        NATIVE_MENU_PIECE(screen->layerId, 0, 7, 146, 70, 0, 92, 219, 105); /* the partner */
++    }
++    if (screen->panels[1].level != 0 || screen->panels[2].level != 0) {
++        NATIVE_MENU_PIECE(screen->layerId, 0, 70, 146, 145, 0, 200, 190, 188); /* its stats and TP */
++    }
++    if (screen->panels[3].level != 0) {
++        NATIVE_MENU_HIDE(screen->layerId, 136, 4, 194, 46);
++    }
++    if (screen->panels[4].level != 0) {
++        NATIVE_MENU_PIECE(screen->layerId, 140, 62, 185, 24, 60, NATIVE_GYM_PARTY_Y - 40, 259, 34);
++    }
++    if (screen->panels[5].level != 0 || screen->panels[6].level != 0) {
++        NATIVE_MENU_PIECE(screen->layerId, 140, 92, 180, 90, 5, NATIVE_GYM_PARTY_Y, 315, 158);
++    }
++}
++#endif
++
+ void STGTRAIN_drawScreen(TrainScreen *screen) {
+     SpriteDrawer sprite;
+     s32 i;
+     s32 partner;
++
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeGymLayout(screen);
++    }
++#endif
+ 
+     for (i = 0; i < screen->partyCount; i++) {
+         if (GFX.funcs.getTime() - screen->anims[i].time >= 0xD) {
+@@ -324,6 +353,16 @@
      } else {
          screen->bgTick = 1;
      }
@@ -17,3 +57,25 @@
      sprite.draw(FILE_CACHE.getEntry(STGTRAIN_SPRITES), screen->bgSprite, screen->bgScroll, screen->bgScroll);
  }
  
+@@ -333,6 +372,21 @@
+     s32 partner;
+ 
+     partner = screen->partner;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a capsule tapped shows its partner, tapped again trains it (X) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++        for (i = 0; i < screen->partyCount; i++) {
++            native_touch_target(i, 40 + i * 84, NATIVE_GYM_PARTY_Y - top, 84, 158);
++        }
++        t = native_touch_tap();
++        if (t >= 0 && t == screen->partner) {
++            native_touch_hold(PAD_CROSS, 3);
++        } else if (t >= 0) {
++            screen->partner = t; /* shown below */
++        }
++    }
++#endif
+     if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
+         screen->partner--;
+         if (screen->partner < 0) {

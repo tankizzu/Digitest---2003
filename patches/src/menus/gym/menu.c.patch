@@ -1,0 +1,74 @@
+--- a/src/menus/gym/menu.c
++++ b/src/menus/gym/menu.c
+@@ -27,6 +27,25 @@
+ }
+ 
+ /* Draws the training menu: its panels, the trainings of the page and the cursor */
++#ifdef NATIVE
++/* Upright, for the finger, where the party's capsules were (screen.c): the title, the trainings' grid 1.7 times, the
++   training's info 1.2 times under it; the page hint naming L1 / R1 hidden, its arrow tapped (gpu_draw.c's layout) */
++#define NATIVE_GYM_GRID_Y 435
++static void nativeGymMenuLayout(TrainMenu *menu) {
++    if (menu->panels[0].level != 0) {
++        NATIVE_MENU_PIECE(menu->layerId, 140, 62, 185, 24, 60, NATIVE_GYM_GRID_Y - 40, 259, 34);
++    }
++    if (menu->panels[1].level != 0 || menu->cursorShown) {
++        NATIVE_MENU_PIECE(menu->layerId, 140, 92, 185, 90, 5, NATIVE_GYM_GRID_Y, 314, 153);
++        NATIVE_MENU_HIDE(menu->layerId, 226, 158, 18, 13); /* "R1" */
++        NATIVE_MENU_HIDE(menu->layerId, 161, 158, 18, 13); /* "L1" */
++    }
++    if (menu->panels[3].level != 0) {
++        NATIVE_MENU_PIECE(menu->layerId, 60, 180, 265, 45, 0, NATIVE_GYM_GRID_Y + 160, 318, 54);
++    }
++}
++#endif
++
+ void STGTRAIN_drawMenu(TrainMenu *menu) {
+     SpriteDrawer sprite;
+     s32 i;
+@@ -34,6 +53,11 @@
+     s32 x;
+     s32 y;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeGymMenuLayout(menu);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setLayerId(menu->layerId, menu->depth);
+     sprite.setTexture(0x240, 0x100);
+@@ -141,6 +165,33 @@
+     s32 row;
+ 
+     col = menu->page;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a training tapped is shown, tapped again picked (X); the page's arrow turns
++                                it (L1, R1) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++        for (i = 0; i < 8; i++) {
++            if (menu->trainings[menu->page][i] > 0) {
++                native_touch_target(i, 19 + (i % 4) * 68, NATIVE_GYM_GRID_Y + 14 + (i / 4) * 68 - top, 68, 68);
++            }
++        }
++        if (STGTRAIN_state.tableCount >= 6) {
++            native_touch_target(8, menu->page == 0 ? 150 : 15, NATIVE_GYM_GRID_Y + 112 - top, 160, 40);
++        }
++        t = native_touch_tap();
++        if (t == 8) {
++            native_touch_hold(menu->page == 0 ? PAD_R1 : PAD_L1, 3);
++        } else if (t >= 0 && t == menu->col + menu->row * 4) {
++            native_touch_hold(PAD_CROSS, 3);
++        } else if (t >= 0) {
++            menu->col = t % 4;
++            menu->row = t / 4;
++            SOUND.playSound(SOUND_MENU_MOVE);
++            STGTRAIN_showTrainingInfo(menu, win, 1);
++            return;
++        }
++    }
++#endif
+     if (STGTRAIN_state.tableCount >= 6) {
+         if (!PAD_HELD(PAD_R1) && PAD_PRESSED(PAD_L1)) {
+             menu->page = 0;
