@@ -45,7 +45,9 @@
   Menu». Lo scambio: titolo, capsule e partner da inserire 1,55 volte in alto, i due pannelli dei partner e la freccia
   1,3 volte sotto; toccando ai lati del partner da inserire si passa agli altri, toccandolo si scambia. Verificato su
   Linux l'aspetto (la squadra di prova non ha partner da scambiare); manca ancora lo sfondo scuro dietro le capsule.
-  Digievoluzione e tabella sono ancora quelle originali; «Button: Details» è ancora a schermo (si tocca).
+  Digievolvi: partner, statistiche, caselle, titolo e le due scelte una sotto l'altra, più grandi; un tocco sceglie, i
+  messaggi si chiudono con un tocco. Verificato su Linux; difetto: un riquadro scuro copre le righe 4-6 delle
+  statistiche (da capire). La lista delle forme e la tabella sono ancora quelle originali; «Button: Details» è ancora a schermo (si tocca).
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che

@@ -358,8 +358,10 @@ dopo il riscontro sulla 2.0.
   partner, titolo, capsule ×1,75 da y 365, suggerimento delle voci; l'etichetta panels[4] nascosta). party_screen.c `nativePartyLayout`:
   colonna destra (140,0,200,220) ×1,55 da y 88, sinistra (0,12,142,180) ×1,3 da y 440, suggerimento accanto; il
   pannello del partner del menu (menu.c) non si mappa più dopo il sottostato 18 (lo fa la schermata). Difetto: la
-  cornice scura 0x2D (144,42) dietro le capsule non si vede in verticale: da capire. Da fare:
-  slot_screen.c, entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
+  cornice scura 0x2D (144,42) dietro le capsule non si vede in verticale: da capire. slot_screen.c
+  `nativeSlotLayout` (fino al sottostato 40): partner, statistiche ×1,3, caselle ×1,4, titolo, scelte ×1,75 a y 488,
+  messaggio. Difetto: un riquadro scuro largo 140 copre le statistiche dalla sorgente y ~124 a ~158 (qualcosa di
+  mappato dal pezzo delle statistiche che in orizzontale non si vede): da capire. Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 
