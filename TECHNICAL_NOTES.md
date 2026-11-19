@@ -364,7 +364,8 @@ dopo il riscontro sulla 2.0.
   (0,15,146,62), altrimenti resta fuori dalla disposizione e copre le statistiche al suo posto originale.
 - Palestra (`--field 2560 --party 0`, `250:start`, capsule a y 435-593, poi la griglia): screen.c `nativeGymLayout`
   (partner, statistiche+TP ×1,3, aiuto nascosto, titolo, capsule ×1,75), menu.c `nativeGymMenuLayout` (titolo,
-  griglia ×1,7 da y 435, «R1»/«L1» nascosti, descrizione ×1,2). Da fare: session.c (TP da usare), result.c.
+  griglia ×1,7 da y 435, «R1»/«L1» nascosti, descrizione ×1,2). session.c `nativeSessionLayout`: tutta la colonna destra (125,8,200,165) ×1,6 da y 395. Da fare: result.c
+  (e trovare un modo di dare TP nei test).
 - Per capire che cosa finisce in un pezzo: un `fprintf` temporaneo in `layout_find` (gpu_draw.c) con la scatola
   del pacchetto e la profondità, filtrato sul pezzo (non lasciarlo nel codice). Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 
