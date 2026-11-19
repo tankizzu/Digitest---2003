@@ -48,7 +48,9 @@
   Digievolvi: partner, statistiche, caselle, titolo e le due scelte una sotto l'altra, più grandi; un tocco sceglie, i
   messaggi si chiudono con un tocco. Verificato su Linux. Tabella: le frecce in basso si toccano per cambiare pagina (tolte le scritte L1 / R1), un Digimon conosciuto si tocca
   per sceglierlo e di nuovo per vederne il nome (non verificato: i Digimon della squadra di prova sono sconosciuti),
-  un tocco chiude il nome; la tabella resta della sua misura. La lista delle forme è ancora quella originale; «Button: Details» è ancora a schermo (si tocca).
+  un tocco chiude il nome; la tabella resta della sua misura. Lista delle forme: partner, titolo e lista 1,75 volte (un tocco mostra la forma, un secondo la sceglie; l'estremità
+  destra della prima e dell'ultima riga scorre), statistiche e tecniche della forma 1,3 volte; verificato l'aspetto,
+  i tocchi sulle righe no (la squadra di prova non ha forme). «Button: Details» è ancora a schermo (si tocca).
 - **Palestra**: il partner, le statistiche e i TP più grandi, le capsule della squadra 1,75 volte (un tocco mostra il
   partner, un secondo lo allena); poi la griglia degli allenamenti 1,7 volte (un tocco mostra l'allenamento, un
   secondo lo sceglie; la freccia della pagina si tocca) e la descrizione sotto. Nascoste le scritte «Button: Stop

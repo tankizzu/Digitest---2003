@@ -1,0 +1,67 @@
+--- a/src/menus/digimon_lab/entry_list.c
++++ b/src/menus/digimon_lab/entry_list.c
+@@ -142,6 +142,9 @@
+ 
+ /* The panel's states: fades in, moves the cursor through the ids and
+    scrolls the list; triangle closes it */
++#ifdef NATIVE
++#define NATIVE_LAB_LIST_Y 242 /* the list, upright (nativeEntryListLayout) */
++#endif
+ void STGDGLAB_runEntryList(LabEntryList *panel, LabEntryListWindows *windows) {
+     s32 cursor;
+     s32 scroll;
+@@ -170,6 +173,26 @@
+         if (panel->count > 0) {
+             cursor = panel->cursor;
+             scroll = panel->scroll;
++#ifdef NATIVE
++            if (native_portrait()) { /* the finger: a form tapped is shown, tapped again picked (X); the right end of
++                                        the first and last rows scrolls (up, down) */
++                s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, i, t;
++
++                native_touch_target(8, 270, NATIVE_LAB_LIST_Y + 14 - top, 50, 26);
++                native_touch_target(9, 270, NATIVE_LAB_LIST_Y + 63 - top, 50, 26);
++                for (i = 0; i < 3 && i < panel->count; i++) {
++                    native_touch_target(i, 0, NATIVE_LAB_LIST_Y + 14 + i * 24 - top, 320, 24);
++                }
++                t = native_touch_tap();
++                if (t == 8 || t == 9) {
++                    native_touch_hold(t == 8 ? PAD_UP : PAD_DOWN, 3);
++                } else if (t >= 0 && t == panel->cursor) {
++                    native_touch_hold(PAD_CROSS, 3);
++                } else if (t >= 0) {
++                    panel->cursor = t; /* shown below */
++                }
++            }
++#endif
+             if (PAD_PRESSED(PAD_UP) || PAD_REPEATED(PAD_UP)) {
+                 panel->cursor--;
+                 if (panel->cursor < 0) {
+@@ -238,11 +261,27 @@
+ 
+ /* Draws the panel's frames, its scroll arrows and the icons of the skills
+    of the id under the cursor */
++#ifdef NATIVE
++/* Upright, for the finger, as the digivolve screen (slot_screen.c): the partner (the menu's panel), the title, the
++   list 1.75 times, the chosen form's stats and skills 1.3 times (gpu_draw.c's layout) */
++static void nativeEntryListLayout(LabEntryList *panel) {
++    NATIVE_MENU_PIECE(panel->layer, 0, 15, 146, 62, 0, 104, 219, 93);
++    NATIVE_MENU_PIECE(panel->layer, 140, 10, 185, 28, 60, 200, 259, 39);
++    NATIVE_MENU_PIECE(panel->layer, 140, 38, 185, 62, 0, NATIVE_LAB_LIST_Y, 324, 108);
++    NATIVE_MENU_PIECE(panel->layer, 80, 96, 245, 140, 0, 360, 318, 182);
++}
++#endif
++
+ void STGDGLAB_drawEntryList(LabEntryList *panel, LabEntryListWindows *windows) {
+     SpriteDrawer sprite;
+     PartnerEntry entry;
+     s32 i;
+ 
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativeEntryListLayout(panel);
++    }
++#endif
+     initSpriteDrawer(&sprite);
+     sprite.setTexture(0x280, 0x100);
+     sprite.setLayerId(panel->layer, panel->depth);
