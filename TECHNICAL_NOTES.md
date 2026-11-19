@@ -367,9 +367,9 @@ dopo il riscontro sulla 2.0.
   (partner, statistiche+TP ×1,3, aiuto nascosto, titolo, capsule ×1,75), menu.c `nativeGymMenuLayout` (titolo,
   griglia ×1,7 da y 435, «R1»/«L1» nascosti, descrizione ×1,2). session.c `nativeSessionLayout`: tutta la colonna destra (125,8,200,165) ×1,6 da y 395. Da fare: result.c e
   l'allenamento. Durante l'allenamento la scena (disegnata sul layer SCREEN dentro il pezzo di session.c) diventa
-  grande in basso, ma un ○, le scritte «Defense +2» / «Failed» e delle linee di cornice restano sparse (canvas circa
-  (180,237), (150,372), x 300). Provato invano: mappare anche il layer 0x1002 e allargare il pezzo a x 110. Da
-  capire con il `fprintf` in `layout_find` quali pacchetti sono (layer e profondità).
+  grande in basso; il pezzo arriva a y 183 (la cornice scende fino a 179) e il riquadro dei messaggi del risultato
+  (65,184,262,44) va ×1,2 sotto la scena (trovato col `fprintf` in `layout_find`). Restano un ○ isolato in alto a
+  destra (canvas circa (180,237)) e un contorno sottile accanto alle statistiche: forse il layer 0x1001 o 0x1002.
 - Per capire che cosa finisce in un pezzo: un `fprintf` temporaneo in `layout_find` (gpu_draw.c) con la scatola
   del pacchetto e la profondità, filtrato sul pezzo (non lasciarlo nel codice). Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 

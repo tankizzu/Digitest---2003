@@ -53,8 +53,9 @@
   partner, un secondo lo allena); poi la griglia degli allenamenti 1,7 volte (un tocco mostra l'allenamento, un
   secondo lo sceglie; la freccia della pagina si tocca) e la descrizione sotto. Nascoste le scritte «Button: Stop
   training» e L1 / R1. Poi la scelta dei TP 1,6 volte (un tocco sceglie, un secondo usa), la domanda e il messaggio
-  si toccano. Verificato su Linux fino all'avvio dell'allenamento (con `DW3_TP`). L'allenamento stesso (i segni ○ ✕
-  e le scritte restano al posto originale) e il risultato sono ancora quelli originali.
+  si toccano. Verificato su Linux fino all'avvio dell'allenamento (con `DW3_TP`). Durante l'allenamento la scena è
+  grande e il messaggio del risultato («Difesa +2», «Fallito») sta sotto; restano un ○ isolato in alto e un contorno
+  sottile da sistemare.
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che

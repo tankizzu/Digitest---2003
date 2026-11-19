@@ -1,6 +1,6 @@
 --- a/src/menus/gym/session.c
 +++ b/src/menus/gym/session.c
-@@ -22,10 +22,25 @@
+@@ -22,10 +22,27 @@
   * Draws a training session: the training's icon, its panels and the cursor
   * over the three columns.
   */
@@ -10,7 +10,9 @@
 +#define NATIVE_GYM_SESSION_Y 395
 +#define NATIVE_GYM_SESSION_K(v) ((v) * 16 / 10)
 +static void nativeSessionLayout(TrainSession *session) {
-+    NATIVE_MENU_PIECE(session->layerId, 125, 8, 200, 165, 0, NATIVE_GYM_SESSION_Y, 320, 264);
++    NATIVE_MENU_PIECE(session->layerId, 125, 8, 200, 175, 0, NATIVE_GYM_SESSION_Y, 320, 280);
++    /* the training's message panel at the bottom (result.c), 1.2 times under the training */
++    NATIVE_MENU_PIECE(session->layerId, 65, 184, 262, 44, 3, NATIVE_GYM_SESSION_Y + 264, 314, 53);
 +}
 +#endif
 +
@@ -26,7 +28,7 @@
      initSpriteDrawer(&sprite);
      sprite.setLayerId(session->layerId, session->depth);
      sprite.setTexture(0x240, 0x100);
-@@ -140,6 +155,24 @@
+@@ -140,6 +157,24 @@
      s32 last;
  
      last = session->intensity;
@@ -51,7 +53,7 @@
      if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
          if (--session->intensity < 0) {
              session->intensity = 0;
-@@ -170,6 +203,11 @@
+@@ -170,6 +205,11 @@
  /* Once cross is pressed, hides the not-enough-points notice and closes its
     panel */
  static inline void STGTRAIN_closeNotice(TrainSession *session, TrainSessionWindows *win) {
@@ -63,7 +65,7 @@
      if (PAD_PRESSED(PAD_CROSS)) {
          SOUND.playSound(SOUND_MENU_CONFIRM);
          win->notice->setVisible(win->notice, 0);
-@@ -217,6 +255,22 @@
+@@ -217,6 +257,22 @@
      s32 choice;
  
      choice = session->choice;
