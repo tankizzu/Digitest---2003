@@ -57,7 +57,7 @@
 +   1.4 times, the title, the two choices 1.75 times, the message (gpu_draw.c's layout) */
 +#define NATIVE_LAB_SLOT_OPTIONS_Y 488
 +static void nativeSlotLayout(LabSlotScreen *screen) {
-+    NATIVE_MENU_PIECE(screen->layer, 0, 15, 142, 50, 0, 110, 213, 75);   /* the partner */
++    NATIVE_MENU_PIECE(screen->layer, 0, 15, 146, 62, 0, 104, 219, 93);   /* the partner (the menu's panel) */
 +    NATIVE_MENU_PIECE(screen->layer, 0, 66, 146, 140, 0, 185, 190, 182); /* its stats */
 +    NATIVE_MENU_PIECE(screen->layer, 140, 10, 185, 62, 60, 352, 259, 87); /* its slots */
 +    NATIVE_MENU_PIECE(screen->layer, 140, 76, 185, 28, 60, 445, 259, 39); /* the title */

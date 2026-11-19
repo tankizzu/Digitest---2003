@@ -83,10 +83,10 @@
 +#define NATIVE_LAB_PICK_Y 365
 +static void nativeLabPageLayout(LabMenu *menu) {
 +    if (menu->panels[3].level != 0 && menu->substate <= 18) { /* once a screen is open, its own layout moves it */
-+        NATIVE_MENU_PIECE(menu->layer, 0, 15, 142, 50, 0, 240, 213, 75);
++        NATIVE_MENU_PIECE(menu->layer, 0, 15, 146, 62, 0, 234, 219, 93);
 +    }
 +    if (menu->panels[4].level != 0) {
-+        NATIVE_MENU_HIDE(menu->layer, 140, 10, 182, 26);
++        NATIVE_MENU_HIDE(menu->layer, 136, 6, 194, 34);
 +    }
 +    if (menu->panels[5].level != 0) {
 +        NATIVE_MENU_PIECE(menu->layer, 140, 62, 180, 24, 50, NATIVE_LAB_PICK_Y - 40, 270, 36);

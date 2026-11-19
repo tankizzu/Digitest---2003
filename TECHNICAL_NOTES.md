@@ -360,8 +360,10 @@ dopo il riscontro sulla 2.0.
   pannello del partner del menu (menu.c) non si mappa più dopo il sottostato 18 (lo fa la schermata). Difetto: la
   cornice scura 0x2D (144,42) dietro le capsule non si vede in verticale: da capire. slot_screen.c
   `nativeSlotLayout` (fino al sottostato 40): partner, statistiche ×1,3, caselle ×1,4, titolo, scelte ×1,75 a y 488,
-  messaggio. Difetto: un riquadro scuro largo 140 copre le statistiche dalla sorgente y ~124 a ~158 (qualcosa di
-  mappato dal pezzo delle statistiche che in orizzontale non si vede): da capire. Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
+  messaggio. Il pannello del partner del menu (sprite 0x1E a (0,19)) è alto più di 50: il suo rettangolo deve essere
+  (0,15,146,62), altrimenti resta fuori dalla disposizione e copre le statistiche al suo posto originale.
+- Per capire che cosa finisce in un pezzo: un `fprintf` temporaneo in `layout_find` (gpu_draw.c) con la scatola
+  del pacchetto e la profondità, filtrato sul pezzo (non lasciarlo nel codice). Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 
