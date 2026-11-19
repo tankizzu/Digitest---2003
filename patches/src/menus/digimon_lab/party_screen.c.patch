@@ -1,0 +1,56 @@
+--- a/src/menus/digimon_lab/party_screen.c
++++ b/src/menus/digimon_lab/party_screen.c
+@@ -73,12 +73,31 @@
+ }
+ 
+ /* Draws the first screen's frames and the party's animations */
++#ifdef NATIVE
++/* Upright, for the finger: the right column (the title, the party's capsules, the partner to swap in with its arrows)
++   1.55 times at the top, the left one (the two partners' panels and the swap's arrow) 1.3 times under it, the
++   entries' hint beside it at the bottom (gpu_draw.c's layout) */
++#define NATIVE_LAB_SWAP_Y 100
++#define NATIVE_LAB_SWAP_LEFT_Y 440
++static void nativePartyLayout(void) {
++    NATIVE_MENU_PIECE(SCREEN_LAYER, 140, 0, 200, 220, 33, NATIVE_LAB_SWAP_Y - 12, 310, 341);
++    NATIVE_MENU_PIECE(SCREEN_LAYER, 0, 12, 142, 180, 0, NATIVE_LAB_SWAP_LEFT_Y, 185, 234);
++    NATIVE_MENU_PIECE(SCREEN_LAYER, 0, 192, 142, 30, 180, NATIVE_LAB_SWAP_LEFT_Y + 200, 142, 30);
++}
++#endif
++
+ void STGDGLAB_drawPartyScreen(LabPartyScreen *screen, void *children) {
+     SpriteDrawer sprite;
+     PartnerAnim *anim;
+     s32 member;
+     s32 id;
+     s32 i;
++
++#ifdef NATIVE
++    if (native_portrait()) {
++        nativePartyLayout();
++    }
++#endif
+ 
+     member = screen->partners[screen->pick];
+     if (GFX.funcs.getTime() - screen->animTime >= 12) {
+@@ -222,6 +241,21 @@
+     s32 old;
+ 
+     old = screen->pick;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: the arrows beside the partner to swap in go through them (left, right), the
++                                partner itself swaps (X), the entries' hint shows its entries (circle) */
++        s32 top = (native_field_h() - SCREEN_HEIGHT) / 2, t;
++
++        native_touch_target(0, 33, NATIVE_LAB_SWAP_Y + 220 - top, 90, 100);
++        native_touch_target(1, 123, NATIVE_LAB_SWAP_Y + 220 - top, 100, 100);
++        native_touch_target(2, 223, NATIVE_LAB_SWAP_Y + 220 - top, 97, 100);
++        native_touch_target(3, 180, NATIVE_LAB_SWAP_LEFT_Y + 200 - top, 140, 30);
++        t = native_touch_tap();
++        if (t >= 0) {
++            native_touch_hold(t == 0 ? PAD_LEFT : t == 1 ? PAD_CROSS : t == 2 ? PAD_RIGHT : PAD_CIRCLE, 3);
++        }
++    }
++#endif
+     if (screen->count >= 2) {
+         if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
+             screen->pick--;

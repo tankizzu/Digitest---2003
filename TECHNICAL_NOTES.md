@@ -355,8 +355,11 @@ dopo il riscontro sulla 2.0.
   `--field 3840 --party 0`, `250:start,700:t160y358` (VENDI), poi `t160y374` (Protezioni). Poi laboratorio, palestra.
 - Laboratorio (`--field 3328 --party 0`, `250:start`, poi `1100:t160y330` Scambia / `t160y345` Digievolvi):
   menu.c `nativeLabMenuLayout` (titolo ×1,5, voci ×1,75, aiuto nascosto) e `nativeLabPageLayout` (pannello del
-  partner, titolo, capsule ×1,75 da y 365, suggerimento delle voci; l'etichetta panels[4] nascosta). Da fare:
-  slot_screen.c, party_screen.c, entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
+  partner, titolo, capsule ×1,75 da y 365, suggerimento delle voci; l'etichetta panels[4] nascosta). party_screen.c `nativePartyLayout`:
+  colonna destra (140,0,200,220) ×1,55 da y 88, sinistra (0,12,142,180) ×1,3 da y 440, suggerimento accanto; il
+  pannello del partner del menu (menu.c) non si mappa più dopo il sottostato 18 (lo fa la schermata). Difetto: la
+  cornice scura 0x2D (144,42) dietro le capsule non si vede in verticale: da capire. Da fare:
+  slot_screen.c, entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 

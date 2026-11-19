@@ -42,8 +42,10 @@
 - **Laboratorio, menu e scelta del partner**: le tre voci 1,75 volte e il titolo più grande, un tocco apre; tolta la
   scritta «Button: Back». Poi il partner (pannello in alto 1,5 volte) e le capsule della squadra 1,75 volte: un tocco
   mostra il partner, un secondo apre la schermata; il suggerimento delle voci si tocca. Nascosta «Button: Back to
-  Menu». Verificato su Linux. Le schermate dopo (scambio, digievoluzione, tabella) sono ancora quelle originali e la
-  scritta «Button: Details» è ancora a schermo.
+  Menu». Lo scambio: titolo, capsule e partner da inserire 1,55 volte in alto, i due pannelli dei partner e la freccia
+  1,3 volte sotto; toccando ai lati del partner da inserire si passa agli altri, toccandolo si scambia. Verificato su
+  Linux l'aspetto (la squadra di prova non ha partner da scambiare); manca ancora lo sfondo scuro dietro le capsule.
+  Digievoluzione e tabella sono ancora quelle originali; «Button: Details» è ancora a schermo (si tocca).
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che

@@ -82,7 +82,7 @@
 +   under it, the entries' hint (Switch Digimon) under them; the label naming a PlayStation button hidden */
 +#define NATIVE_LAB_PICK_Y 365
 +static void nativeLabPageLayout(LabMenu *menu) {
-+    if (menu->panels[3].level != 0) {
++    if (menu->panels[3].level != 0 && menu->substate <= 18) { /* once a screen is open, its own layout moves it */
 +        NATIVE_MENU_PIECE(menu->layer, 0, 15, 142, 50, 0, 240, 213, 75);
 +    }
 +    if (menu->panels[4].level != 0) {
