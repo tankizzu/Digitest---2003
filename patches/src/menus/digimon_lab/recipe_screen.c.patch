@@ -1,0 +1,62 @@
+--- a/src/menus/digimon_lab/recipe_screen.c
++++ b/src/menus/digimon_lab/recipe_screen.c
+@@ -103,6 +103,12 @@
+ /* Draws the third screen: the picked id, the frames, the recipes of the row
+    (the ids found, the empty slots after them) and the arrows */
+ void STGDGLAB_drawRecipeScreen(LabRecipeScreen *screen, LabRecipeScreenWindows *win) {
++#ifdef NATIVE
++    if (native_portrait()) { /* the pages' labels name the PlayStation's L1 and R1: the arrows are tapped instead */
++        NATIVE_MENU_HIDE(screen->layer, 35, 190, 32, 20);
++        NATIVE_MENU_HIDE(screen->layer, 275, 190, 32, 20);
++    }
++#endif
+     SpriteDrawer sprite;
+     s32 complete;
+     s32 frame;
+@@ -496,6 +502,34 @@
+    one), triangle closes the screen; otherwise the cursor moves over the row */
+ static inline void runRecipeRow(LabRecipeScreen *screen, LabRecipeScreenWindows *win) {
+     screen->nextRow = screen->row;
++#ifdef NATIVE
++    if (native_portrait()) { /* the finger: a Digimon of the chart tapped is chosen, tapped again shown (X); the arrows
++                                at the bottom turn the page (L1, R1) */
++        s32 s, c, t;
++
++        if (screen->found[screen->row][0][0] != -1) {
++            for (s = 0; s < screen->slots && s < 4; s++) {
++                for (c = 0; c < 5; c++) {
++                    if (screen->found[screen->row][s][c]) {
++                        native_touch_target(s * 5 + c, c * 0x28 + 0x46, s * 0x2E + 0x2E, 40, 44);
++                    }
++                }
++            }
++        }
++        native_touch_target(20, 0, 0xB8, 80, 40);
++        native_touch_target(21, 240, 0xB8, 80, 40);
++        t = native_touch_tap();
++        if (t == 20 || t == 21) {
++            native_touch_hold(t == 20 ? PAD_L1 : PAD_R1, 3);
++        } else if (t >= 0 && t / 5 == screen->slot && t % 5 == screen->col) {
++            native_touch_hold(PAD_CROSS, 3);
++        } else if (t >= 0) {
++            screen->slot = t / 5;
++            screen->col = t % 5;
++            SOUND.playSound(SOUND_MENU_MOVE);
++        }
++    }
++#endif
+     if ((!PAD_HELD(PAD_R1) && PAD_PRESSED(PAD_L1)) || (!PAD_HELD(PAD_R1) && PAD_REPEATED(PAD_L1))) {
+         if (--screen->nextRow < 0) {
+             screen->nextRow = 0;
+@@ -600,6 +634,11 @@
+             showRecipeName(screen, win);
+             break;
+         case 5:
++#ifdef NATIVE
++            if (native_portrait() && native_touch_anywhere()) {
++                native_touch_hold(PAD_CROSS, 3); /* the finger anywhere closes the name */
++            }
++#endif
+             if (PAD_PRESSED(PAD_CROSS)) {
+                 STGDGLAB_data.funcs.startFade(&screen->panels[1], 0);
+                 win->name->setVisible(win->name, 0);

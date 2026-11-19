@@ -46,7 +46,9 @@
   1,3 volte sotto; toccando ai lati del partner da inserire si passa agli altri, toccandolo si scambia. Verificato su
   Linux l'aspetto (la squadra di prova non ha partner da scambiare); manca ancora lo sfondo scuro dietro le capsule.
   Digievolvi: partner, statistiche, caselle, titolo e le due scelte una sotto l'altra, più grandi; un tocco sceglie, i
-  messaggi si chiudono con un tocco. Verificato su Linux. La lista delle forme e la tabella sono ancora quelle originali; «Button: Details» è ancora a schermo (si tocca).
+  messaggi si chiudono con un tocco. Verificato su Linux. Tabella: le frecce in basso si toccano per cambiare pagina (tolte le scritte L1 / R1), un Digimon conosciuto si tocca
+  per sceglierlo e di nuovo per vederne il nome (non verificato: i Digimon della squadra di prova sono sconosciuti),
+  un tocco chiude il nome; la tabella resta della sua misura. La lista delle forme è ancora quella originale; «Button: Details» è ancora a schermo (si tocca).
 - Corretto: le icone dei tasti nei testi (es. il ● di «Button: Effects») restavano al loro posto quando il testo era
   spostato da una disposizione nuova; ora seguono il testo.
 - **Salvataggi automatici affidabili** (non si riuscivano a caricare le partite: dopo «Carica» il gioco diceva che
