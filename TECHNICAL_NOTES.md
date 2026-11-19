@@ -376,7 +376,9 @@ dopo il riscontro sulla 2.0.
   (65,184,262,44) va ×1,2 sotto la scena (trovato col `fprintf` in `layout_find`). Restano un ○ isolato in alto a
   destra (canvas circa (180,237)) e un contorno sottile accanto alle statistiche: forse il layer 0x1001 o 0x1002.
 - Per capire che cosa finisce in un pezzo: un `fprintf` temporaneo in `layout_find` (gpu_draw.c) con la scatola
-  del pacchetto e la profondità, filtrato sul pezzo (non lasciarlo nel codice). Da fare: entry_list.c, recipe_screen.c, entry_panel.c, skill_panel.c.
+  del pacchetto e la profondità, filtrato sul pezzo (non lasciarlo nel codice).
+- Laboratorio, fatti anche: entry_list.c `nativeEntryListLayout` (partner, titolo, lista ×1,75 a y 242, dettagli ×1,3
+  a y 360), recipe_screen.c (frecce toccate, L1/R1 nascosti, Digimon toccati). Da fare: entry_panel.c, skill_panel.c.
 
 ## Demo da disporre: menu del campo (artefatto "Disposizione menu", 18/11/2026)
 
