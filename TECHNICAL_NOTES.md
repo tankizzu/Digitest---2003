@@ -117,6 +117,11 @@
   da 0xD7, accessori da 0x124). Percorso in verticale: `250:start,900:start,1100:t160y390,1400:t100y57,1700:t100y151`
   (Stato, Kotemon, Equipaggiamento), poi `t100y463` (Destra). Lo `unk70` di StatsScreen (che il gioco azzera soltanto)
   dice a Stato che l'aiuto dell'equipaggiamento copre il TP.
+- Regressione in orizzontale (dopo ogni gruppo di modifiche): ripristinare i salvataggi di prova con `cp -rp`, poi
+  `P="250:start,256:start,330:start,336:start,700:t150y176,1900:cross,2100:cross,2400:t160y120"` con
+  `DW3_TOUCH=1` e `shoot.sh .../reg 150 600:300:2700 "$P"`, e confrontare i fotogrammi 600/1200/1800/2400 con
+  `/home/user/feerdus95/ref` (devono essere identici). Il 600 del riferimento è stato rifatto il 19/11 (l'ingranaggio
+  delle impostazioni sul titolo, voluto).
 - `DW3_MONEY=5000`: col `--field`, il denaro di partenza (per provare i negozi).
 - `DW3_TP=20`: i TP della squadra quando si apre la palestra (gym/screen.c).
 - `DW3_ENEMY_HP=1`: a ogni turno del giocatore gli HP dei nemici scendono a quel valore (battaglia vinta al primo
