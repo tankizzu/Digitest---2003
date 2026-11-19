@@ -374,6 +374,7 @@ int native_autosave_read_slot(int game, int which, void *buf); /* 0 the newest a
 int native_test_layer_hidden(int id); /* tests: DW3_HIDE_LAYERS */
 int native_test_save(void); /* tests: DW3_PRESS "save", once */
 int native_test_enemy_hp(void); /* tests: DW3_ENEMY_HP, the enemies' HP at most that at each player turn; 0 off */
+int native_test_tp(void);       /* tests: DW3_TP, the party's TP at the gym; 0 off */
 void native_sheet_dump(const void *sheet, int tex_x, int tex_y, const char *tag); /* tests: DW3_SHEET_DUMP */
 void native_touch_auto_sprite(const void *sheet, int tex_x, int tex_y, int clut_row);
 void native_touch_no_stick(void);    /* no stick on this screen */

@@ -222,6 +222,13 @@ int native_test_layer_hidden(int id) {
     return SDL_strcasestr(env, hex) != NULL;
 }
 
+/* DW3_TP=20: tests only, the party's TP set to that much when the gym opens (gym/screen.c); 0 when unset */
+int native_test_tp(void) {
+    const char *env = SDL_getenv("DW3_TP");
+
+    return env != NULL ? SDL_max(SDL_atoi(env), 0) : 0;
+}
+
 /* DW3_ENEMY_HP=1: tests only, the enemies' HP brought down to that much at each player turn, for a battle won at once
    (FIGHTSTG player_turn.c); 0 when unset */
 int native_test_enemy_hp(void) {

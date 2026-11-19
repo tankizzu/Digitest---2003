@@ -79,3 +79,19 @@
      if (PAD_PRESSED(PAD_LEFT) || PAD_REPEATED(PAD_LEFT)) {
          screen->partner--;
          if (screen->partner < 0) {
+@@ -479,6 +533,15 @@
+     switch (screen->substate) {
+     case 0:
+     default:
++#ifdef NATIVE
++        if (native_test_tp() > 0) { /* tests (DW3_TP): the party's TP */
++            s32 m;
++
++            for (m = 0; m < screen->partyCount; m++) {
++                GAME.funcs.getPartnerStats(GAME.funcs.getPartyMember(m))->stats[STAT_TP] = native_test_tp();
++            }
++        }
++#endif
+         STGTRAIN_state.startFade(&screen->panels[0], 1);
+         STGTRAIN_state.startFade(&screen->panels[3], 1);
+         screen->substate++;
